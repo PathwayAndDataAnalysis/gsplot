@@ -7,182 +7,7 @@ body {
   overflow-x: hidden;
 }
 
-h4 {
-  margin: 0.5em;
-}
-
-#graph {
-  width: 100%;
-  height: 100%;
-  margin-left: 40px;
-  margin-top: 15px;
-  margin-right: 0px;
-  transition: margin-right 0.5s ease;
-}
-
-#graph.settings-open {
-  margin-right: 300px;
-}
-
-#graph-settings-container {
-  display: none;
-  justify-content: center;
-  align-items: flex-start;
-  height: 100vh;
-  flex-shrink: 0;
-}
-
-.settings-container {
-  background-color: #ffffff;
-  border: 1px solid #ddd;
-  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
-  border-radius: 7px;
-  height: auto;
-  padding: 20px;
-  margin: 20px;
-  position: absolute;
-  width: 260px;
-  top: 100px;
-  right: -400px;
-  transition: right 0.5s ease;
-}
-
-.settings-container.visible {
-  right: 0px;
-}
-
-.graph-settings-header,
-.umap-settings-header {
-  display: flex;
-  justify-content: center;
-}
-
-.button-container {
-  display: flex;
-  justify-content: space-between;
-  padding-top: 5px;
-}
-
-.option {
-  display: flex;
-  justify-content: space-between;
-  padding: 5px;
-  column-gap: 10px;
-  width: auto;
-  text-wrap: nowrap;
-}
-
-.size-options {
-  display: flex;
-  justify-content: space-between;
-}
-
-.size-number-container {
-  display: flex;
-  flex-direction: column;
-  width: 150px;
-  height: 65px;
-}
-
-.radio-container {
-  display: flex;
-  flex-direction: column;
-}
-
-.option input[type="numeric"] {
-  text-align: right;
-  width: 50px;
-}
-
-#fixed-size-input-reveal,
-#dynamic-size-input-reveal {
-  display: none;
-}
-
-.graph-settings-header h3 {
-  margin: 0px;
-  margin-bottom: 0.7em;
-}
-
-#selected-section {
-  display: none;
-}
-
-#selected-points-header {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-#selected-points-container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.table-container {
-  width: 20%;
-  margin: 20px;
-}
-table {
-  table-layout: fixed;
-  border-collapse: collapse;
-  background-color: #ffffff;
-  border: 1px solid #ddd;
-  text-align: left;
-}
-
-th,
-td {
-  padding: 8px;
-  border: 1px solid #000000;
-}
-
-thead {
-  word-break: break-all;
-  background-color: #77a5c2;
-  text-align: center;
-}
-
-tbody th {
-  background-color: #77a5c2;
-  text-align: center;
-  vertical-align: top;
-  width: 10%;
-}
-
-.spinner-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: none; /* Hidden by default */
-  align-items: center;
-  justify-content: center;
-  z-index: 9999; /* Ensure it sits on top of other content */
-}
-
-.spinner {
-  border: 8px solid #f3f3f3; /* Light grey */
-  border-top: 8px solid #3498db; /* Blue */
-  border-radius: 50%;
-  width: 60px;
-  height: 60px;
-  animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
+/* Styling for nav bar and buttons */
 .nav-bar {
   margin-left: 50px;
   margin-right: 50px;
@@ -240,10 +65,10 @@ tbody th {
   content: "";
   position: absolute;
   width: 100%;
-  height: 2px; /* Thickness of the underline */
+  height: 2px; 
   bottom: 0;
   left: 0;
-  background-color: black; /* Color of the underline */
+  background-color: black; 
   transform: scaleX(0);
   transition: transform 0.5s ease;
 }
@@ -259,6 +84,8 @@ tbody th {
   border-radius: 15px;
 }
 
+/* STYLING FOR MAIN PAGE - order of styling roughly follows how content is displayed top to bottom, left to right*/
+/* Upload overlay */
 #upload-container {
   width: 100%;
   display: none;
@@ -277,3 +104,187 @@ tbody th {
   padding-bottom: 20px;
   box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
 }
+
+/* Container for graph and settings combined */
+#graph-settings-container {
+  display: none;
+  justify-content: center;
+  align-items: flex-start;
+  height: 100vh;
+  flex-shrink: 0;
+}
+
+/* Only graph, not settings */
+#graph {
+  width: 100%;
+  height: 100%;
+  margin-left: 40px;
+  margin-top: 15px;
+  margin-right: 0px;
+  transition: margin-right 0.5s ease;
+}
+
+#graph.settings-open {
+  margin-right: 300px;
+}
+
+/* Only settings, not graph */
+.settings-container {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+  border-radius: 7px;
+  height: auto;
+  padding: 20px;
+  margin: 20px;
+  position: absolute;
+  width: 260px;
+  top: 100px;
+  right: -400px;
+  transition: right 0.5s ease;
+}
+
+.settings-container.visible {
+  right: 0px;
+}
+
+h4 {
+  margin: 0.5em;
+}
+
+.graph-settings-header,
+.umap-settings-header {
+  display: flex;
+  justify-content: center;
+}
+
+.button-container {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 5px;
+}
+
+.option {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px;
+  column-gap: 10px;
+  width: auto;
+  text-wrap: nowrap;
+}
+
+.size-options {
+  display: flex;
+  justify-content: space-between;
+}
+
+.size-number-container {
+  display: flex;
+  flex-direction: column;
+  width: 150px;
+  height: 65px;
+}
+
+.radio-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.option input[type="numeric"] {
+  text-align: right;
+  width: 50px;
+}
+
+#fixed-size-input-reveal,
+#dynamic-size-input-reveal {
+  display: none;
+}
+
+.graph-settings-header h3 {
+  margin: 0px;
+  margin-bottom: 0.7em;
+}
+
+/* For selected points below graph and settings */
+#selected-section {
+  display: none;
+}
+
+#selected-points-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#selected-points-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.table-container {
+  width: 20%;
+  margin: 20px;
+}
+table {
+  table-layout: fixed;
+  border-collapse: collapse;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+th,
+td {
+  padding: 8px;
+  border: 1px solid #000000;
+}
+
+thead {
+  word-break: break-all;
+  background-color: #77a5c2;
+  text-align: center;
+}
+
+tbody th {
+  background-color: #77a5c2;
+  text-align: center;
+  vertical-align: top;
+  width: 10%;
+}
+
+/* loading spinner */
+.spinner-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: none; 
+  align-items: center;
+  justify-content: center;
+  z-index: 9999; 
+}
+
+.spinner {
+  border: 8px solid #f3f3f3; 
+  border-top: 8px solid #3498db;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* HELP PAGE STYLING - some additional styling for help page*/
+

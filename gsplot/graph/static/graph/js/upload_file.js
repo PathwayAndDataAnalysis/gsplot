@@ -55,11 +55,6 @@ function importFile() {
   }
 }
 
-// Redirect to help page for help button
-function redirectToHelp() {
-  window.location.href = "/help";
-}
-
 // When the user clicks the settings button, add classes to trigger css animation
 settingsButton.addEventListener("click", function () {
   settingsContainer.classList.toggle("visible");

@@ -12,6 +12,148 @@
     />
   </head>
   <body>
-    
+    <nav class="nav-bar">
+      <div class="header-container">
+        <div class="title">
+          <h1>Gene Set Visualizer</h1>
+        </div>
+      </div>
+      <div class="nav-links">
+        <span class="nav-button" onclick="window.location.href='/'">Graph</span>
+        <span class="nav-button" onclick="window.location.href='/help'"
+          >Help</span
+        >
+        <span class="nav-button">About</span>
+      </div>
+    </nav>
+    <div class="help-button-container">
+      <button class="rounded-button" id="format-help">Input</button>
+      <button class="rounded-button" id="tools-help">Tools</button>
+      <button class="rounded-button" id="settings-help">Settings</button>
+    </div>
+    <div class="help-content-container">
+      <div class="format-content-container">
+        <h2 class="center-text">How to Format Input Data:</h2>
+        <div class="format-instructions">
+          <ul>
+            <li>
+              All data should be saved as a tab seperated value (.tsv) file.
+            </li>
+            <li>The top line of the file should be a header line.</li>
+            <li>
+              There should be three columns of data on each line with the
+              following headers:
+            </li>
+            <ul>
+              <li>Name - The name of the gene set.</li>
+              <li>
+                Molecules - Molecules in the set that were enriched, each
+                seperated by a space.
+              </li>
+              <li>
+                Value - The p-value, q-value, or whatever metric the sets are
+                evaluated by.
+              </li>
+            </ul>
+            <li>The order of these columns does not matter, but each line of data must match the order of the header.</li>
+            <li>Click <a href="{% static 'graph/data/example_data.tsv' %}" download=>here</a> to download an example data file.</li>
+            <li>
+              This is what the first three lines of a data file
+              might look like:
+            </li>
+          </ul>
+          <div class="flex-center">
+            <div class="example-data">
+              <pre><code>Name	Molecules	Value
+GO_PODOSOME_ASSEMBLY	DBNL BIN2 SRC MSN ASAP1 ARHGEF2	0.074073679
+GO_PROFILIN_BINDING	VASP CTTN WIPF1 HTT DBN1	0.2582822646196803</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
+  <style>
+    h2 {
+      margin: 2px;
+      padding: 5px;
+    }
+
+    li {
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+
+    ul {
+      margin-bottom: 0px;
+    }
+
+    .rounded-button {
+      padding: 10px 30px;
+      font-size: xx-large;
+      color: rgb(0, 0, 0);
+      background-color: #ffffff;
+      box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+      width: 200px;
+      border: none;
+      border-radius: 50px; /* Makes the button oval */
+      cursor: pointer;
+      transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .rounded-button.selected {
+      background-color: #9cc5e7;
+    }
+
+    .rounded-button:hover {
+      background-color: #9cc5e7;
+      transform: scale(1.05);
+    }
+
+    .rounded-button:active {
+      transform: scale(0.95);
+    }
+
+    .help-button-container {
+      margin-top: 30px;
+      display: flex;
+      justify-content: center;
+      column-gap: 20px;
+    }
+
+    .help-content-container {
+      display: flex;
+      justify-content: center;
+      padding-top: 25px;
+      margin: 10px;
+    }
+
+    .center-text {
+      text-align: center;
+    }
+
+    .format-content-container {
+      background-color: white;
+      box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+      border-radius: 5px;
+      width: 700px;
+    }
+
+    .flex-center {
+      display: flex;
+      justify-content: center;
+    }
+
+    .example-data {
+      background-color: rgb(235, 235, 235);
+      border-radius: 5px;
+      display: inline-block;
+      width: auto;
+      margin: 10px;
+    }
+    pre {
+      padding: 5px;
+      margin: 0px;
+    }
+  </style>
 </html>

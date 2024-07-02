@@ -22,10 +22,10 @@ def umap_reduction(fileData, neighbors, minDistance, seed):
         numberOfEnrichedMolecules = []
 
         for i in range(n):
-            set1 = set(df.loc[i, "Enriched Molecules"].split())
+            set1 = set(df.loc[i, "Molecules"].split())
             numberOfEnrichedMolecules.append(len(set1))
             for j in range (i + 1, n):
-                set2 = set(df.loc[j, "Enriched Molecules"].split())
+                set2 = set(df.loc[j, "Molecules"].split())
                 dist = jaccard_distance(set1, set2)
                 distance_matrix[i, j] = dist
                 distance_matrix[j, i] = dist
@@ -42,10 +42,10 @@ def umap_reduction(fileData, neighbors, minDistance, seed):
 
         # Make Data Frame for website display with the embedding results
         embedding_df = pd.DataFrame(embedding, columns=['X', 'Y'])
-        embedding_df['qValue'] = df['Q Value'].values
-        embedding_df['setName'] = df['Set Name'].values
+        embedding_df['qValue'] = df['Value'].values
+        embedding_df['setName'] = df['Name'].values
         embedding_df['setSize'] = numberOfEnrichedMolecules
-        embedding_df['molecules'] = df['Enriched Molecules'].values
+        embedding_df['molecules'] = df['Molecules'].values
         
         # Sort entries by descending order of qValue so if two points overlap, the point with the more significant q value appears on top
         embedding_df = embedding_df.sort_values(by='qValue', ascending=False)

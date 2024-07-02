@@ -61,6 +61,17 @@
           let fullGraphData = getLocalStorage("data");
           let camera = getLocalStorage("camera");
 
+          // Check to see if annotations are currently on, if they are, apply them at the very end
+          // Need to use a try catch block as trying to access myPlot.layout.annotations will fail if they aren't present
+          let enableAnnotaions = false;
+          try {
+            enableAnnotaions =
+              myPlot.layout.annotations !== undefined &&
+              myPlot.layout.annotations.length !== 0;
+          } catch {
+            enableAnnotaions = false;
+          }
+
           // This stores the data only for points that are going to be displayed. (points that are < qval max and > q-val min)
           let displayedGraphData = {};
           dataKeys.forEach((key) => {
@@ -151,6 +162,11 @@
             layout.xaxis = camera.xaxis;
             layout.yaxis = camera.yaxis;
             Plotly.newPlot(myPlot, [trace], layout, config);
+          }
+
+          // If there were annotations present before call to graph, apply them again
+          if (enableAnnotaions) {
+            toggleLabels();
           }
 
           // This saves edits to the annotations that the user makes
@@ -396,7 +412,7 @@
           let firstPoint = event.points[0];
           let curveNumber = firstPoint.curveNumber; // Refrence to the ID of the points on the graph
 
-          // The following are arrays of information of each displayed point
+          // The following are arrays of information of each displayed point needed for plotly.restyle
           let borderColor = firstPoint.data.marker.line.color.slice();
           let pointColors = firstPoint.data.marker.color.slice();
           let outlineWidths = firstPoint.data.marker.line.width.slice();
@@ -525,7 +541,7 @@
           // Stores all of the new annotations that will be appleid
           let annotations = [];
 
-          // If there are labels currently displayed, then turn off labels
+          // If there are labels currently displayed, then turn off labels and exit
           if (
             myPlot.layout.annotations !== undefined &&
             myPlot.layout.annotations.length !== 0
@@ -573,20 +589,19 @@
             // The idea for overlap prevention is to check several angles at a given radius, see if there is overlap, then increase radius if nothing could be placed.
             let radius = 1;
             let attemptsWithCurrentRadius = 0;
-            annotations.push(annotation);
-
+            
             // While annotation is overlapping with another point in annotations, try new angle to place
-            while (overlapping(annotations[i], annotations)) {
+            while (overlapping(annotation, annotations)) {
               // ay and ax are rotated clockwise by pi/7 radians at each attempt.
               // Take the coordiante of the base point, and add radius multiplied by the angle desired
-              annotations[i].ay =
-                annotations[i].y +
+              annotation.ay =
+                annotation.y +
                 radius *
                   Math.sin(
                     Math.PI / 2 - (Math.PI / 7) * attemptsWithCurrentRadius
                   );
-              annotations[i].ax =
-                annotations[i].x +
+              annotation.ax =
+                annotation.x +
                 radius *
                   Math.cos(
                     Math.PI / 2 - (Math.PI / 7) * attemptsWithCurrentRadius
@@ -599,6 +614,9 @@
                 attemptsWithCurrentRadius = 0;
               }
             }
+            
+            // Once the annotation has been placed, put it into annotations
+            annotations.push(annotation);
           }
 
           // Apply layout with list of annotations
@@ -610,7 +628,7 @@
 
         // Determines if an annotation is overlapping with another annotation or point
         function overlapping(annotation, annotations) {
-          // Set the collision ranges for x and y axis. 
+          // Set the collision ranges for x and y axis.
           // This means that if a point is within 0.3 on the y axis and 2 on the x axis, the annotation is considered overlapping
           let yRange = 0.3;
           let xRange = 1.5;
@@ -623,8 +641,8 @@
           let overlapOnX = false;
           let overlapOnY = false;
 
-          // Loop through all annotations except for the last one. It is assumed the current annotation is at the end of the list.
-          for (let i = 0; i < annotations.length - 1; i++) {
+          // Loop through all annotations to check for overlaps.
+          for (let i = 0; i < annotations.length; i++) {
             overlapOnAY = checkOverlapOnAxis(
               annotation.ay,
               annotations[i].ay,
@@ -673,7 +691,7 @@
           let adjustedSizes = [];
           let scalar = parseFloat(settings["dynamic-size-scalar"]);
 
-          // Loop through all of the sizes, apply scalar, and convert area into diamater 
+          // Loop through all of the sizes, apply scalar, and convert area into diamater
           for (let i = 0; i < sizes.length; i++) {
             let adjustedArea = sizes[i] * scalar;
             let diamater = 2 * Math.sqrt(adjustedArea / Math.PI);
