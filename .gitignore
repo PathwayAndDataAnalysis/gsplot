@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# Static files in django
+gsplot/staticfiles
+
 # Distribution / packaging
 .Python
 build/

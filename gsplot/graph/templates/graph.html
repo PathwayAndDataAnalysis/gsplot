@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  </head>
+  <body>
+    <div id="plot-container">
+      <script>
+        // This file handles the rendering of the interactive graph on the main page.
+        // File is an HTML file because it is imported to the main page as an iframe so the graph renders correctly
+
+        // All keys of the "data" key in local storage. Used to iterate through all keys of data
+        const dataKeys = [
+          "X",
+          "Y",
+          "qValue",
+          "setName",
+          "setSize",
+          "molecules",
+          "color",
+          "pointNumber",
+        ];
+
+        // Get refrences to graph div and loading spinner
+        const myPlot = document.getElementById("plot-container");
+        const spinnerOverlay =
+          window.parent.document.getElementById("loading-spinner");
+
+        // Draw initial graph
+        async function main() {
+          let settings = getLocalStorage("settings");
+
+          // Check to see if there is already data saved, if not then fetch new data from backend
+          if (getLocalStorage("data") === null) {
+            // Display loading spinner to block view
+            showSpinner();
+            try {
+              await getUmapData(settings);
+            } catch (error) {
+              hideSpinner();
+              throw error;
+              return;
+            }
+            hideSpinner();
+          }
+
+          // Draw graph after verifying that data is already present or recieved
+          graph();
+
+          // Apply some css to graph as putting these lines in a css file don't seem to apply since this is in an iframe
+          let mainDisplay = document.getElementsByClassName("user-select-none");
+          mainDisplay[0].style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
+        }
+
+        // Draws graph based on current data stored in local storage
+        function graph() {
+          // Getting resources from local storage
+          let settings = getLocalStorage("settings");
+          let fullGraphData = getLocalStorage("data");
+          let camera = getLocalStorage("camera");
+
+          // This stores the data only for points that are going to be displayed. (points that are < qval max and > q-val min)
+          let displayedGraphData = {};
+          dataKeys.forEach((key) => {
+            displayedGraphData[key] = [];
+          });
+
+          // Get number of points in full data, could have used any key instead of X as they all have the same size
+          let numberOfPoints = fullGraphData["X"].length;
+
+          // Loop through full graph data, ignoring anything below cuttoff and adding the rest
+          for (let i = 0; i < numberOfPoints; i++) {
+            let belowMaximum =
+              fullGraphData["qValue"][i] <= settings["q-value-maximum"];
+            let aboveMinimum =
+              fullGraphData["qValue"][i] >= settings["q-value-minimum"];
+            if (belowMaximum && aboveMinimum) {
+              dataKeys.forEach((key) => {
+                displayedGraphData[key].push(fullGraphData[key][i]);
+              });
+            }
+          }
+
+          // Create a plotly trace, this contians all data for each point on graph based on displayedGraphData
+          let trace = makeTrace(displayedGraphData, settings);
+
+          // Define layout properties of graoh
+          let layout = {
+            title: "Double Click To Edit",
+            hovermode: "closest",
+            xaxis: {
+              title: "UMAP-1",
+              zeroline: false, // This makes sure that the x and y axis aren't highlighted at 0
+            },
+            yaxis: {
+              title: "UMAP-2",
+              zeroline: false,
+            },
+            height: Math.max(window.innerHeight - 50, 300), // Set minimum on height and width as plotly stops working below 300 x 300
+            width: Math.max(window.innerWidth - 50, 300),
+          };
+
+          // Allow annotations, graph title, and colorbar title to be editable.
+          // Disable default double click event as it conflicts with custom camera settings.
+          let config = {
+            edits: {
+              annotationTail: true,
+              annotationText: true,
+              titleText: true,
+              colorbarTitleText: true,
+            },
+            doubleClick: false,
+          };
+
+          // Custom Camera settings: find zoom level that displays all points (even the ones outside of cutoff) and let that be the max
+          // This is done for clarity so when user zooms out, it returns to same zoom level every time.
+          // First check if camera settings exist for this data set already, if not, create new settings
+          if (camera) {
+            layout.xaxis = camera["xaxis"];
+            layout.yaxis = camera["yaxis"];
+            Plotly.newPlot(myPlot, [trace], layout, config);
+          } else {
+            // Create a graph with full data set in order to grab the xaxis and yaxis zoom levels
+            Plotly.newPlot(
+              myPlot,
+              [makeTrace(fullGraphData, settings)],
+              layout,
+              config
+            );
+
+            // Create camera settings with new zoom levels
+            camera = {
+              xaxis: {
+                title: "UMAP-1",
+                autorange: false, // Autorange causes some interference with camera so its turned off
+                range: myPlot.layout.xaxis.range,
+                zeroline: false,
+              },
+              yaxis: {
+                title: "UMAP-2",
+                autorange: false,
+                range: myPlot.layout.yaxis.range,
+                zeroline: false,
+              },
+            };
+
+            // Save and apply camera settings by drawing graph with correct data
+            setLocalStorage("camera", camera);
+            layout.xaxis = camera.xaxis;
+            layout.yaxis = camera.yaxis;
+            Plotly.newPlot(myPlot, [trace], layout, config);
+          }
+
+          // This saves edits to the annotations that the user makes
+          myPlot.on("plotly_relayout", function (event) {
+            // Check to see if there are already annotations saved. Format forsaved annotations is key = point number, value = annotation data
+            let annotations = getLocalStorage("annotations");
+            if (annotations === null) {
+              annotations = {};
+            }
+
+            // plotly_relayout gets called on several events, window size change, zoom in, and others.
+            // Check to see if they key in the current event matches the expected format of annotations[i] where i is annotation number
+            let keyRegex = /annotations\[[0-9]+\]/i;
+            let isAnnotationEdit = false;
+            let annotationNumber = -1;
+
+            // Compare against keys in the event and get annotation number if it is
+            for (let key in event) {
+              if (keyRegex.test(key)) {
+                isAnnotationEdit = true;
+                annotationNumber = parseInt(key.slice(12, key.length - 1));
+              }
+            }
+
+            if (isAnnotationEdit) {
+              // Get the point number by going to the list of currently displayed points (myPlot.data[0]), then getting the point number of the current annotation edited (.customdata[annotationNumber][1])
+              // Custom data is a 2D array of all currently displayed points that contains the following: [qvalue, pointnumber] for all points.
+              let pointNumber = myPlot.data[0].customdata[annotationNumber][1];
+
+              // Set annotation in saved annotations with the key as pointnumber and value as annotation
+              annotations[pointNumber] =
+                myPlot.layout.annotations[annotationNumber];
+              setLocalStorage("annotations", annotations);
+            }
+          });
+
+          // Handles selecting and unselecting data
+          myPlot.on("plotly_click", function (event) {
+            selectPoint(event, true);
+          });
+
+          // Handles select events with box select and lasso select.
+          // Unselect is turned off so users don't mass unselecting points by mistake
+          myPlot.on("plotly_selected", function (event) {
+            selectPoint(event, false);
+          });
+
+          // Custom zoom out function. This handles zooming out and overrides the default double click zoom out
+          myPlot.on("plotly_doubleclick", () => {
+            camera = getLocalStorage("camera");
+            Plotly.relayout(myPlot, {
+              xaxis: camera["xaxis"],
+              yaxis: camera["yaxis"],
+            });
+          });
+        }
+
+        // Get new graph data from UMAP on backend
+        function getUmapData(settings) {
+          return new Promise((resolve, reject) => {
+            // Load user input file and csrf token
+            let fileData = localStorage.getItem("rawFile");
+            const csrftoken = getCookie("csrftoken");
+
+            // Fetch data with umap settings and file
+            fetch("/read-output/", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrftoken,
+              },
+              body: JSON.stringify({
+                file: fileData,
+                neighbors: settings["number-of-neighbors"],
+                minDistance: settings["minimum-distance"],
+                seed: settings["seed"],
+              }),
+            })
+              .then((response) => {
+                // If the response is not ok, reject the promise with an error message
+                if (!response.ok) {
+                  return response.json().then((errorData) => {
+                    reject(
+                      new Error(errorData.error || "Unknown error occurred")
+                    );
+                  });
+                }
+
+                // Otherwise, continue
+                return response.json();
+              })
+              .then((data) => {
+                // Clear out annotations and camera as these contain new cooridnates for every point and these won't apply
+                localStorage.removeItem("camera");
+                localStorage.removeItem("annotations");
+
+                // Object to store data from umap, initalize with empty lists
+                let dataStorage = {};
+                dataKeys.forEach((key) => {
+                  dataStorage[key] = [];
+                });
+
+                for (let i = 0; i < data.length; i++) {
+                  // If statement needed for color and pointnumber as these were not given by UMAP, so data[color] and data[pointNumber] don't exist
+                  dataKeys.forEach((key) => {
+                    if (key === "color") {
+                      dataStorage["color"].push("white"); // Default outline color is white
+                    } else if (key === "pointNumber") {
+                      dataStorage["pointNumber"].push(i); // Pointnumber is the index of point in all data
+                    } else {
+                      dataStorage[key].push(data[i][key]);
+                    }
+                  });
+                }
+
+                // Store the entire data object in localStorage as JSON string
+                setLocalStorage("data", dataStorage);
+                resolve();
+              })
+              .catch((error) => {
+                reject(error); // Catches any error that occured when reading data
+              });
+          });
+        }
+
+        // This listens for a settigns change, when changed apply them
+        window.addEventListener("storage", function (e) {
+          if (e.key === "settings") {
+            let selected = getLocalStorage("selected");
+            let fullGraphData = getLocalStorage("data");
+            let settings = getLocalStorage("settings");
+            let pointNumber;
+
+            // If umap settings changed, calculate umap again. Otherwise redraw graph
+            if (settings["umapChange"]) {
+              applyUmapChange(settings);
+            } else {
+              if (selected === null) {
+                selected = [];
+              }
+
+              // Update colors of selected points to new selected point color
+              for (let i = 0; i < selected.length; i++) {
+                pointNumber = selected[i]["pointNumber"];
+                fullGraphData["color"][pointNumber] =
+                  settings["selected-color"];
+              }
+
+              // Apply changes to data and redraw graph
+              setLocalStorage("data", fullGraphData);
+              graph();
+            }
+          }
+        });
+
+        // Get umap data once more and draw graph. Selected are cleared as new UMAP data doesn't carry over selected points since they are in new positions
+        async function applyUmapChange(settings) {
+          showSpinner();
+          await getUmapData(settings);
+          hideSpinner();
+          graph();
+          clearSelected();
+        }
+
+        // Resize window on browser size change
+        window.onresize = function () {
+          let update = {
+            height: Math.max(window.innerHeight - 50, 300),
+            width: Math.max(window.innerWidth - 50, 300),
+          };
+          Plotly.relayout(myPlot, update);
+        };
+
+        // Generates the data for each point based on settings
+        function makeTrace(data, settings) {
+          let size = getSize(data["setSize"], settings); // Get sizes of each point based on settings - user can edit this
+
+          // If point is unselected it should have  thing outline, selected is thicker for clarity
+          let outlineWidth = data["color"].map((color) => {
+            if (color === "white") {
+              return 1;
+            } else {
+              return 2;
+            }
+          });
+
+          let trace = {
+            x: data["X"],
+            y: data["Y"],
+            mode: "markers",
+            type: "scatter",
+            text: data["setName"],
+            // Custom data at each point contains its qvalue and point number. Having this universal ID allows each point to be refrenced much easier once some points aren't displayed
+            customdata: data["qValue"].map((qValue, index) => [
+              qValue,
+              data["pointNumber"][index],
+            ]),
+            hovertemplate:
+              "Name: %{text}<br>Q-Value: %{customdata[0]}<extra></extra>", // Format hover text, <extra> is needed to not display unwanted data
+            marker: {
+              color: data["qValue"],
+              colorscale: [
+                [0.0, settings["significant-color"]],
+                [1.0, settings["insignificant-color"]],
+              ],
+              colorbar: {
+                title: {
+                  text: "Double Click To Edit",
+                  side: "right",
+                },
+              },
+              // Color scale is based off of the range of points currently displayed
+              cmax: settings["q-value-maximum"],
+              cmin: settings["q-value-minimum"],
+              size: size,
+              opacity: 1.0,
+              line: {
+                //This refers to outline of each point
+                width: outlineWidth,
+                color: data["color"],
+              },
+            },
+          };
+          return trace;
+        }
+
+        // Point selection code. Event contains refrence to the point selected along with marker data for point. Allowunselect is a bool
+        function selectPoint(event, allowUnselect) {
+          // Get needed data from local storage
+          let selected = getLocalStorage("selected");
+          let fullGraphData = getLocalStorage("data");
+          let settings = getLocalStorage("settings");
+          if (selected === null) {
+            selected = [];
+          }
+
+          // If no event actually passed, or the length of points is 0 return.
+          if (event === undefined || event.points.length === 0) {
+            return;
+          }
+
+          // Refrence to first point made to get data that is universal to all selected points
+          let firstPoint = event.points[0];
+          let curveNumber = firstPoint.curveNumber; // Refrence to the ID of the points on the graph
+
+          // The following are arrays of information of each displayed point
+          let borderColor = firstPoint.data.marker.line.color.slice();
+          let pointColors = firstPoint.data.marker.color.slice();
+          let outlineWidths = firstPoint.data.marker.line.width.slice();
+          let sizes = firstPoint.data.marker.size.slice();
+
+          let unselect = false; // Assume point isn't being unselected
+
+          // Loop through each point selected
+          for (let i = 0; i < event.points.length; i++) {
+            let localPointNumber = event.points[i].pointNumber; // This is the index of the point in the borderColor, pointColors, outlineWidths, and sizes array. Contains only DISPLAYED points
+            let pointNumber = event.points[i].customdata[1]; // This s the index of the point in the data object of ALL points
+
+            /*
+            In the following if statements two main things are edited. fullGraphData and the above arrays.
+            The above arrays are used to call plotly.restyle, which only needs data on the currently displayed points.
+            Plotly.restyle is used instead of calling graph(), because this won't zoom out the camera whenever the user selects something.
+            However full graph data must be updated so if the user displays more points, the correct point is still selected.
+            Full graph data cannot be used for plotly.restyle as it contians data of points that may not be displayed.
+            */
+
+            // Point is selected if its color is currently the color of a selected point
+            let isPointSelected =
+              fullGraphData["color"][pointNumber] ===
+                settings["selected-color"] && allowUnselect;
+
+            if (isPointSelected) {
+              fullGraphData["color"][pointNumber] = "white"; // Unselect point in full graph data and borderColor and reset outline width
+              borderColor[localPointNumber] = "white";
+              outlineWidths[localPointNumber] = 1;
+              unselect = true; // Mark point for unselection
+            } else {
+              borderColor[localPointNumber] = settings["selected-color"]; // Select point in full graph data and border color, increase outline
+              fullGraphData["color"][pointNumber] = settings["selected-color"];
+              outlineWidths[localPointNumber] = 2;
+            }
+
+            // Generate object to be put in local storage
+            let selectedPoint = {
+              pointNumber: pointNumber,
+              qValue: fullGraphData["qValue"][pointNumber],
+              molecules: fullGraphData["molecules"][pointNumber],
+              setName: fullGraphData["setName"][pointNumber],
+            };
+
+            // If point needs to be unselected, and unselected is permitted
+            if (unselect && allowUnselect) {
+              // Find point and remove it from selected list
+              for (let i = 0; i < selected.length; i++) {
+                if (selected[i]["pointNumber"] === pointNumber) {
+                  selected.splice(i, 1);
+                }
+              }
+              // Otherwise, if point isn't already selected, add it to selected list
+            } else if (
+              !selected.some((obj) => obj["pointNumber"] === pointNumber)
+            ) {
+              selected.push(selectedPoint);
+            }
+          }
+
+          // Create variable used in plotly restyle to apply selected point colors
+          // All marker settings need to be specified here or else plotly resets them to default, which is why unchanged settings are redeclared like sizes and colorscale
+          let update = {
+            marker: {
+              color: pointColors,
+              colorscale: [
+                [0.0, settings["significant-color"]],
+                [1.0, settings["insignificant-color"]],
+              ],
+              colorbar: firstPoint.data.marker.colorbar,
+              cmax: settings["q-value-maximum"],
+              cmin: settings["q-value-minimum"],
+              size: sizes,
+              opacity: 1.0,
+              line: {
+                width: outlineWidths,
+                color: borderColor,
+              },
+            },
+          };
+
+          // Save selected and data points in local storage
+          setLocalStorage("data", fullGraphData);
+          setLocalStorage("selected", selected);
+          // Restyle graph
+          Plotly.restyle(myPlot, update, [curveNumber]);
+        }
+
+        // Clear out selected items
+        function clearSelected() {
+          // Get data and selected points
+          let fullGraphData = getLocalStorage("data");
+          let selectedPoints = getLocalStorage("selected");
+          if (selectedPoints === null) {
+            selectedPoints = [];
+          }
+
+          // Reset colors of selected points
+          for (let i = 0; i < selectedPoints.length; i++) {
+            pointNumber = selectedPoints[i]["pointNumber"];
+            fullGraphData["color"][pointNumber] = "white";
+          }
+
+          // Set data back in local storage
+          localStorage.setItem("selected", "[]");
+          setLocalStorage("data", fullGraphData);
+
+          // Unlike in the select function, here graph is called which does reset camera zoom out.
+          // This is done because we dont have the "event" refrence containing marker data for selected point which is needed for calling plotly.restyle
+          graph();
+        }
+
+        // Toggles the label annotations for each point
+        function toggleLabels() {
+          // Get needed data from local storage
+          let fullGraphData = getLocalStorage("data");
+          let savedAnnotations = getLocalStorage("annotations"); // Contains all manual user adjusted annotations
+          if (savedAnnotations === null) {
+            savedAnnotations = {};
+          }
+
+          // This is the data of points currently displayed on graph.
+          // We iterate through this as we only need to get annotations for currently displayed points
+          let data = myPlot.data[0];
+
+          // Stores all of the new annotations that will be appleid
+          let annotations = [];
+
+          // If there are labels currently displayed, then turn off labels
+          if (
+            myPlot.layout.annotations !== undefined &&
+            myPlot.layout.annotations.length !== 0
+          ) {
+            let layout = {
+              annotations: annotations,
+            };
+            // Apply a relayout with an empty array for annotations in order to clear them
+            Plotly.relayout(myPlot, layout);
+            return;
+          }
+
+          // Loop through each displayed point
+          for (let i = 0; i < data["x"].length; i++) {
+            let pointNumber = data["customdata"][i][1]; // Get its point number through customdata
+
+            // If the user has manually adjusted the current annotation, apply it and move to next point
+            if (savedAnnotations[pointNumber] !== undefined) {
+              annotations.push(savedAnnotations[pointNumber]);
+              continue;
+            }
+
+            // Build annotation for current point
+            let annotation = {
+              // (x, y) determines base of annotation, this is right on the point
+              x: data["x"][i],
+              y: data["y"][i],
+              text: fullGraphData["setName"][pointNumber],
+              showarrow: true,
+              arrowhead: 0, // There are different arrowhead options, 0 is the clearest for this case
+              // (ax, ay) determines the tail of annotation, this is the text/name of gene set
+              ax: data["x"][i],
+              ay: data["y"][i] + 1,
+              // axref and ayref make the tail relative to the x/y axis instead of the point its attached to.
+              // This is needed to calculate where these points are in the cartesian plane.
+              axref: "x",
+              ayref: "y",
+              visible: true,
+              arrowwidth: 0.7,
+              font: {
+                size: 12,
+              },
+            };
+
+            // The idea for overlap prevention is to check several angles at a given radius, see if there is overlap, then increase radius if nothing could be placed.
+            let radius = 1;
+            let attemptsWithCurrentRadius = 0;
+            annotations.push(annotation);
+
+            // While annotation is overlapping with another point in annotations, try new angle to place
+            while (overlapping(annotations[i], annotations)) {
+              // ay and ax are rotated clockwise by pi/7 radians at each attempt.
+              // Take the coordiante of the base point, and add radius multiplied by the angle desired
+              annotations[i].ay =
+                annotations[i].y +
+                radius *
+                  Math.sin(
+                    Math.PI / 2 - (Math.PI / 7) * attemptsWithCurrentRadius
+                  );
+              annotations[i].ax =
+                annotations[i].x +
+                radius *
+                  Math.cos(
+                    Math.PI / 2 - (Math.PI / 7) * attemptsWithCurrentRadius
+                  );
+
+              // Increase attempts, and if we have done a full circle around the point, increase the radius and reset count
+              attemptsWithCurrentRadius += 1;
+              if (attemptsWithCurrentRadius >= 13) {
+                radius += 0.2;
+                attemptsWithCurrentRadius = 0;
+              }
+            }
+          }
+
+          // Apply layout with list of annotations
+          let layout = {
+            annotations: annotations,
+          };
+          Plotly.relayout(myPlot, layout);
+        }
+
+        // Determines if an annotation is overlapping with another annotation or point
+        function overlapping(annotation, annotations) {
+          // Set the collision ranges for x and y axis. 
+          // This means that if a point is within 0.3 on the y axis and 2 on the x axis, the annotation is considered overlapping
+          let yRange = 0.3;
+          let xRange = 1.5;
+
+          // Initilaize values to false
+          // AY/AX variables are checking if there is overlap with another annotation
+          // X/Y variables are checking if there is overlap with another point
+          let overlapOnAY = false;
+          let overlapOnAX = false;
+          let overlapOnX = false;
+          let overlapOnY = false;
+
+          // Loop through all annotations except for the last one. It is assumed the current annotation is at the end of the list.
+          for (let i = 0; i < annotations.length - 1; i++) {
+            overlapOnAY = checkOverlapOnAxis(
+              annotation.ay,
+              annotations[i].ay,
+              yRange
+            );
+            overlapOnAX = checkOverlapOnAxis(
+              annotation.ax,
+              annotations[i].ax,
+              xRange
+            );
+            overlapOnY = checkOverlapOnAxis(
+              annotation.ay,
+              annotations[i].y,
+              yRange
+            );
+            overlapOnX = checkOverlapOnAxis(
+              annotation.ax,
+              annotations[i].x,
+              xRange
+            );
+
+            // If overlap with annotation OR point, return
+            if ((overlapOnAY && overlapOnAX) || (overlapOnX && overlapOnY)) {
+              return true;
+            }
+          }
+          return false;
+        }
+
+        // If the first point is in the range of the second point, there is overlap on this axis
+        function checkOverlapOnAxis(x1, x2, range) {
+          return x1 > x2 - range && x1 < x2 + range;
+        }
+
+        // Get size of function based on user settings
+        function getSize(sizes, settings) {
+          // If setting is a simple fixed size which is one number, return single number
+          if (settings["fixed-size"]) {
+            return settings["fixed-size-input"];
+          }
+
+          // Sizes contains the number of enriched genes in each set.
+          // This number is treated as the area of the point.
+          // Apply user scaling, then convert into a diamater as the "size" varaible with plotly is the diamater in pixels
+
+          let adjustedSizes = [];
+          let scalar = parseFloat(settings["dynamic-size-scalar"]);
+
+          // Loop through all of the sizes, apply scalar, and convert area into diamater 
+          for (let i = 0; i < sizes.length; i++) {
+            let adjustedArea = sizes[i] * scalar;
+            let diamater = 2 * Math.sqrt(adjustedArea / Math.PI);
+
+            adjustedSizes.push(diamater);
+          }
+
+          return adjustedSizes;
+        }
+
+        function getLocalStorage(key) {
+          return JSON.parse(localStorage.getItem(key));
+        }
+
+        function setLocalStorage(key, value) {
+          localStorage.setItem(key, JSON.stringify(value));
+        }
+
+        function showSpinner() {
+          spinnerOverlay.style.display = "flex";
+        }
+
+        function hideSpinner() {
+          spinnerOverlay.style.display = "none";
+        }
+
+        // Function to get CSRF token in post request for UMAP data
+        function getCookie(name) {
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== "") {
+            const cookies = document.cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+              const cookie = cookies[i].trim();
+              if (cookie.substring(0, name.length + 1) === name + "=") {
+                cookieValue = decodeURIComponent(
+                  cookie.substring(name.length + 1)
+                );
+                break;
+              }
+            }
+          }
+          return cookieValue;
+        }
+      </script>
+    </div>
+  </body>
+</html>
