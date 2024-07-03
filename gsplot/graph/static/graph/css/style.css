@@ -7,6 +7,10 @@ body {
   overflow-x: hidden;
 }
 
+.no-click {
+  pointer-events: none;
+}
+
 /* Styling for nav bar and buttons */
 .nav-bar {
   margin-left: 50px;
@@ -53,6 +57,7 @@ body {
   border: 0px;
   font-size: large;
   color: black;
+  text-decoration: none;
 }
 
 .nav-button,
@@ -65,10 +70,10 @@ body {
   content: "";
   position: absolute;
   width: 100%;
-  height: 2px; 
+  height: 2px;
   bottom: 0;
   left: 0;
-  background-color: black; 
+  background-color: black;
   transform: scaleX(0);
   transition: transform 0.5s ease;
 }
@@ -89,7 +94,9 @@ body {
 #upload-container {
   width: 100%;
   display: none;
+  opacity: 0;
   justify-content: center;
+  transition: opacity 0.3s ease;
 }
 
 #initial-upload {
@@ -112,6 +119,8 @@ body {
   align-items: flex-start;
   height: 100vh;
   flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 /* Only graph, not settings */
@@ -148,7 +157,7 @@ body {
   right: 0px;
 }
 
-h4 {
+.settings-container h4 {
   margin: 0.5em;
 }
 
@@ -195,6 +204,14 @@ h4 {
   width: 50px;
 }
 
+.option input[type="color"] {
+  cursor: pointer;
+}
+
+.settings button {
+  cursor: pointer;
+}
+
 #fixed-size-input-reveal,
 #dynamic-size-input-reveal {
   display: none;
@@ -208,6 +225,8 @@ h4 {
 /* For selected points below graph and settings */
 #selected-section {
   display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 #selected-points-header {
@@ -262,14 +281,14 @@ tbody th {
   width: 100%;
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
-  display: none; 
+  display: none;
   align-items: center;
   justify-content: center;
-  z-index: 9999; 
+  z-index: 9999;
 }
 
 .spinner {
-  border: 8px solid #f3f3f3; 
+  border: 8px solid #f3f3f3;
   border-top: 8px solid #3498db;
   border-radius: 50%;
   width: 60px;
@@ -285,6 +304,3 @@ tbody th {
     transform: rotate(360deg);
   }
 }
-
-/* HELP PAGE STYLING - some additional styling for help page*/
-

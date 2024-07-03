@@ -115,6 +115,7 @@
 
           // Allow annotations, graph title, and colorbar title to be editable.
           // Disable default double click event as it conflicts with custom camera settings.
+          // Disable some deafult plotly buttons that aren't helpful in a UMAP context
           let config = {
             edits: {
               annotationTail: true,
@@ -123,6 +124,11 @@
               colorbarTitleText: true,
             },
             doubleClick: false,
+            modeBarButtonsToRemove: [
+              "toggleSpikelines",
+              "hoverClosestCartesian",
+              "hoverCompareCartesian",
+            ],
           };
 
           // Custom Camera settings: find zoom level that displays all points (even the ones outside of cutoff) and let that be the max
@@ -589,7 +595,7 @@
             // The idea for overlap prevention is to check several angles at a given radius, see if there is overlap, then increase radius if nothing could be placed.
             let radius = 1;
             let attemptsWithCurrentRadius = 0;
-            
+
             // While annotation is overlapping with another point in annotations, try new angle to place
             while (overlapping(annotation, annotations)) {
               // ay and ax are rotated clockwise by pi/7 radians at each attempt.
@@ -614,7 +620,7 @@
                 attemptsWithCurrentRadius = 0;
               }
             }
-            
+
             // Once the annotation has been placed, put it into annotations
             annotations.push(annotation);
           }

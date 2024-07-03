@@ -10,6 +10,8 @@ const graph = document.getElementById("graph"); // Graph iframe
 const importNavButton = document.getElementById("nav-import"); // nav button in top right
 const fileInput = document.getElementById("initial-file-input"); // Select file button
 
+const transitionDuration = 300;
+
 // This becomes a refrence to the iframe once it has loaded
 let frame;
 
@@ -44,14 +46,16 @@ function importFile() {
     confirm("Do you want to import new data?\nThis erases current saved data.")
   ) {
     // Clear selected points and remove local storage
-    frame.clearSelected();
+    localStorage.setItem("selected", "[]");
     localStorage.removeItem("rawFile");
     localStorage.removeItem("camera");
     localStorage.removeItem("data");
     localStorage.removeItem("annotations");
     // Show upload screen
     hideGraph();
-    showUpload();
+    setTimeout(() => {
+      showUpload();
+    }, transitionDuration);
   }
 }
 
@@ -80,7 +84,7 @@ document
     if (!localStorage.getItem("rawFile") || fileInput.value === "") {
       return;
     }
-    
+
     // Try to draw graph, catch any error that comes up and display it
     try {
       await frame.main();
@@ -92,23 +96,47 @@ document
     // Clear the fileInput button and show graph
     fileInput.value = "";
     hideUpload();
-    showGraph();
+    setTimeout(() => {
+      showGraph();
+    }, transitionDuration);
   });
 
 function showGraph() {
+  graphAndSettingsContainer.classList.add("no-click");
   graphAndSettingsContainer.style.display = "flex";
   selectedPoints.style.display = "block";
+  setTimeout(() => {
+    selectedPoints.style.opacity = "1";
+    graphAndSettingsContainer.style.opacity = "1";
+    graphAndSettingsContainer.classList.remove("no-click");
+  }, 100);
 }
 
 function hideGraph() {
-  graphAndSettingsContainer.style.display = "none";
-  selectedPoints.style.display = "none";
+  graphAndSettingsContainer.classList.add("no-click");
+  selectedPoints.style.opacity = "0";
+  graphAndSettingsContainer.style.opacity = "0";
+  setTimeout(() => {
+    graphAndSettingsContainer.style.display = "none";
+    selectedPoints.style.display = "none";
+    graphAndSettingsContainer.classList.remove("no-click");
+  }, transitionDuration);
 }
 
 function showUpload() {
+  uploadContainer.classList.add("no-click");
   uploadContainer.style.display = "flex";
+  setTimeout(() => {
+    uploadContainer.style.opacity = "1";
+    uploadContainer.classList.remove("no-click");
+  }, 100);
 }
 
 function hideUpload() {
-  uploadContainer.style.display = "none";
+  uploadContainer.classList.add("no-click");
+  uploadContainer.style.opacity = "0";
+  setTimeout(() => {
+    uploadContainer.style.display = "none";
+    uploadContainer.classList.remove("no-click");
+  }, transitionDuration);
 }
