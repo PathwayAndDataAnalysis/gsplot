@@ -7,7 +7,7 @@ __pycache__/
 *.so
 
 # Static files in django
-gsplot/staticfiles
+staticfiles/
 
 # Distribution / packaging
 .Python
