@@ -1,4 +1,4 @@
-body {
+html {
   margin: 0;
   padding: 0;
   height: 100svh;
@@ -240,6 +240,16 @@ body {
   flex-direction: row;
   justify-content: center;
   flex-wrap: wrap;
+}
+
+#selected-points-container p {
+  margin: 0px;
+  margin-bottom: 20px;
+  padding: 10px;
+  background-color: #ffffff;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+  border-radius: 7px;
+  font-size: larger;
 }
 
 .table-container {

@@ -10,27 +10,50 @@
       type="text/css"
       href="{% static 'graph/css/style.css' %}"
     />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="{% static 'help/css/help_style.css' %}"
+    />
   </head>
   <body>
     <nav class="nav-bar">
       <div class="header-container">
         <div class="title">
-          <h1>Gene Set Visualizer</h1>
+          <h1>Gene Set Plot</h1>
         </div>
       </div>
       <div class="nav-links">
         <a class="nav-button" href="/">Graph</a>
         <a class="nav-button" href="/help">Help</a>
-        <a class="nav-button" href="/about">About</a>
+        <a class="nav-button" href="/about">About Us</a>
       </div>
     </nav>
-    <div class="help-button-container">
-      <button class="rounded-button" id="format-help">Input</button>
-      <button class="rounded-button" id="tools-help">Tools</button>
-      <button class="rounded-button" id="settings-help">Settings</button>
+    <div id="help-button-container">
+      <button
+        class="rounded-button"
+        id="format-help"
+        onclick="openSection(event, 'format-content-container')"
+      >
+        Input
+      </button>
+      <button
+        class="rounded-button"
+        id="tools-help"
+        onclick="openSection(event, 'tools-content-container')"
+      >
+        Tools
+      </button>
+      <button
+        class="rounded-button"
+        id="settings-help"
+        onclick="openSection(event, 'settings-content-container')"
+      >
+        Settings
+      </button>
     </div>
-    <div class="help-content-container">
-      <div class="format-content-container">
+    <div id="help-content-container">
+      <div id="format-content-container">
         <h2 class="center-text">How to Format Input Data:</h2>
         <div class="format-instructions">
           <ul>
@@ -77,7 +100,7 @@ GO_PROFILIN_BINDING	VASP CTTN WIPF1 HTT DBN1	0.2582822646196803</code></pre>
           </div>
         </div>
       </div>
-      <div class="tools-content-container">
+      <div id="tools-content-container">
         <div class="tabs">
           <button
             id="defaultTab"
@@ -243,189 +266,187 @@ GO_PROFILIN_BINDING	VASP CTTN WIPF1 HTT DBN1	0.2582822646196803</code></pre>
             <h3>Reset Scale</h3>
             <ul>
               <li>
-                <b>On Selection:</b> Apply default zoom which fits all
-                points, even hidden ones.
+                <b>On Selection:</b> Apply default zoom which fits all points,
+                even hidden ones.
               </li>
             </ul>
           </div>
         </div>
       </div>
-      <div class="settings-content-container">
-        <h2 class="center-text">Graph and Visual Settings:</h2>
+      <div id="settings-content-container">
+        <h2 class="center-text">Graph and Visual Settings</h2>
         <div class="graph-settings">
-          <h3></h3>
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'point-color-collapse')"
+          >
+            <h3>Point Color</h3>
+          </button>
+          <div class="collapsible-content" id="point-color-collapse">
+            <ul>
+              <li>The color of all points is a gradient between two colors.</li>
+              <li>
+                A gene set's position on this gradient is determined based on
+                its p-value.
+              </li>
+              <li>
+                <b>Most Significant Color</b><i> (RGB):</i> Determines color for
+                most significant gene set.
+              </li>
+              <li>
+                <b>Least Significant Color</b><i> (RGB):</i> Determines color
+                for least significant gene set.
+              </li>
+              <li>
+                <b>Selected Color</b><i> (RGB):</i> Controls the color of the
+                outline placed around selected points on graph.
+              </li>
+            </ul>
+          </div>
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'q-value-collapse')"
+          >
+            <h3>Q-Value Range</h3>
+          </button>
+          <div id="q-value-collapse" class="collapsible-content">
+            <ul>
+              <li>
+                This determines what points are displayed on the graph from the
+                data set based on p-value.
+              </li>
+              <li>
+                <b>Maximum</b><i> (Float):</i> The largest p-value a displayed
+                point can have
+              </li>
+              <li>
+                <b>Minimum</b><i> (Float):</i> the smallest p-value a displayed
+                point can have.
+              </li>
+              <li>This also sets the range for the color gradient.</li>
+              <ul>
+                <li>
+                  Maximum sets the p-value for the least significant color.
+                </li>
+                <li>Minimum sets the p-value for most significant color.</li>
+              </ul>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'point-size-collapse')"
+          >
+            <h3>Point Size</h3>
+          </button>
+          <div class="collapsible-content" id="point-size-collapse">
+            <ul>
+              <li>
+                <b>Fixed</b><i> (Float):</i> The size of every point is the
+                same, represents the length of its diamater in pixels.
+              </li>
+              <li>
+                <b>Dynamic</b><i> (Float):</i> The size of each point is
+                determined by it's number of enriched molecules.
+              </li>
+              <ul>
+                <li>
+                  The number of molecules is treated as the area, and can be
+                  scaled by any positive float.
+                </li>
+              </ul>
+            </ul>
+          </div>
+        </div>
+        <h2 class="center-text">UMAP Settings</h2>
+        <div class="umap-settings">
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'neighbors-collapse')"
+          >
+            <h3>Neighbors</h3>
+          </button>
+          <div class="collapsible-content" id="neighbors-collapse">
+            <ul>
+              <li>Input tye: <i>Integer</i></li>
+              <li>
+                Sets the number of neighbors paramater used in UMAP calculation.
+              </li>
+              <li>
+                Smaller values result in smaller clusters on embedding, while
+                higher values produce larger clusters.
+              </li>
+              <li>
+                Click
+                <a
+                  href="https://umap-learn.readthedocs.io/en/latest/parameters.html#n-neighbors"
+                  >here</a
+                >
+                for more information.
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'distance-collapse')"
+          >
+            <h3>Minimum Distance</h3>
+          </button>
+          <div class="collapsible-content" id="distance-collapse">
+            <ul>
+              <li>Input tye: <i>Float</i></li>
+              <li>
+                Controls the minimum distance between points in the final
+                embedding.
+              </li>
+              <li>
+                Lower values means points and clusters will be closer together,
+                while larger values push them apart.
+              </li>
+              <li>
+                Click
+                <a
+                  href="https://umap-learn.readthedocs.io/en/latest/parameters.html#min-dist"
+                  >here</a
+                >
+                for more information.
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'seed-collapse')"
+          >
+            <h3>Random Seed</h3>
+          </button>
+          <div class="collapsible-content" id="seed-collapse">
+            <ul>
+              <li>Input tye: <i>Integer</i></li>
+              <li>
+                Sets the random state of UMAP to a set number for
+                reproducibility.
+              </li>
+              <li>
+                Click
+                <a
+                  href="https://umap-learn.readthedocs.io/en/latest/reproducibility.html#umap-reproducibility"
+                  >here</a
+                >
+                for more information.
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
+    <script src="{% static 'help/js/help.js' %}"></script>
   </body>
-  <style>
-    /* General styling */
-    h2 {
-      margin: 2px;
-      padding: 5px;
-      margin-top: 10px;
-    }
-
-    .center-text {
-      text-align: center;
-    }
-
-    .flex-center {
-      display: flex;
-      justify-content: center;
-    }
-
-    li {
-      margin-top: 15px;
-      margin-bottom: 15px;
-    }
-
-    ul {
-      margin-bottom: 0px;
-    }
-
-    /* Category buttons */
-    .rounded-button {
-      padding: 10px 30px;
-      font-size: xx-large;
-      color: rgb(0, 0, 0);
-      background-color: #ffffff;
-      box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
-      width: 200px;
-      border: none;
-      border-radius: 50px;
-      cursor: pointer;
-      transition: background-color 0.3s ease, transform 0.2s ease;
-    }
-
-    .rounded-button.selected {
-      background-color: #9cc5e7;
-    }
-
-    .rounded-button:hover {
-      background-color: #9cc5e7;
-      transform: scale(1.05);
-    }
-
-    .rounded-button:active {
-      transform: scale(0.95);
-    }
-
-    .help-button-container {
-      margin-top: 30px;
-      display: flex;
-      justify-content: center;
-      column-gap: 20px;
-    }
-
-    .help-content-container {
-      display: flex;
-      justify-content: center;
-      padding-top: 25px;
-      margin: 10px;
-    }
-
-    /* Format setion stuff */
-
-    .format-content-container {
-      background-color: white;
-      box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
-      border-radius: 5px;
-      width: 750px;
-      display: none; /* Here for implementing other menus temporarliy */
-    }
-
-    .example-data {
-      background-color: rgb(235, 235, 235);
-      border-radius: 5px;
-      display: inline-block;
-      width: auto;
-      margin: 10px;
-    }
-
-    pre {
-      padding: 5px;
-      margin: 0px;
-      font-size: large;
-    }
-
-    /* TOOLS CSS */
-    .tools-content-container {
-      box-shadow: 0 3px 9px rgba(0, 0, 0, 0.2);
-      border-radius: 7px;
-      background-color: rgb(235, 235, 235);
-      display: none;
-    }
-    
-    /* Style the tab */
-    .tabs {
-      overflow: hidden;
-      border: 1px solid #ccc;
-      background-color: #ffffff;
-      border-top-right-radius: 7px;
-      border-top-left-radius: 7px;
-    }
-
-    /* Style the buttons that are used to open the tab content */
-    .tabs button {
-      background-color: inherit;
-      float: left;
-      border: none;
-      outline: none;
-      cursor: pointer;
-      padding: 14px 16px;
-      transition: 0.3s;
-    }
-
-    /* Change background color of buttons on hover */
-    .tabs button:hover {
-      background-color: #ddd;
-    }
-
-    /* Create an active/current tablink class */
-    .tabs button.active {
-      background-color: #ccc;
-    }
-
-    .tab-content-outline {
-      border: 1px solid #ccc;
-      background-color: rgb(235, 235, 235);
-      border-bottom-right-radius: 7px;
-      border-bottom-left-radius: 7px;
-      border-top: none;
-    }
-
-    .tabcontent {
-      display: none;
-      padding: 6px 12px;
-      animation: fadeEffect 0.5s;
-      text-wrap: wrap;
-      font-size: large;
-    }
-
-    @keyframes fadeEffect {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-  </style>
-
-  <script>
-    let allTabContent = document.getElementsByClassName("tabcontent");
-    let allTabs = document.getElementsByClassName("tablinks");
-
-    document.getElementById("defaultTab").click();
-
-    function openTool(event, tool) {
-      for (let i = 0; i < allTabContent.length; i++) {
-        allTabContent[i].style.display = "none";
-        allTabs[i].classList.remove("active");
-      }
-      event.currentTarget.classList.add("active");
-      document.getElementById(tool).style.display = "block";
-    }
-  </script>
 </html>

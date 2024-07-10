@@ -7,16 +7,16 @@ from .dataReduction import umap_reduction
 
 # Create your views here.
 def home(request):
-    return render(request, "base.html")
+    return render(request, 'base.html')
 
 def read_output(request):
-    if request.method == "POST":
+    if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            fileData = data.get("file")
-            neighbors = data.get("neighbors")
-            seed = data.get("seed")
-            minDistance = data.get("minDistance")        
+            fileData = data.get('file')
+            neighbors = data.get('neighbors')
+            seed = data.get('seed')
+            minDistance = data.get('minDistance')        
             data = json.loads(umap_reduction(fileData, neighbors, minDistance, seed))
             return JsonResponse(data, safe=False)
         except Exception as e:
@@ -32,4 +32,7 @@ def read_graph(request):
     return FileResponse(open(file_path, 'rb'), content_type='text/html')
 
 def help(request):
-    return render(request, "help.html")
+    return render(request, 'help.html')
+
+def about(request):
+    return render(request, 'about.html')

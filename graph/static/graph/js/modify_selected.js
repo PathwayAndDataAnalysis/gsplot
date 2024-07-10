@@ -31,6 +31,12 @@ function updateContent() {
 
   // Clear table
   allTablesContainer.innerHTML = "";
+
+  if (selecteditems.length === 0) {
+    displayPlaceholder();
+    return;
+  }
+
   // Compare all sets in selected items and find the shared molecules
   for (let i = 0; i < selecteditems.length; i++) {
     let set1 = new Set(selecteditems[i]["molecules"].split(" "));
@@ -76,7 +82,7 @@ function tableCreator(selectedPoint, intersection) {
   // Create second row in table containing the q-value
   const secondRow = document.createElement("tr");
   const qValueHeader = document.createElement("th");
-  qValueHeader.textContent = "Q-Value";
+  qValueHeader.textContent = "P-Value";
   const qValue = document.createElement("td");
   qValue.textContent = selectedPoint["qValue"]; // Apply Q-Value
   secondRow.appendChild(qValueHeader);
@@ -101,6 +107,12 @@ function tableCreator(selectedPoint, intersection) {
   table.appendChild(tableBody);
   tableContainer.appendChild(table);
   allTablesContainer.appendChild(tableContainer);
+}
+
+function displayPlaceholder() {
+  const placeholder = document.createElement("p");
+  placeholder.textContent = "Please select a point above by clicking it.";
+  allTablesContainer.appendChild(placeholder);
 }
 
 // Apply bolding to molecules via HTML
