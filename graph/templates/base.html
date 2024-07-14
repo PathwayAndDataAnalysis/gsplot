@@ -19,7 +19,7 @@
     <nav class="nav-bar">
       <div class="header-container">
         <div class="title">
-          <h1>Gene Set Plot</h1>
+          <a href="/"><h1>Gene Set Plot</h1></a>
         </div>
       </div>
       <div class="nav-links">
@@ -35,8 +35,7 @@
             style="enable-background: new 0 0 512 512"
             version="1.1"
             viewBox="0 0 512 512"
-            width="100%"
-            xml:space="preserve"
+            width="40"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
@@ -48,13 +47,17 @@
       </div>
     </nav>
     <div id="upload-container">
+      <div id="welcome-message">
+        <h1>Welcome to Gene Set Plot</h1>
+        <h3>A Gene Set Enrichment Analysis (GSEA) visualization tool.</h3>
+      </div>
       <div id="initial-upload">
         <h2>Please Select Data File</h2>
         <div>
           <input type="file" id="initial-file-input" />
           <button id="initial-upload-button">Upload</button>
         </div>
-        <p>To get started, click <b>Help</b> in the top right.</p>
+        <p>For more information, click <b>Help</b> in the top right.</p>
       </div>
     </div>
     <div id="graph-settings-container">
