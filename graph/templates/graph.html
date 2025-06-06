@@ -12,6 +12,7 @@
         // File is an HTML file because it is imported to the main page as an iframe so the graph renders correctly
 
         // All keys of the "data" key in local storage. Used to iterate through all keys of data
+        // dataKeys: a list of all the things each point needs (coordinates, name, color, etc.)
         const dataKeys = [
           "X",
           "Y",
@@ -24,9 +25,14 @@
         ];
 
         // Get refrences to graph div and loading spinner
-        const myPlot = document.getElementById("plot-container");
-        const spinnerOverlay =
+        const myPlot = document.getElementById("plot-container"); // myPlot: the graph itself (div element)
+        const spinnerOverlay =                                    // spinnerOverlay: loading spinner that appears while waiting for data
           window.parent.document.getElementById("loading-spinner");
+
+        // Start drawing
+        // This runs when the page loads
+        // If the data isn’t already saved, it fetches new UMAP data from backend.
+        // Then calls graph() to actually draw the chart.
 
         // Draw initial graph
         async function main() {
@@ -56,6 +62,7 @@
 
         // Draws graph based on current data stored in local storage
         function graph() {
+          // Loads current user settings, data, and previous zoom view (called camera).
           // Getting resources from local storage
           let settings = getLocalStorage("settings");
           let fullGraphData = getLocalStorage("data");
@@ -73,6 +80,8 @@
           }
 
           // This stores the data only for points that are going to be displayed. (points that are < qval max and > q-val min)
+          // Creates a filtered list of points that pass the user’s cutoff settings.
+          // Example: show only points with qValue between 0.01 and 0.1.
           let displayedGraphData = {};
           dataKeys.forEach((key) => {
             displayedGraphData[key] = [];
@@ -95,6 +104,7 @@
           }
 
           // Create a plotly trace, this contians all data for each point on graph based on displayedGraphData
+          // trace = the visual data for Plotly to use (coordinates, sizes, color, etc.)
           let trace = makeTrace(displayedGraphData, settings);
 
           // Define layout properties of graoh
@@ -134,10 +144,14 @@
           // Custom Camera settings: find zoom level that displays all points (even the ones outside of cutoff) and let that be the max
           // This is done for clarity so when user zooms out, it returns to same zoom level every time.
           // First check if camera settings exist for this data set already, if not, create new settings
+
+          // If the user had a zoomed view earlier, it restores it.
           if (camera) {
             layout.xaxis = camera["xaxis"];
             layout.yaxis = camera["yaxis"];
             Plotly.newPlot(myPlot, [trace], layout, config);
+          
+          // If not, it figures out the best zoom and saves it.
           } else {
             // Create a graph with full data set in order to grab the xaxis and yaxis zoom levels
             Plotly.newPlot(

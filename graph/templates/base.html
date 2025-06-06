@@ -60,6 +60,9 @@
         <p>For more information, click <b>Help</b> in the top right.</p>
       </div>
     </div>
+    <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
+      <h3 style="text-align: center;">Select Gene Set Group(s):</h3>
+    </div>
     <div id="graph-settings-container">
       <iframe id="graph" src="{% url 'read_graph' %}" frameborder="0"></iframe>
       <div class="settings-container">
@@ -182,5 +185,7 @@
     <script src="{% static 'graph/js/update_settings.js' %}"></script>
     <script src="{% static 'graph/js/modify_selected.js' %}"></script>
     <script src="{% static 'graph/js/upload_file.js' %}"></script>
+    <script src="{% static 'graph/js/msigdb_loader.js' %}"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
   </body>
 </html>
