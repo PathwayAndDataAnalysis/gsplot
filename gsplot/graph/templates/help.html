@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive UMAP Plot</title>
+    {% load static %}
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="{% static 'graph/css/style.css' %}"
+    />
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="{% static 'help/css/help_style.css' %}"
+    />
+  </head>
+  <body>
+    <nav class="nav-bar">
+      <div class="header-container">
+        <div class="title">
+          <a href="/"><h1>Gene Set Plot</h1></a>
+        </div>
+      </div>
+      <div class="nav-links">
+        <a class="nav-button" href="/">Graph</a>
+        <a class="nav-button" href="/help">Help</a>
+        <a class="nav-button" href="/about">About Us</a>
+      </div>
+    </nav>
+    <div id="help-button-container">
+      <button
+        class="rounded-button"
+        id="format-help"
+        onclick="openSection(event, 'format-content-container')"
+      >
+        Input
+      </button>
+      <button
+        class="rounded-button"
+        id="tools-help"
+        onclick="openSection(event, 'tools-content-container')"
+      >
+        Tools
+      </button>
+      <button
+        class="rounded-button"
+        id="settings-help"
+        onclick="openSection(event, 'settings-content-container')"
+      >
+        Settings
+      </button>
+    </div>
+    <div id="help-content-container">
+      <div id="format-content-container">
+        <h2 class="center-text">How to Format Input Data:</h2>
+        <div class="format-instructions">
+          <ul>
+            <li>
+              All data should be saved as a tab seperated value (.tsv) file.
+            </li>
+            <li>The top line of the file should be a header line.</li>
+            <li>
+              There should be three columns of data on each line with the
+              following headers:
+            </li>
+            <ul>
+              <li>Name - The name of the gene set.</li>
+              <li>
+                Molecules - Molecules in the set that were enriched, each
+                seperated by a space.
+              </li>
+              <li>
+                Value - The p-value, q-value, or whatever metric the sets are
+                evaluated by.
+              </li>
+            </ul>
+            <li>
+              The order of these columns does not matter, but each line of data
+              must match the order of the header.
+            </li>
+            <li>
+              Click
+              <a href="{% static 'graph/data/example_data.tsv' %}" download
+                >here</a
+              >
+              to download an example data file.
+            </li>
+            <li>
+              This is what the first three lines of a data file might look like:
+            </li>
+          </ul>
+          <div class="flex-center">
+            <div class="example-data">
+              <pre><code>Name	Molecules	Value
+GO_PODOSOME_ASSEMBLY	DBNL BIN2 SRC MSN ASAP1 ARHGEF2	0.074073679
+GO_PROFILIN_BINDING	VASP CTTN WIPF1 HTT DBN1	0.2582822646196803</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="tools-content-container">
+        <div class="tabs">
+          <button
+            id="defaultTab"
+            class="tablinks"
+            onclick="openTool(event, 'screenshot')"
+          >
+            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m500 450c-83 0-150-67-150-150 0-83 67-150 150-150 83 0 150 67 150 150 0 83-67 150-150 150z m400 150h-120c-16 0-34 13-39 29l-31 93c-6 15-23 28-40 28h-340c-16 0-34-13-39-28l-31-94c-6-15-23-28-40-28h-120c-55 0-100-45-100-100v-450c0-55 45-100 100-100h800c55 0 100 45 100 100v450c0 55-45 100-100 100z m-400-550c-138 0-250 112-250 250 0 138 112 250 250 250 138 0 250-112 250-250 0-138-112-250-250-250z m365 380c-19 0-35 16-35 35 0 19 16 35 35 35 19 0 35-16 35-35 0-19-16-35-35-35z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'zoom')">
+            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m1000-25l-250 251c40 63 63 138 63 218 0 224-182 406-407 406-224 0-406-182-406-406s183-406 407-406c80 0 155 22 218 62l250-250 125 125z m-812 250l0 438 437 0 0-438-437 0z m62 375l313 0 0-312-313 0 0 312z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'pan')">
+            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m1000 350l-187 188 0-125-250 0 0 250 125 0-188 187-187-187 125 0 0-250-250 0 0 125-188-188 186-187 0 125 252 0 0-250-125 0 187-188 188 188-125 0 0 250 250 0 0-126 187 188z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'box')">
+            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m0 850l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z m285 0l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z m-857-286l0-143 143 0 0 143-143 0z m857 0l0-143 143 0 0 143-143 0z m-857-285l0-143 143 0 0 143-143 0z m857 0l0-143 143 0 0 143-143 0z m-857-286l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z m285 0l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'lasso')">
+            <svg viewBox="0 0 1031 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m1018 538c-36 207-290 336-568 286-277-48-473-256-436-463 10-57 36-108 76-151-13-66 11-137 68-183 34-28 75-41 114-42l-55-70 0 0c-2-1-3-2-4-3-10-14-8-34 5-45 14-11 34-8 45 4 1 1 2 3 2 5l0 0 113 140c16 11 31 24 45 40 4 3 6 7 8 11 48-3 100 0 151 9 278 48 473 255 436 462z m-624-379c-80 14-149 48-197 96 42 42 109 47 156 9 33-26 47-66 41-105z m-187-74c-19 16-33 37-39 60 50-32 109-55 174-68-42-25-95-24-135 8z m360 75c-34-7-69-9-102-8 8 62-16 128-68 170-73 59-175 54-244-5-9 20-16 40-20 61-28 159 121 317 333 354s407-60 434-217c28-159-121-318-333-355z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'zoomIn')">
+            <svg viewBox="0 0 875 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m1 787l0-875 875 0 0 875-875 0z m687-500l-187 0 0-187-125 0 0 187-188 0 0 125 188 0 0 187 125 0 0-187 187 0 0-125z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'zoomOut')">
+            <svg viewBox="0 0 875 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m0 788l0-876 875 0 0 876-875 0z m688-500l-500 0 0 125 500 0 0-125z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'autoscale')">
+            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m250 850l-187 0-63 0 0-62 0-188 63 0 0 188 187 0 0 62z m688 0l-188 0 0-62 188 0 0-188 62 0 0 188 0 62-62 0z m-875-938l0 188-63 0 0-188 0-62 63 0 187 0 0 62-187 0z m875 188l0-188-188 0 0-62 188 0 62 0 0 62 0 188-62 0z m-125 188l-1 0-93-94-156 156 156 156 92-93 2 0 0 250-250 0 0-2 93-92-156-156-156 156 94 92 0 2-250 0 0-250 0 0 93 93 157-156-157-156-93 94 0 0 0-250 250 0 0 0-94 93 156 157 156-157-93-93 0 0 250 0 0 250z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+          <button class="tablinks" onclick="openTool(event, 'reset')">
+            <svg viewBox="0 0 928.6 1000" class="icon" height="4em" width="4em">
+              <path
+                d="m786 296v-267q0-15-11-26t-25-10h-214v214h-143v-214h-214q-15 0-25 10t-11 26v267q0 1 0 2t0 2l321 264 321-264q1-1 1-4z m124 39l-34-41q-5-5-12-6h-2q-7 0-12 3l-386 322-386-322q-7-4-13-4-7 2-12 7l-35 41q-4 5-3 13t6 12l401 334q18 15 42 15t43-15l136-114v109q0 8 5 13t13 5h107q8 0 13-5t5-13v-227l122-102q5-5 6-12t-4-13z"
+                transform="matrix(1 0 0 -1 0 850)"
+              ></path>
+            </svg>
+          </button>
+        </div>
+        <div class="tab-content-outline">
+          <div id="screenshot" class="tabcontent">
+            <h3>Screenshot</h3>
+            <ul>
+              <li>
+                <b>On Selection:</b> A sreenshot of the current graph will be
+                taken and saved as a png.
+              </li>
+            </ul>
+          </div>
+          <div id="zoom" class="tabcontent">
+            <h3>Zoom</h3>
+            <ul>
+              <li>
+                <b>Click and Drag on Graph:</b> Zoom in on a selected area on
+                the graph.
+              </li>
+              <li>
+                <b>Click and Drag on Axis:</b> Zoom in on selected range on
+                UMAP-1 or UMAP-2.
+              </li>
+              <li>
+                <b>Double Click on Graph:</b> Apply default zoom which fits all
+                points, even hidden ones.
+              </li>
+            </ul>
+          </div>
+          <div id="pan" class="tabcontent">
+            <h3>Pan</h3>
+            <ul>
+              <li><b>Click and Drag on Graph:</b> Pan accross graph.</li>
+              <li><b>Click and Drag on Axis:</b> Pan accross selected axis.</li>
+              <li>
+                <b>Double Click on Graph:</b> Apply default zoom which fits all
+                points, even hidden ones.
+              </li>
+            </ul>
+          </div>
+          <div id="box" class="tabcontent">
+            <h3>Box Select</h3>
+            <ul>
+              <li>
+                <b>Click and Drag on Graph:</b> Select points in a box to
+                compare below graph.
+              </li>
+              <li><b>Double Click on Graph:</b> Exit selection mode.</li>
+            </ul>
+          </div>
+          <div id="lasso" class="tabcontent">
+            <h3>Lasso Select</h3>
+            <ul>
+              <li>
+                <b>Click and Drag on Graph:</b> Select points in a custom area
+                to compare below graph.
+              </li>
+              <li><b>Double Click on Graph:</b> Exit selection mode.</li>
+            </ul>
+          </div>
+          <div id="zoomIn" class="tabcontent">
+            <h3>Zoom In</h3>
+            <ul>
+              <li><b>On Selection:</b> Zoom into center of graph.</li>
+            </ul>
+          </div>
+          <div id="zoomOut" class="tabcontent">
+            <h3>Zoom Out</h3>
+            <ul>
+              <li><b>On Selection:</b> Zoom out of center of graph.</li>
+            </ul>
+          </div>
+          <div id="autoscale" class="tabcontent">
+            <h3>Autoscale</h3>
+            <ul>
+              <li>
+                <b>On Selection:</b> Scale graph to fit all points and labels on
+                screen
+              </li>
+              <li>
+                <b>Double Click on Graph:</b> Apply default zoom which fits all
+                points, even hidden ones.
+              </li>
+            </ul>
+          </div>
+          <div id="reset" class="tabcontent">
+            <h3>Reset Scale</h3>
+            <ul>
+              <li>
+                <b>On Selection:</b> Apply default zoom which fits all points,
+                even hidden ones.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div id="settings-content-container">
+        <h2 class="center-text">Graph and Visual Settings</h2>
+        <div class="graph-settings">
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'point-color-collapse')"
+          >
+            <h3>Point Color</h3>
+          </button>
+          <div class="collapsible-content" id="point-color-collapse">
+            <ul>
+              <li>The color of all points is a gradient between two colors.</li>
+              <li>
+                A gene set's position on this gradient is determined based on
+                its p-value.
+              </li>
+              <li>
+                <b>Most Significant Color</b><i> (RGB):</i> Determines color for
+                most significant gene set.
+              </li>
+              <li>
+                <b>Least Significant Color</b><i> (RGB):</i> Determines color
+                for least significant gene set.
+              </li>
+              <li>
+                <b>Selected Color</b><i> (RGB):</i> Controls the color of the
+                outline placed around selected points on graph.
+              </li>
+            </ul>
+          </div>
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'q-value-collapse')"
+          >
+            <h3>Q-Value Range</h3>
+          </button>
+          <div id="q-value-collapse" class="collapsible-content">
+            <ul>
+              <li>
+                This determines what points are displayed on the graph from the
+                data set based on p-value.
+              </li>
+              <li>
+                <b>Maximum</b><i> (Float):</i> The largest p-value a displayed
+                point can have
+              </li>
+              <li>
+                <b>Minimum</b><i> (Float):</i> the smallest p-value a displayed
+                point can have.
+              </li>
+              <li>This also sets the range for the color gradient.</li>
+              <ul>
+                <li>
+                  Maximum sets the p-value for the least significant color.
+                </li>
+                <li>Minimum sets the p-value for most significant color.</li>
+              </ul>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'point-size-collapse')"
+          >
+            <h3>Point Size</h3>
+          </button>
+          <div class="collapsible-content" id="point-size-collapse">
+            <ul>
+              <li>
+                <b>Fixed</b><i> (Float):</i> The size of every point is the
+                same, represents the length of its diamater in pixels.
+              </li>
+              <li>
+                <b>Dynamic</b><i> (Float):</i> The size of each point is
+                determined by it's number of enriched molecules.
+              </li>
+              <ul>
+                <li>
+                  The number of molecules is treated as the area, and can be
+                  scaled by any positive float.
+                </li>
+              </ul>
+            </ul>
+          </div>
+        </div>
+        <h2 class="center-text">UMAP Settings</h2>
+        <div class="umap-settings">
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'neighbors-collapse')"
+          >
+            <h3>Neighbors</h3>
+          </button>
+          <div class="collapsible-content" id="neighbors-collapse">
+            <ul>
+              <li>Input tye: <i>Integer</i></li>
+              <li>
+                Sets the number of neighbors paramater used in UMAP calculation.
+              </li>
+              <li>
+                Smaller values result in smaller clusters on embedding, while
+                higher values produce larger clusters.
+              </li>
+              <li>
+                Click
+                <a
+                  href="https://umap-learn.readthedocs.io/en/latest/parameters.html#n-neighbors"
+                  >here</a
+                >
+                for more information.
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'distance-collapse')"
+          >
+            <h3>Minimum Distance</h3>
+          </button>
+          <div class="collapsible-content" id="distance-collapse">
+            <ul>
+              <li>Input tye: <i>Float</i></li>
+              <li>
+                Controls the minimum distance between points in the final
+                embedding.
+              </li>
+              <li>
+                Lower values means points and clusters will be closer together,
+                while larger values push them apart.
+              </li>
+              <li>
+                Click
+                <a
+                  href="https://umap-learn.readthedocs.io/en/latest/parameters.html#min-dist"
+                  >here</a
+                >
+                for more information.
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'seed-collapse')"
+          >
+            <h3>Random Seed</h3>
+          </button>
+          <div class="collapsible-content" id="seed-collapse">
+            <ul>
+              <li>Input tye: <i>Integer</i></li>
+              <li>
+                Sets the random state of UMAP to a set number for
+                reproducibility.
+              </li>
+              <li>
+                Click
+                <a
+                  href="https://umap-learn.readthedocs.io/en/latest/reproducibility.html#umap-reproducibility"
+                  >here</a
+                >
+                for more information.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="{% static 'help/js/help.js' %}"></script>
+  </body>
+</html>

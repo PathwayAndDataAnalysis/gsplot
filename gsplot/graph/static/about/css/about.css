@@ -1,0 +1,97 @@
+li {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+ul {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+.about-container {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  row-gap: 25px;
+}
+
+.bio-lab-container h1 {
+  font-family: Lato, sans-serif;
+  text-align: center;
+  font-weight: normal;
+  font-size: 2rem;
+  width: 200px;
+}
+
+.bio-lab-container img {
+  max-width: 150px;
+  height: 150px;
+}
+
+.bio-lab-header {
+  display: flex;
+}
+
+.bio-lab-container {
+  padding: 15px;
+  border-radius: 5px;
+  background-color: white;
+  align-items: center;
+  display: flex;
+  column-gap: 100px;
+  justify-content: space-between;
+  width: 900px;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+}
+
+.signature-header {
+  font-size: xx-large;
+}
+
+.signature-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: white;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+  padding: 15px;
+  border-radius: 5px;
+  width: 600px;
+}
+
+.signature-container p {
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+.signature-content {
+  display: flex;
+}
+
+.signature-content img {
+  width: 200px;
+  height: 200px;
+  margin: 5px;
+}
+
+.headshot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: x-large;
+}
+
+.about-me {
+  font-size: large;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.socials {
+  display: flex;
+  column-gap: 40px;
+  margin-top: 5px;
+}

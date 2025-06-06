@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    {% csrf_token %}
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive UMAP Plot</title>
+    {% load static %}
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="{% static 'graph/css/style.css' %}"
+    />
+  </head>
+  <body>
+    <div id="loading-spinner" class="spinner-overlay">
+      <div class="spinner"></div>
+    </div>
+
+    <nav class="nav-bar">
+      <div class="header-container">
+        <div class="title">
+          <a href="/"><h1>Gene Set Plot</h1></a>
+        </div>
+      </div>
+      <div class="nav-links">
+        <span class="nav-button" id="nav-import" onclick="importFile()">Import Data</span>
+        <a class="nav-button" href="/help">Help</a>
+        <a class="nav-button" href="/about">About Us</a>
+        <div class="settings-button">
+          <!-- Gear Icon -->
+          <svg height="100%" viewBox="0 0 512 512" width="40" xmlns="http://www.w3.org/2000/svg">
+            <path d="M424.5,216.5h-15.2c..."></path>
+          </svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Upload Section (No form) -->
+    <div id="upload-container">
+      <div id="welcome-message">
+        <h1>Welcome to Gene Set Plot</h1>
+        <h3>A Gene Set Enrichment Analysis (GSEA) visualization tool.</h3>
+      </div>
+
+      <div id="initial-upload">
+        <h2>Option 1: Upload File</h2>
+        <div style="margin-bottom: 20px;">
+          <input type="file" id="initial-file-input" style="margin-bottom: 10px;" />
+        </div>
+        <button id="initial-upload-button" style="padding: 10px 20px; font-size: 16px;">Submit File</button>
+        <p>For more information, click <b>Help</b> in the top right.</p>
+      </div>
+    </div>
+
+    <!-- Manual Gene Input (No form) -->
+    <div id="manual-gene-input" style="margin-top: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+      <h2>Manual Gene Input</h2>
+
+      <label for="id_significant_genes" style="font-weight: bold;">Significant Genes:</label><br/>
+      <textarea id="id_significant_genes" rows="5" cols="40"
+        placeholder="Enter significant genes, comma or newline separated"
+        style="width: 100%; padding: 10px; font-size: 16px; resize: vertical; margin-bottom: 15px;"></textarea>
+
+      <label for="id_insignificant_genes" style="font-weight: bold;">Insignificant Genes:</label><br/>
+      <textarea id="id_insignificant_genes" rows="5" cols="40"
+        placeholder="Enter insignificant genes, comma or newline separated"
+        style="width: 100%; padding: 10px; font-size: 16px; resize: vertical; margin-bottom: 25px;"></textarea>
+
+      <button id="submit-gene-button" style="padding: 10px 20px; font-size: 16px;">Submit Genes</button>
+    </div>
+
+    <!-- Graph + Settings -->
+    <div id="graph-settings-container">
+      <iframe id="graph" src="{% url 'read_graph' %}" frameborder="0"></iframe>
+      <div class="settings-container">
+        <div class="settings">
+          <div class="graph-settings-header"><h3>Graph Settings</h3></div>
+
+          <h4>Point Color</h4>
+          <div class="color-options">
+            <div class="option">
+              <label for="insignificant-color">Least Significant:</label>
+              <input type="color" id="insignificant-color" name="insignificant-color" />
+            </div>
+            <div class="option">
+              <label for="significant-color">Most Significant:</label>
+              <input type="color" id="significant-color" name="significant-color" />
+            </div>
+            <div class="option">
+              <label for="selected-color">Selected:</label>
+              <input type="color" id="selected-color" name="selected-color" />
+            </div>
+          </div>
+
+          <h4>P-Value Range</h4>
+          <div class="option">
+            <label for="q-value-maximum">Maximum:</label>
+            <input type="numeric" id="q-value-maximum" name="q-value-maximum" />
+          </div>
+          <div class="option">
+            <label for="q-value-minimum">Minimum:</label>
+            <input type="numeric" id="q-value-minimum" name="q-value-minimum" />
+          </div>
+
+          <h4>Point Size</h4>
+          <div class="size-options">
+            <div class="radio-container">
+              <div class="option">
+                <label for="fixed-size">Fixed:</label>
+                <input type="radio" id="fixed-size" name="point-size" value="fixed" />
+              </div>
+              <div class="option">
+                <label for="dynamic-size">Dynamic:</label>
+                <input type="radio" id="dynamic-size" name="point-size" value="dynamic" />
+              </div>
+            </div>
+            <div class="size-number-container">
+              <div id="fixed-size-input-reveal">
+                <div class="option">
+                  <label for="fixed-size-input">Size:</label>
+                  <input type="numeric" id="fixed-size-input" name="fixed-size-input" />
+                </div>
+              </div>
+              <div id="dynamic-size-input-reveal">
+                <div class="option">
+                  <label for="dynamic-size-scalar">Scalar:</label>
+                  <input type="numeric" id="dynamic-size-scalar" name="dynamic-size-scalar" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="umap-settings-header"><h3>UMAP Settings</h3></div>
+          <div class="option">
+            <label for="number-of-neighbors">Number of Neighbors:</label>
+            <input type="numeric" id="number-of-neighbors" name="number-of-neighbors" />
+          </div>
+          <div class="option">
+            <label for="minimum-distance">Minimum Distance:</label>
+            <input type="numeric" id="minimum-distance" name="minimum-distance" />
+          </div>
+          <div class="option">
+            <label for="seed">Seed (0 is random):</label>
+            <input type="numeric" id="seed" name="seed" />
+          </div>
+
+          <div class="button-container">
+            <button onclick="clearSelected()">Clear Selected</button>
+            <button onclick="updateSettings()">Apply</button>
+            <button onclick="toggleLabels()">Toggle Labels</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="selected-section">
+      <div id="selected-points-header">
+        <h2>Selected Points:</h2>
+      </div>
+      <div id="selected-points-container"></div>
+    </div>
+
+    <!-- JavaScript Files -->
+    <script src="{% static 'graph/js/update_settings.js' %}"></script>
+    <script src="{% static 'graph/js/modify_selected.js' %}"></script>
+    <script src="{% static 'graph/js/upload_file.js' %}"></script>
+  </body>
+</html>

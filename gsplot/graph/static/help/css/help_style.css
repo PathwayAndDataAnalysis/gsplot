@@ -1,0 +1,199 @@
+/* General styling */
+h2 {
+  margin: 2px;
+  padding: 5px;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.center-text {
+  text-align: center;
+}
+
+.flex-center {
+  display: flex;
+  justify-content: center;
+}
+
+li {
+  margin-top: 15px;
+  margin-bottom: 15px;
+}
+
+ul {
+  margin-bottom: 0px;
+}
+
+/* Category buttons */
+.rounded-button {
+  padding: 10px 30px;
+  font-size: xx-large;
+  color: rgb(0, 0, 0);
+  background-color: #ffffff;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+  width: 200px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.rounded-button.selected {
+  background-color: #9cc5e7;
+}
+
+.rounded-button:hover {
+  background-color: #9cc5e7;
+  transform: scale(1.05);
+}
+
+.rounded-button:active {
+  transform: scale(0.95);
+}
+
+#help-button-container {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+  column-gap: 20px;
+}
+
+#help-content-container {
+  display: flex;
+  justify-content: center;
+  padding-top: 25px;
+  margin: 10px;
+}
+
+/* Format setion stuff */
+
+#format-content-container {
+  background-color: white;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  width: 750px;
+  display: none; /* Here for implementing other menus temporarliy */
+  animation: fadeEffect 0.5s;
+}
+
+.example-data {
+  background-color: rgb(235, 235, 235);
+  border-radius: 5px;
+  display: inline-block;
+  width: auto;
+  margin: 10px;
+}
+
+pre {
+  padding: 5px;
+  margin: 0px;
+  font-size: large;
+}
+
+/* TOOLS CSS */
+#tools-content-container {
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.2);
+  border-radius: 7px;
+  background-color: rgb(221, 220, 220);
+  display: none;
+  animation: fadeEffect 0.5s;
+}
+
+/* Style the tab */
+.tabs {
+  overflow: hidden;
+  border: 1px solid #ccc;
+  background-color: #ffffff;
+  border-top-right-radius: 7px;
+  border-top-left-radius: 7px;
+}
+
+/* Style the buttons that are used to open the tab content */
+.tabs button {
+  background-color: inherit;
+  float: left;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  padding: 14px 16px;
+  transition: 0.3s;
+}
+
+/* Change background color of buttons on hover */
+.tabs button:hover {
+  background-color: #ddd;
+}
+
+/* Create an active/current tablink class */
+.tabs button.active {
+  background-color: #ccc;
+}
+
+.tab-content-outline {
+  border: 1px solid #ccc;
+  background-color: rgb(235, 235, 235);
+  border-bottom-right-radius: 7px;
+  border-bottom-left-radius: 7px;
+  border-top: none;
+}
+
+.tabcontent {
+  display: none;
+  padding: 6px 12px;
+  animation: fadeEffect 0.5s;
+  text-wrap: wrap;
+  font-size: large;
+}
+
+@keyframes fadeEffect {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Settings help content */
+#settings-content-container {
+  margin-bottom: 15px;
+  width: 800px;
+  display: none;
+  animation: fadeEffect 0.5s;
+}
+
+.settings-content-container h2 {
+  margin: 10px;
+}
+
+.graph-settings {
+  max-width: 100%;
+}
+/* Style the button that is used to open and close the collapsible content */
+.collapsible {
+  background-color: #ffffff;
+  cursor: pointer;
+  padding: 10px;
+  padding-left: 18px;
+  width: 100%;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.collapsible.active,
+.collapsible:hover {
+  background-color: #ccc;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.collapsible-content {
+  padding: 0 18px;
+  overflow: hidden;
+  max-height: 0;
+  background-color: rgb(255, 255, 255);
+  text-wrap: wrap;
+  transition: max-height 0.2s ease-out;
+}
