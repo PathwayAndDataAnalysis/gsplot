@@ -22,11 +22,12 @@
           "molecules",
           "color",
           "pointNumber",
+          "clusterName"
         ];
 
         // Get refrences to graph div and loading spinner
-        const myPlot = document.getElementById("plot-container"); // myPlot: the graph itself (div element)
-        const spinnerOverlay =                                    // spinnerOverlay: loading spinner that appears while waiting for data
+        const myPlot = document.getElementById("plot-container");
+        const spinnerOverlay =
           window.parent.document.getElementById("loading-spinner");
 
         // Start drawing
@@ -39,15 +40,26 @@
           let settings = getLocalStorage("settings");
 
           // Check to see if there is already data saved, if not then fetch new data from backend
+          const hasRawFile = localStorage.getItem("rawFile");
+          const sigGenes = localStorage.getItem("sigGenes") || "";
+          const insigGenes = localStorage.getItem("insigGenes") || "";
+
+          const hasGeneInput = sigGenes.trim() || insigGenes.trim();
+
+
           if (getLocalStorage("data") === null) {
-            // Display loading spinner to block view
             showSpinner();
             try {
-              await getUmapData(settings);
+              if (hasRawFile) {
+                await getUmapData(settings);
+              }
+
+              if (hasGeneInput) {
+                await getGeneInputData();
+              }
             } catch (error) {
               hideSpinner();
               throw error;
-              return;
             }
             hideSpinner();
           }
@@ -311,6 +323,78 @@
               });
           });
         }
+
+
+        // Get new graph data from gene input on backend
+        function getGeneInputData() {
+          return new Promise((resolve, reject) => {
+            // Get the gene input values from your input fields (replace with your actual input element IDs)
+            //const sigGenes = localStorage.getItem("sigGenes") || "";
+            //const insigGenes = localStorage.getItem("insigGenes") || "";
+            const sigGenes = localStorage.getItem("sigGenes")
+            const insigGenes = localStorage.getItem("insigGenes")
+
+            if (!sigGenes.trim() && !insigGenes.trim()) {
+              reject(new Error("Please enter at least one gene in either field."));
+              return;
+            }
+
+            // Get CSRF token as before
+            const csrftoken = getCookie("csrftoken");
+
+            // POST gene data to /gene-input/ endpoint
+            fetch("/gene-input/", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrftoken,
+              },
+              body: JSON.stringify({
+                significant_genes: sigGenes,
+                insignificant_genes: insigGenes,
+              }),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  return response.json().then((errorData) => {
+                    reject(new Error(errorData.error || "Unknown error occurred"));
+                  });
+                }
+                return response.json();
+              })
+              .then((data) => {
+                // Clear camera and annotations as data changed
+                localStorage.removeItem("camera");
+                localStorage.removeItem("annotations");
+
+                // Convert returned data into the localStorage.data structure
+                let dataStorage = {};
+                dataKeys.forEach((key) => {
+                  dataStorage[key] = [];
+                });
+
+                for (let i = 0; i < data.length; i++) {
+                  dataKeys.forEach((key) => {
+                    if (key === "color") {
+                      dataStorage["color"].push("white");
+                    } else if (key === "pointNumber") {
+                      dataStorage["pointNumber"].push(i);
+                    } else {
+                      dataStorage[key].push(data[i][key]);
+                    }
+                  });
+                }
+
+                // Save data
+                setLocalStorage("data", dataStorage);
+                resolve();
+              })
+              .catch((error) => {
+                reject(error);
+              });
+          });
+        }
+
 
         // This listens for a settigns change, when changed apply them
         window.addEventListener("storage", function (e) {

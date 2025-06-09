@@ -7,6 +7,9 @@ from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from .dataReduction import umap_reduction
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
+from django.shortcuts import render
+from .dataReduction import run_fishers_test
+from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 # When someone goes to the website root (/), it shows the homepage (base.html).
@@ -19,6 +22,45 @@ def home(request):
     # UMAP settings (neighbors, minDistance, seed).
 # Calls umap_reduction() with that data.
 # Sends back JSON data (the reduced coordinates + info) to the frontend.
+
+
+@csrf_exempt
+def gene_input_view(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON body
+            data = json.loads(request.body)
+
+            # Get gene inputs
+            sig_input = data.get('significant_genes', '')
+            insig_input = data.get('insignificant_genes', '')
+
+            # Split inputs into cleaned gene lists
+            sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
+            insig_genes = [gene.strip().upper() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
+
+            # Remove duplicates and overlaps
+            sig_genes = list(set(sig_genes))
+            insig_genes = list(set(insig_genes))
+            overlap = set(sig_genes) & set(insig_genes)
+            sig_genes = [g for g in sig_genes if g not in overlap]
+            insig_genes = [g for g in insig_genes if g not in overlap]
+
+            print("Manual gene input received.")
+
+            # Run your analysis
+            results = run_fishers_test(sig_genes, insig_genes)
+
+            # Return result as JSON
+            data = json.loads(results)
+            return JsonResponse(data, safe=False)
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    # Method not allowed
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
 def read_output(request):
     if request.method == 'POST':
         try:
@@ -26,17 +68,16 @@ def read_output(request):
             fileData = data.get('file')
             neighbors = data.get('neighbors')
             seed = data.get('seed')
-            minDistance = data.get('minDistance')        
-            data = json.loads(umap_reduction(fileData, neighbors, minDistance, seed))
+            minDistance = data.get('minDistance')
+            output = umap_reduction(fileData, neighbors, minDistance, seed)
+            data = json.loads(output)
             return JsonResponse(data, safe=False)
-        # If there's an error:
-            # If anything goes wrong (e.g., file format is bad), send a JSON error back.
         except Exception as e:
             error_response = {
                 'error': str(e)
             }
             return JsonResponse(error_response, status=400)
-    else: 
+    else:
         return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 # Sends the graph.html file to be shown as a webpage — most likely inside an <iframe> on the main page.    
