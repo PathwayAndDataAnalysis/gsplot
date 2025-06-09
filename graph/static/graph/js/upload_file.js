@@ -4,6 +4,10 @@ const settingsContainer = document.querySelector(".settings-container"); // Cont
 const graphAndSettingsContainer = document.getElementById(
   "graph-settings-container"
 ); // Container for Graph and Settings area
+const loadingSpinner = document.getElementById("loading-spinner"); // Spinner element
+
+const submitContainer = document.getElementById("manual-gene-input"); // Container for the submit text button
+
 const uploadContainer = document.getElementById("upload-container"); // Container for the upload file button
 const selectedPoints = document.getElementById("selected-section"); // Container for selected points below graph
 const graph = document.getElementById("graph"); // Graph iframe
@@ -12,9 +16,12 @@ const fileInput = document.getElementById("initial-file-input"); // Select file 
 
 const transitionDuration = 300;
 
+// To cler storge for testing purposes
+clearLocalStorageExceptSettings()
+//localStorage.clear();
+
 // This becomes a refrence to the iframe once it has loaded
 let frame;
-
 graph.onload = () => {
   frame = graph.contentWindow;
   main();
@@ -27,14 +34,23 @@ async function main() {
     localStorage.getItem("data") !== null &&
     localStorage.getItem("rawFile") !== null
   ) {
+    // Show loading spinner
+    loadingSpinner.style.display = "block";
+
     await frame.main();
+
+    // Hide spinner after graph is ready
+    loadingSpinner.style.display = "none";
+
 
     // Hide upload and show graph
     hideUpload();
+    hideSubmit()
     showGraph();
   } else {
     // Show upload screen
     showUpload();
+    showSubmit
   }
 }
 
@@ -55,6 +71,7 @@ function importFile() {
     hideGraph();
     setTimeout(() => {
       showUpload();
+      showSubmit
     }, transitionDuration);
   }
 }
@@ -87,7 +104,10 @@ document
 
     // Try to draw graph, catch any error that comes up and display it
     try {
+      loadingSpinner.style.display = "block";
       await frame.main();
+      loadingSpinner.style.display = "none";
+
     } catch (error) {
       alert(`Check that file was formatted correctly, error: ${error}`);
       return;
@@ -96,10 +116,49 @@ document
     // Clear the fileInput button and show graph
     fileInput.value = "";
     hideUpload();
+    hideSubmit()
     setTimeout(() => {
       showGraph();
     }, transitionDuration);
   });
+
+function convertToExpectedFormat(arrayOfObjects) {
+  const keys = Object.keys(arrayOfObjects[0]);
+  const result = {};
+  for (const key of keys) {
+    result[key] = arrayOfObjects.map((obj) => obj[key]);
+  }
+  return result;
+}
+
+
+document.getElementById("submit-gene-button").addEventListener("click", async function () {
+  const sigGenes = document.getElementById("id_significant_genes").value;
+  const insigGenes = document.getElementById("id_insignificant_genes").value;
+
+  if (!sigGenes.trim() && !insigGenes.trim()) {
+    alert("Please enter at least one gene in either field.");
+    return;
+  }
+
+  // Save values to localStorage so the iframe can access them
+  localStorage.setItem("sigGenes", sigGenes.trim());
+  localStorage.setItem("insigGenes", insigGenes.trim());
+
+  try {
+    loadingSpinner.style.display = "block";
+    await frame.main();
+    loadingSpinner.style.display = "none";
+  } catch (error) {
+    alert("Error submitting genes: " + error.message);
+  }
+
+  hideUpload();
+  hideSubmit()
+  setTimeout(() => showGraph(), transitionDuration);
+
+});
+
 
 function showGraph() {
   graphAndSettingsContainer.classList.add("no-click");
@@ -131,7 +190,6 @@ function showUpload() {
     uploadContainer.classList.remove("no-click");
   }, 100);
 }
-
 function hideUpload() {
   uploadContainer.classList.add("no-click");
   uploadContainer.style.opacity = "0";
@@ -139,4 +197,29 @@ function hideUpload() {
     uploadContainer.style.display = "none";
     uploadContainer.classList.remove("no-click");
   }, transitionDuration);
+}
+
+function showSubmit() {
+  submitContainer.classList.add("no-click");
+  submitContainer.style.display = "flex";
+  setTimeout(() => {
+    submitContainer.style.opacity = "1";
+    submitContainer.classList.remove("no-click");
+  }, 100);
+}
+function hideSubmit() {
+  submitContainer.classList.add("no-click");
+  submitContainer.style.opacity = "0";
+  setTimeout(() => {
+    submitContainer.style.display = "none";
+    submitContainer.classList.remove("no-click");
+  }, transitionDuration);
+}
+
+function clearLocalStorageExceptSettings() {
+  const settingsBackup = localStorage.getItem("settings");
+  localStorage.clear();
+  if (settingsBackup) {
+    localStorage.setItem("settings", settingsBackup);
+  }
 }
