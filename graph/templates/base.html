@@ -62,6 +62,11 @@
     </div>
     <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
       <h3 style="text-align: center;">Select Gene Set Group(s):</h3>
+      <div style="text-align: center; margin-top: 20px;">
+        <input type="number" id="min-member-input" placeholder="Min matching genes" style="margin-right: 10px;">
+        <button onclick="submitSelectedGeneSets(window.GSP.userGenes)">Submit Selected Sets</button>
+      </div>
+      <div id="filtered-results" style="margin: 20px auto; max-width: 800px; font-family: sans-serif;"></div>
     </div>
     <div id="graph-settings-container">
       <iframe id="graph" src="{% url 'read_graph' %}" frameborder="0"></iframe>
@@ -187,5 +192,6 @@
     <script src="{% static 'graph/js/upload_file.js' %}"></script>
     <script src="{% static 'graph/js/msigdb_loader.js' %}"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="{% static 'graph/js/submit_handler.js' %}"></script>
   </body>
 </html>

@@ -4,7 +4,9 @@ import json
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
 from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
 from .dataReduction import umap_reduction
+from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 
 # Create your views here.
 # When someone goes to the website root (/), it shows the homepage (base.html).
@@ -59,5 +61,37 @@ def serve_msigdb(request):
         with open(file_path, 'r') as f:
             msigdb_data = json.load(f)
         return JsonResponse(msigdb_data)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+    
+@csrf_exempt
+def filter_gene_sets_view(request):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Only POST allowed'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+
+        selected_gene_sets = data.get("selectedGeneSets", [])
+        user_genes = data.get("userGenes", [])
+        min_members = int(data.get("minMembers", 1))
+
+        if not selected_gene_sets or not user_genes:
+            return JsonResponse({"error": "Missing input"}, status=400)
+
+        # Load MSigDB JSON
+        file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', 'msigdb.v2024.1.Hs.json')
+        with open(file_path, 'r') as f:
+            gene_sets_data = json.load(f)
+
+        filtered = get_selected_gene_sets_with_relevant_members(
+            gene_list=set(user_genes),
+            min_members_threshold=min_members,
+            selected_gene_sets=selected_gene_sets,
+            gene_sets_data=gene_sets_data
+        )
+
+        return JsonResponse(filtered, safe=False)
+
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)

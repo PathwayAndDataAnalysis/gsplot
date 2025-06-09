@@ -348,12 +348,18 @@ function drawD3Tree(treeData) {
           selectedPaths.push(getFullPath(node));
           const isLeaf = !node.children && !node._children;
           if (node.data.geneSets && Array.isArray(node.data.geneSets)) {
-            selectedGeneSets.push(...node.data.geneSets);  // Sửa ở đây: dùng spread chứ không push nguyên mảng
+            selectedGeneSets.push(...node.data.geneSets.map(gs => ({
+              name: gs.name,
+              collection: gs.collection
+            })));
           } else {
             const descendants = (node.children || node._children || []);
             descendants.forEach(child => {
               if (child.data.geneSets) {
-                selectedGeneSets.push(...child.data.geneSets);
+                selectedGeneSets.push(...child.data.geneSets.map(gs => ({
+                  name: gs.name,
+                  collection: gs.collection
+                })));
               }
             });
           }
@@ -415,13 +421,16 @@ function buildSimpleTree(msigdb) {
     const collection = info.collection || "";
     const [major, sub] = collection.split(":");
 
+    const geneSetEntry = { name: setName, collection };
+
     if (!map[major]) map[major] = {};
+
     if (sub !== undefined) {
       if (!map[major][sub]) map[major][sub] = [];
-      map[major][sub].push(setName);
+      map[major][sub].push(geneSetEntry);
     } else {
       if (!map[major]._direct) map[major]._direct = [];
-      map[major]._direct.push(setName);
+      map[major]._direct.push(geneSetEntry);
     }
   }
 
@@ -430,7 +439,7 @@ function buildSimpleTree(msigdb) {
 
     if (subgroups._direct) {
       majorNode.geneSets = subgroups._direct;
-      majorNode.children = [];  // Leaf node
+      majorNode.children = [];  // leaf node
     } else {
       majorNode.children = [];
 

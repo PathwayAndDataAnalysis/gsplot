@@ -8,4 +8,5 @@ urlpatterns = [
     path('help/', views.help, name='help'),
     path('about/', views.about, name='about'),
     path('api/msigdb/', views.serve_msigdb, name='serve_msigdb'),
+    path('api/filter_gene_sets/', views.filter_gene_sets_view, name='filter_gene_sets'),
 ]
