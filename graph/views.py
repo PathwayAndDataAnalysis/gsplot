@@ -115,7 +115,7 @@ def filter_gene_sets_view(request):
 
         selected_gene_sets = data.get("selectedGeneSets", [])
         user_genes = data.get("userGenes", [])
-        min_members = int(data.get("minMembers", 1))
+        min_members = int(data.get("minMembers", 3))
 
         if not selected_gene_sets or not user_genes:
             return JsonResponse({"error": "Missing input"}, status=400)
@@ -135,4 +135,7 @@ def filter_gene_sets_view(request):
         return JsonResponse(filtered, safe=False)
 
     except Exception as e:
+        import traceback
+        print("BACKEND ERROR:", e)
+        traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)

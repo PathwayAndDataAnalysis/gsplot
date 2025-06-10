@@ -36,7 +36,6 @@ function drawD3Tree(treeData) {
     .select("#tree-container")
     .append("svg")
     .attr("width", "100%")
-    .attr("height", "auto")
     .style("font", "0.8em sans-serif")
     .style("user-select", "none");
 
@@ -221,7 +220,7 @@ function drawD3Tree(treeData) {
     // Force-update the container height to match SVG's actual height
     setTimeout(() => {
       const svgElement = svg.node();
-      const actualHeight = svg.svgElement.getBox().height + 40; // Padding
+      const actualHeight = svgElement.getBBox().height + 40; // Padding
       container.style.height = actualHeight + 'px';
     }, 0);
   }
@@ -247,44 +246,44 @@ function drawD3Tree(treeData) {
     const controlsDiv = document.createElement("div");
     controlsDiv.id = "selection-controls";
     controlsDiv.style.cssText = `
-      margin-bottom: 15px;
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    `;
+     margin-bottom: 15px;
+     display: flex;
+     gap: 10px;
+     align-items: center;
+   `;
 
     const instruction = document.createElement("span");
     instruction.textContent = "Hold Ctrl/Cmd to select multiple items";
     instruction.style.cssText = `
-      font-size: 0.9em;
-      color: #666;
-      margin-right: 15px;
-    `;
+     font-size: 0.9em;
+     color: #666;
+     margin-right: 15px;
+   `;
 
     const selectAllBtn = document.createElement("button");
     selectAllBtn.textContent = "Select All";
     selectAllBtn.style.cssText = `
-      padding: 6px 12px;
-      background-color: #4a90e2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.85em;
-    `;
+     padding: 6px 12px;
+     background-color: #4a90e2;
+     color: white;
+     border: none;
+     border-radius: 4px;
+     cursor: pointer;
+     font-size: 0.85em;
+   `;
     selectAllBtn.onclick = selectAllNodes;
 
     const clearAllBtn = document.createElement("button");
     clearAllBtn.textContent = "Clear All";
     clearAllBtn.style.cssText = `
-      padding: 6px 12px;
-      background-color: #e74c3c;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 0.85em;
-    `;
+     padding: 6px 12px;
+     background-color: #e74c3c;
+     color: white;
+     border: none;
+     border-radius: 4px;
+     cursor: pointer;
+     font-size: 0.85em;
+   `;
     clearAllBtn.onclick = clearAllSelections;
 
     controlsDiv.appendChild(instruction);
@@ -320,16 +319,16 @@ function drawD3Tree(treeData) {
       label = document.createElement("div");
       label.id = "selected-group-label";
       label.style.cssText = `
-        margin-top: 15px;
-        padding: 10px;
-        background-color: #e8f4f8;
-        border: 1px solid #4a90e2;
-        border-radius: 5px;
-        font-weight: bold;
-        color: #2c5282;
-        max-height: 120px;
-        overflow-y: auto;
-      `;
+       margin-top: 15px;
+       padding: 10px;
+       background-color: #e8f4f8;
+       border: 1px solid #4a90e2;
+       border-radius: 5px;
+       font-weight: bold;
+       color: #2c5282;
+       max-height: 120px;
+       overflow-y: auto;
+     `;
       container.appendChild(label);
     }
 
@@ -370,14 +369,16 @@ function drawD3Tree(treeData) {
       const uniqueGeneSets = [...new Set(selectedGeneSets)];
 
       window.selectedGeneSets = uniqueGeneSets;
+      window.GSP = window.GSP || {};
+      window.GSP.selectedGeneSets = uniqueGeneSets;
       window.selectedCollectionLabel = selectedPaths.join(", ");
 
       label.innerHTML = `
-        <strong>Selected (${window.selectedItems.size} items):</strong><br>
-        ${selectedPaths.join("<br>")}
-        <br><br>
-        <strong>Total Gene Sets:</strong> ${uniqueGeneSets.length}
-      `;
+       <strong>Selected (${window.selectedItems.size} items):</strong><br>
+       ${selectedPaths.join("<br>")}
+       <br><br>
+       <strong>Total Gene Sets:</strong> ${uniqueGeneSets.length}
+     `;
       label.style.backgroundColor = "#e8f4f8";
       label.style.borderColor = "#4a90e2";
       label.style.color = "#2c5282";
