@@ -50,7 +50,7 @@ function submitSelectedGeneSets() {
     .then(filteredResults => {
       console.log("Filtered gene sets (hidden):", filteredResults);
       const statusBox = document.getElementById("submit-status");
-      statusBox.textContent = `Successfully generated ${filteredResults.length} gene sets.`;
+      statusBox.textContent = `Successfully collected ${filteredResults.length} gene sets with relevant members.`;
       statusBox.style.color = "green";
     })
     .catch(err => {

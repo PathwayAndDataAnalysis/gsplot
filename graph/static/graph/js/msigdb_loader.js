@@ -111,27 +111,43 @@ function drawD3Tree(treeData) {
       .attr("fill-opacity", 0)
       .attr("stroke-opacity", 0)
       .on("click", (event, d) => {
-        if (!d.parent) return;  // Ignore root
+        if (!d.parent) return;  // Skip root
 
         const nodeId = d.id || (d.id = ++i);
 
-        // Expand/collapse if has children
-        if (d.children) {
-          d._children = d.children;
-          d.children = null;
-        } else if (d._children) {
-          d.children = d._children;
-          d._children = null;
-        }
+        if (event.ctrlKey || event.metaKey) {
+          // 1. Remove all ancestors of this node from the selection
+          let current = d.parent;
+          while (current) {
+            if (window.selectedItems.has(current.id)) {
+              window.selectedItems.delete(current.id);
+            }
+            current = current.parent;
+          }
 
-        // Toggle select
-        if (window.selectedItems.has(nodeId)) {
-          window.selectedItems.delete(nodeId);  // Unselect if chosen
-        } else if (event.ctrlKey || event.metaKey) {
-          window.selectedItems.add(nodeId);     // Multi-select
+          // 2. Remove all descendants of this node from the selection
+          d.descendants().forEach(desc => {
+            if (desc !== d && window.selectedItems.has(desc.id)) {
+              window.selectedItems.delete(desc.id);
+            }
+          });
+
+          // 3. Toggle this node
+          if (window.selectedItems.has(nodeId)) {
+            window.selectedItems.delete(nodeId); // Unselect if selected
+          } else {
+            window.selectedItems.add(nodeId);    // Add new selection
+          }
+
         } else {
-          window.selectedItems.clear();         // Single select
-          window.selectedItems.add(nodeId);
+          // Just expand/collapse
+          if (d.children) {
+            d._children = d.children;
+            d.children = null;
+          } else if (d._children) {
+            d.children = d._children;
+            d._children = null;
+          }
         }
 
         update(d);
@@ -246,7 +262,7 @@ function drawD3Tree(treeData) {
    `;
 
     const instruction = document.createElement("span");
-    instruction.textContent = "Hold Ctrl/Cmd to select multiple items";
+    instruction.textContent = "Hold Ctrl/Cmd to select the option(s)";
     instruction.style.cssText = `
      font-size: 0.9em;
      color: #666;
