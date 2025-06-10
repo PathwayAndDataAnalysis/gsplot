@@ -216,13 +216,6 @@ function drawD3Tree(treeData) {
 
     // Update node styles after each update
     updateNodeStyles();
-
-    // Force-update the container height to match SVG's actual height
-    setTimeout(() => {
-      const svgElement = svg.node();
-      const actualHeight = svgElement.getBBox().height + 40; // Padding
-      container.style.height = actualHeight + 'px';
-    }, 0);
   }
 
   function updateNodeStyles() {
