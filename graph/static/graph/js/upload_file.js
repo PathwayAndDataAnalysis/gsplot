@@ -82,6 +82,7 @@ settingsButton.addEventListener("click", function () {
   graph.classList.toggle("settings-open");
 });
 
+/*
 // When user selects a file, save it in local storage in base64 to send to backend endpoint
 fileInput.addEventListener("change", function (event) {
   const file = event.target.files[0];
@@ -122,6 +123,8 @@ document
     }, transitionDuration);
   });
 
+*/
+
 function convertToExpectedFormat(arrayOfObjects) {
   const keys = Object.keys(arrayOfObjects[0]);
   const result = {};
@@ -136,10 +139,21 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
 
+  const pv = document.getElementById("pvalue-input").value;
+  const fdr = document.getElementById("fdr-input").value;
+
+  if (pv === "" && fdr === "") {
+    alert("Please enter either a p-value or an FDR threshold.");
+    return;
+  }
+
   if (!sigGenes.trim() && !insigGenes.trim()) {
     alert("Please enter at least one gene in either field.");
     return;
   }
+
+  if (pv !== "") localStorage.setItem("p-value", parseFloat(pv));
+  if (fdr !== "") localStorage.setItem("fdr", parseFloat(fdr));
 
   // Save values to localStorage so the iframe can access them
   localStorage.setItem("sigGenes", sigGenes.trim());
