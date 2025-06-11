@@ -55,12 +55,14 @@
       </div>
 
       <div id="initial-upload">
+        <!--
         <h2>Option 1: Upload File</h2>
         <div style="margin-bottom: 20px;">
           <input type="file" id="initial-file-input" style="margin-bottom: 10px;" />
         </div>
         <button id="initial-upload-button" style="padding: 10px 20px; font-size: 16px;">Submit File</button>
         <p>For more information, click <b>Help</b> in the top right.</p>
+        -->
       </div>
     </div>
 
@@ -78,12 +80,11 @@
         placeholder="Enter insignificant genes, comma or newline separated"
         style="width: 100%; padding: 10px; font-size: 16px; resize: vertical; margin-bottom: 25px;"></textarea>
 
-      <button id="submit-gene-button" style="padding: 10px 20px; font-size: 16px;">Submit Genes</button>
     </div>
 
 
-    <!-- Display for Gene sets -->
-     <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
+
+    <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
       <h3 style="text-align: center;">Select Gene Set Group(s):</h3>
       <div style="text-align: center; margin-top: 20px;">
         <input type="number" id="min-member-input" placeholder="Min matching genes" style="margin-right: 10px;">
@@ -197,6 +198,18 @@
       </div>
       <div id="selected-points-container"></div>
     </div>
+
+    <div id="submit-section-wrapper" style="padding-bottom: 5px;">
+      <div style="display: flex; justify-content: center; margin: 20px 0 60px 0;">
+        <button id="submit-gene-button" style="padding: 10px 20px; font-size: 16px;">
+          Submit
+        </button>
+      </div>
+    </div>
+
+
+
+
 
     <!-- JavaScript Files -->
     <script src="{% static 'graph/js/update_settings.js' %}"></script>
