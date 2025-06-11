@@ -85,8 +85,11 @@
     <!-- Display for Gene sets -->
      <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
       <h3 style="text-align: center;">Select Gene Set Group(s):</h3>
-      <div style="text-align: center; margin-top: 20px;">
-        <input type="number" id="min-member-input" placeholder="Min matching genes" style="margin-right: 10px;">
+      <div style="text-align: left; margin-top: 20px;">
+        <label for="min-member-input" style="font-weight: normal; margin-right: 10px;">
+          Enter the minimum relevant members for each gene set:
+        </label>
+        <input type="number" id="min-member-input" placeholder="e.g. 5 (default)" style="margin-right: 10px;">
         <button onclick="submitSelectedGeneSets(window.GSP.userGenes)">Submit Selected Sets</button>
       </div>
       <div id="submit-status" style="margin-top: 10px; font-weight: bold; color: green;"></div>

@@ -23,7 +23,18 @@ function submitSelectedGeneSets() {
   }
 
   const minInput = document.getElementById("min-member-input");
-  const minMembers = minInput ? Number(minInput.value) : 3;
+
+  let minMembers = 5; // default
+
+  if (minInput) {
+    const raw = minInput.value.trim();
+    if (raw !== "" && !isNaN(raw)) {
+      const val = Number(raw);
+      if (val >= 5) {
+        minMembers = val;
+      }
+    }
+  }
 
   if (selectedGeneSets.length === 0) {
     alert("Please select at least one category of gene sets from the tree.");
@@ -60,14 +71,14 @@ function submitSelectedGeneSets() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    const savedGenes = localStorage.getItem("userGenes");
-    if (savedGenes) {
-        window.GSP.userGenes = JSON.parse(savedGenes);
-        console.log("Restored userGenes from localStorage:", window.GSP.userGenes);
-    }
+  const savedGenes = localStorage.getItem("userGenes");
+  if (savedGenes) {
+    window.GSP.userGenes = JSON.parse(savedGenes);
+    console.log("Restored userGenes from localStorage:", window.GSP.userGenes);
+  }
 
-    const submitBtn = document.getElementById("submit-gene-button");
-    if (submitBtn) {
-        submitBtn.addEventListener("click", submitGenes);
-    }
+  const submitBtn = document.getElementById("submit-gene-button");
+  if (submitBtn) {
+    submitBtn.addEventListener("click", submitGenes);
+  }
 });
