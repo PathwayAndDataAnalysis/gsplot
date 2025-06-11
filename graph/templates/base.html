@@ -66,6 +66,16 @@
       </div>
     </div>
 
+    <!--Human/Mouse/Upload Options-->
+    <div id="species-selector" style="text-align: center; margin-top: 30px;">
+      <label><strong>Select Dataset:</strong></label>
+      <select id="species-select" onchange="handleSpeciesChange()" style="margin-left: 10px; padding: 5px;">
+        <option value="human" selected>Human (MSigDB)</option>
+        <option value="mouse">Mouse (MSigDB)</option>
+        <option value="custom">Upload your own</option>
+      </select>
+    </div>
+
     <!-- Manual Gene Input (No form) -->
     <div id="manual-gene-input" style="margin-top: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
       <h2>Manual Gene Input</h2>
@@ -82,8 +92,7 @@
 
     </div>
 
-
-
+    <!--Display for tree of collections-->
     <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
       <h3 style="text-align: center;">Select Gene Set Group(s):</h3>
       <div style="text-align: left; margin-top: 20px;">

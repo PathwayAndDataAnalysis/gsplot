@@ -45,13 +45,15 @@ function submitSelectedGeneSets() {
     return;
   }
 
+  const species = document.getElementById("species-select").value;
   fetch("/api/filter_gene_sets/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       selectedGeneSets: selectedGeneSets,
       userGenes: userGenesInput,
-      minMembers: minMembers
+      minMembers: minMembers,
+      species: species
     })
   })
     .then(res => {

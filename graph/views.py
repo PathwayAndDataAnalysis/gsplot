@@ -96,11 +96,23 @@ def about(request):
 @require_GET
 def serve_msigdb(request):
     try:
-        file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', 'msigdb.v2024.1.Hs.json')
+        species = request.GET.get("species", "human").lower()
+
+        file_map = {
+            "human": "msigdb.v2025.1.Hs.json",
+            "mouse": "msigdb.v2025.1.Mm.json"
+        }
+        filename = file_map.get(species)
+        if not filename:
+            return JsonResponse({"error": "Invalid species"}, status=400)
+        
+        file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', filename)
         if not os.path.exists(file_path):
             return JsonResponse({"error": "MSigDB file not found"}, status=404)
+        
         with open(file_path, 'r') as f:
             msigdb_data = json.load(f)
+
         return JsonResponse(msigdb_data)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -115,13 +127,22 @@ def filter_gene_sets_view(request):
 
         selected_gene_sets = data.get("selectedGeneSets", [])
         user_genes = data.get("userGenes", [])
-        min_members = int(data.get("minMembers", 3))
+        min_members = int(data.get("minMembers", 5))
+        species = data.get("species", "human").lower()
 
         if not selected_gene_sets or not user_genes:
             return JsonResponse({"error": "Missing input"}, status=400)
 
         # Load MSigDB JSON
-        file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', 'msigdb.v2024.1.Hs.json')
+        file_map ={
+            "human": "msigdb.v2025.1.Hs.json",
+            "mouse": "msigdb.v2025.1.Mm.json"
+        }
+        filename = file_map.get(species)
+        if not filename:
+            return JsonResponse({"error": "Invalid species"}, status=400)
+        
+        file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', filename)
         with open(file_path, 'r') as f:
             gene_sets_data = json.load(f)
 

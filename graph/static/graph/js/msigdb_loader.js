@@ -412,16 +412,27 @@ function drawD3Tree(treeData) {
   }
 }
 
-// Initialize the tree when data is loaded
-fetch("/api/msigdb/")
-  .then(res => res.json())
-  .then(msigdb => {
-    const data = buildSimpleTree(msigdb);
-    drawD3Tree(data);
-  })
-  .catch(error => {
-    console.error("Error loading MSigDB data:", error);
-  });
+// Load the tree based on dataset selection
+function handleSpeciesChange() {
+  const species = document.getElementById("species-select").value;
+
+  fetch(`/api/msigdb/?species=${species}`)
+    .then(res => res.json())
+    .then(msigdb => {
+      const data = buildSimpleTree(msigdb);
+      drawD3Tree(data);
+    })
+    .catch(error => {
+      console.error("Error loading MSigDB data:", error);
+    });
+}
+
+window.handleSpeciesChange = handleSpeciesChange;
+
+// Auto draw human tree when server starts
+document.addEventListener("DOMContentLoaded", () => {
+  handleSpeciesChange();
+});
 
 function buildSimpleTree(msigdb) {
   const tree = { name: "Gene Set Collections", children: [] };
