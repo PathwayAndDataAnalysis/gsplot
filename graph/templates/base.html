@@ -82,7 +82,7 @@
     </div>
 
 
-    <!-- Disply for Gene sets -->
+    <!-- Display for Gene sets -->
      <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
       <h3 style="text-align: center;">Select Gene Set Group(s):</h3>
       <div style="text-align: center; margin-top: 20px;">
@@ -92,6 +92,20 @@
       <div id="submit-status" style="margin-top: 10px; font-weight: bold; color: green;"></div>
     </div>
 
+    <!-- p-value or FDR entering -->
+    <div id="threshold-container" style="margin-top: 20px; display: flex; justify-content: center; align-items: flex-start; gap: 20px; font-family: sans-serif; padding-bottom: 60px;">
+      <div style="display: flex; flex-direction: column; align-items: center; font-size: 16px; font-weight: bold;">
+        <label for="pvalue-input">p-value</label>
+        <input type="number" id="pvalue-input" step="0.0001" placeholder="e.g. 0.05" style="width: 100px;">
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; font-size: 14px">
+        <span style="margin-top: 20px;">or</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; font-size: 16px; font-weight: bold;">
+        <label for="fdr-input">FDR</label>
+        <input type="number" id="fdr-input" step="0.0001" placeholder="e.g. 0.25" style="width: 100px;">
+      </div>
+    </div>
 
     <!-- Graph + Settings -->
     <div id="graph-settings-container">
