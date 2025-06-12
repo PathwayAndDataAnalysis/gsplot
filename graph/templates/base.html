@@ -66,14 +66,18 @@
       </div>
     </div>
 
-    <!--Human/Mouse/Upload Options-->
+    <!--Human/Mouse/Upload Dataset Selection-->
     <div id="species-selector" style="text-align: center; margin-top: 30px;">
-      <label><strong>Select Dataset:</strong></label>
+      <label><strong>Select Gene Set Dataset:</strong></label>
       <select id="species-select" onchange="handleSpeciesChange()" style="margin-left: 10px; padding: 5px;">
         <option value="human" selected>Human (MSigDB)</option>
         <option value="mouse">Mouse (MSigDB)</option>
         <option value="custom">Upload your own</option>
       </select>
+      <div id="custom-upload-section" style="display: none; margin-top: 15px;">
+        <input type="file" id="custom-json-input" accept=".json" />
+        <p style="color: gray; margin-top: 10px;">Upload a custom gene set JSON file</p>
+      </div>
     </div>
 
     <!-- Manual Gene Input (No form) -->
@@ -94,7 +98,7 @@
 
     <!--Display for tree of collections-->
     <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
-      <h3 style="text-align: center;">Select Gene Set Group(s):</h3>
+      <h3 style="text-align: center;">Select Gene Set Collection(s):</h3>
       <div style="text-align: left; margin-top: 20px;">
         <label for="min-member-input" style="font-weight: normal; margin-right: 10px;">
           Enter the minimum relevant members for each gene set:

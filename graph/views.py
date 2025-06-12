@@ -106,7 +106,7 @@ def serve_msigdb(request):
         if not filename:
             return JsonResponse({"error": "Invalid species"}, status=400)
         
-        file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', filename)
+        file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
         if not os.path.exists(file_path):
             return JsonResponse({"error": "MSigDB file not found"}, status=404)
         
@@ -142,7 +142,7 @@ def filter_gene_sets_view(request):
         if not filename:
             return JsonResponse({"error": "Invalid species"}, status=400)
         
-        file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', filename)
+        file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
         with open(file_path, 'r') as f:
             gene_sets_data = json.load(f)
 
@@ -160,3 +160,35 @@ def filter_gene_sets_view(request):
         print("BACKEND ERROR:", e)
         traceback.print_exc()
         return JsonResponse({"error": str(e)}, status=500)
+    
+@csrf_exempt
+def upload_custom_gene_sets(request):
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
+
+    uploaded_file = request.FILES.get("file")
+    if not uploaded_file:
+        return JsonResponse({"error": "No file provided"}, status=400)
+
+    try:
+        data = json.load(uploaded_file)
+
+        # Format 1: MSigDB-style (has nested structure)
+        if isinstance(data, dict) and all(isinstance(v, dict) for v in data.values()):
+            return JsonResponse({
+                "treeType": "msigdb",
+                "data": data
+            })
+
+        # Format 2: Flat list of {name, genes}
+        elif isinstance(data, list) and all("name" in gs and "genes" in gs for gs in data):
+            return JsonResponse({
+                "treeType": "flat",
+                "count": len(data)
+            })
+
+        else:
+            raise ValueError("Unrecognized format")
+
+    except Exception as e:
+        return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)

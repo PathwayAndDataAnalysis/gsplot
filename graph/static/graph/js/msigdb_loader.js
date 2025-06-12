@@ -415,16 +415,25 @@ function drawD3Tree(treeData) {
 // Load the tree based on dataset selection
 function handleSpeciesChange() {
   const species = document.getElementById("species-select").value;
+  const uploadSection = document.getElementById("custom-upload-section");
 
-  fetch(`/api/msigdb/?species=${species}`)
-    .then(res => res.json())
-    .then(msigdb => {
-      const data = buildSimpleTree(msigdb);
-      drawD3Tree(data);
-    })
-    .catch(error => {
-      console.error("Error loading MSigDB data:", error);
-    });
+  if (species === "custom") {
+    uploadSection.style.display = "block";
+    d3.select("#tree-container").select("svg").remove();
+    return;
+  } else {
+    uploadSection.style.display = "none";
+
+    fetch(`/api/msigdb/?species=${species}`)
+      .then(res => res.json())
+      .then(msigdb => {
+        const data = buildSimpleTree(msigdb);
+        drawD3Tree(data);
+      })
+      .catch(error => {
+        console.error("Error loading MSigDB data:", error);
+      });
+  }
 }
 
 window.handleSpeciesChange = handleSpeciesChange;
@@ -435,47 +444,69 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function buildSimpleTree(msigdb) {
-  const tree = { name: "Gene Set Collections", children: [] };
-  const map = {};
+  const root = { name: "Gene Set Collections", children: [] };
 
   for (const [setName, info] of Object.entries(msigdb)) {
     const collection = info.collection || "";
-    const [major, sub] = collection.split(":");
-
+    const levels = collection.split(":");
     const geneSetEntry = { name: setName, collection };
 
-    if (!map[major]) map[major] = {};
+    let currentLevel = root;
 
-    if (sub !== undefined) {
-      if (!map[major][sub]) map[major][sub] = [];
-      map[major][sub].push(geneSetEntry);
-    } else {
-      if (!map[major]._direct) map[major]._direct = [];
-      map[major]._direct.push(geneSetEntry);
-    }
-  }
+    for (let i = 0; i < levels.length; i++) {
+      const levelName = levels[i];
+      if (!currentLevel.children) currentLevel.children = [];
 
-  for (const [major, subgroups] of Object.entries(map)) {
-    const majorNode = { name: major };
-
-    if (subgroups._direct) {
-      majorNode.geneSets = subgroups._direct;
-      majorNode.children = [];  // leaf node
-    } else {
-      majorNode.children = [];
-
-      for (const [sub, geneSets] of Object.entries(subgroups)) {
-        const subNode = {
-          name: sub,
-          geneSets: geneSets,
-          children: []
-        };
-        majorNode.children.push(subNode);
+      let existingChild = currentLevel.children.find(child => child.name === levelName);
+      if (!existingChild) {
+        existingChild = { name: levelName };
+        currentLevel.children.push(existingChild);
       }
-    }
 
-    tree.children.push(majorNode);
+      if (!existingChild.geneSets) existingChild.geneSets = [];
+      existingChild.geneSets.push(geneSetEntry);
+
+      currentLevel = existingChild;
+    }
   }
 
-  return tree;
+  return root;
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const fileInput = document.getElementById("custom-json-input");
+
+  if (fileInput) {
+    fileInput.addEventListener("change", () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      fetch("/api/upload_custom_gene_sets/", {
+        method: "POST",
+        body: formData
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.treeType === "msigdb") {
+            const treeData = buildSimpleTree(data.data);
+            drawD3Tree(treeData);
+          } else if (data.treeType === "flat") {
+            d3.select("#tree-container").select("svg").remove();
+            alert(`Successfully loaded ${data.count} gene sets. All will be used.`);
+            // Store for later filtering step
+            window.GSP = window.GSP || {};
+            window.GSP.customGeneSets = data;
+          } else {
+            throw new Error("Unknown tree type");
+          }
+        })
+        .catch(err => {
+          console.error("Upload error:", err);
+          alert("Error: Invalid JSON format or upload failed.");
+        });
+    });
+  }
+});

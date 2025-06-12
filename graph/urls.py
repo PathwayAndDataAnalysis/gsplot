@@ -10,4 +10,5 @@ urlpatterns = [
     path('api/msigdb/', views.serve_msigdb, name='serve_msigdb'),
     path('api/filter_gene_sets/', views.filter_gene_sets_view, name='filter_gene_sets'),
     path('gene-input/', views.gene_input_view, name='gene_input'),
+    path('api/upload_custom_gene_sets/', views.upload_custom_gene_sets, name='upload_custom_gene_sets'),
 ]
