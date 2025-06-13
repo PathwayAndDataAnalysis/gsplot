@@ -59,8 +59,9 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
             gene_sets_for_umap = {}  # Or keep as is
             return
         threshold_index = np.where(reject)[0].max()
-        pval_threshold = p_vals[threshold_index]
-        print(f"pval_threshold @ {threshold_index} w val {pval_threshold}")
+        p_val = p_vals[threshold_index]
+
+        print(f"pval_threshold @ {threshold_index} w val {p_val}")
 
     else:
         # Get Estimate of FDR
@@ -68,8 +69,8 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
             print("no values are under the threshold")
             return
 
-        estimated_fdr = (p_val * total) / reject_count
-        print(f"Estimated FDR at threshold {p_val}: {estimated_fdr:.4f}")
+        fdr = (p_val * total) / reject_count
+        print(f"Estimated FDR at threshold {p_val}: {fdr:.4f}")
 
         # find threshold_index
         threshold_index = max((i for i, (_, val) in enumerate(sorted_items) if val[1] <= p_val), default=-1)
@@ -79,10 +80,14 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     # Optional: overwrite or use elsewhere
     gene_sets_for_umap = filtered_gene_sets
 
+    # round the variables to 3rd decimal point
+    p_val = round(p_val, 3)
+    fdr = round(fdr, 3)
+
 
     ret = umap_reduction(gene_sets_for_umap, "2", "0.1", "0")
 
-    return ret
+    return ret,p_val,fdr
 
 
 

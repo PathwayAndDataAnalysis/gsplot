@@ -79,11 +79,15 @@ def gene_input_view(request):
             )
 
             # Run Fisher's test analysis
-            results = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes)
+            results,pvl,fdr = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes)
 
             # Return result as JSON
-            data = json.loads(results)
-            return JsonResponse(data, safe=False)
+            data = json.loads(results)  # or skip if already a Python object
+            return JsonResponse({
+                "umap": data,
+                "p_value": pvl,
+                "fdr_value": fdr
+            })
 
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
