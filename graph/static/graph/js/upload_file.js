@@ -6,7 +6,8 @@ const graphAndSettingsContainer = document.getElementById(
 ); // Container for Graph and Settings area
 const loadingSpinner = document.getElementById("loading-spinner"); // Spinner element
 const treeContainer = document.getElementById("tree-container");
-const InputContainer = document.getElementById("threshold-container")
+const InputContainer = document.getElementById("threshold-container");
+const valsContainer = document.getElementById("graph-text-info");
 
 const submitContainer = document.getElementById("manual-gene-input"); // Container for the submit text button
 
@@ -57,6 +58,7 @@ async function main() {
     showSubmit();
     showGenes();
     showInput();
+    hideGraph();
   }
 }
 
@@ -213,6 +215,7 @@ function showGraph() {
   graphAndSettingsContainer.classList.add("no-click");
   graphAndSettingsContainer.style.display = "flex";
   selectedPoints.style.display = "block";
+  valsContainer.style.display = "flex";
   setTimeout(() => {
     selectedPoints.style.opacity = "1";
     graphAndSettingsContainer.style.opacity = "1";
@@ -226,6 +229,7 @@ function hideGraph() {
   graphAndSettingsContainer.style.opacity = "0";
   setTimeout(() => {
     graphAndSettingsContainer.style.display = "none";
+    valsContainer.style.display = "none";
     selectedPoints.style.display = "none";
     graphAndSettingsContainer.classList.remove("no-click");
   }, transitionDuration);
