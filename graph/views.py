@@ -34,22 +34,35 @@ def gene_input_view(request):
             # Get gene inputs
             sig_input = data.get('significant_genes', '')
             insig_input = data.get('insignificant_genes', '')
+            selected_gene_sets = data.get("selected_genes_sets", [])
+            min_members = int(data.get("minMembers", 5))
+            p_thr = (data.get("p_thr"))
+            fdr_thr = (data.get("fdr_thr"))
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
             insig_genes = [gene.strip().upper() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
-            # Remove duplicates and overlaps
-            sig_genes = list(set(sig_genes))
-            insig_genes = list(set(insig_genes))
-            overlap = set(sig_genes) & set(insig_genes)
-            sig_genes = [g for g in sig_genes if g not in overlap]
-            insig_genes = [g for g in insig_genes if g not in overlap]
+            # Load MSigDB JSON
+            file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', 'msigdb.v2024.1.Hs.json')
+            with open(file_path, 'r') as f:
+                gene_sets_data = json.load(f)
 
-            print("Manual gene input received.")
+            if p_thr:
+                p_thr = float(p_thr)
+            if fdr_thr:
+                fdr_thr = float(fdr_thr)
+
+
+            filtered = get_selected_gene_sets_with_relevant_members(
+                gene_list= set(sig_genes + insig_genes),
+                min_members_threshold=min_members,
+                selected_gene_sets=selected_gene_sets,
+                gene_sets_data=gene_sets_data,
+            )
 
             # Run your analysis
-            results = run_fishers_test(sig_genes, insig_genes)
+            results = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes)
 
             # Return result as JSON
             data = json.loads(results)
@@ -130,7 +143,7 @@ def filter_gene_sets_view(request):
         min_members = int(data.get("minMembers", 5))
         species = data.get("species", "human").lower()
 
-        if not selected_gene_sets or not user_genes:
+        if not selected_gene_sets:# old code ->  (if not selected_gene_sets or not user_genes:)
             return JsonResponse({"error": "Missing input"}, status=400)
 
         # Load MSigDB JSON

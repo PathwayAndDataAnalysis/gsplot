@@ -5,6 +5,8 @@ const graphAndSettingsContainer = document.getElementById(
   "graph-settings-container"
 ); // Container for Graph and Settings area
 const loadingSpinner = document.getElementById("loading-spinner"); // Spinner element
+const treeContainer = document.getElementById("tree-container");
+const InputContainer = document.getElementById("threshold-container")
 
 const submitContainer = document.getElementById("manual-gene-input"); // Container for the submit text button
 
@@ -45,12 +47,16 @@ async function main() {
 
     // Hide upload and show graph
     hideUpload();
-    hideSubmit()
+    hideInput();
+    hideSubmit();
+    hideGenes();
     showGraph();
   } else {
     // Show upload screen
     showUpload();
-    showSubmit
+    showSubmit();
+    showGenes();
+    showInput();
   }
 }
 
@@ -71,7 +77,10 @@ function importFile() {
     hideGraph();
     setTimeout(() => {
       showUpload();
-      showSubmit
+      showGenes();
+      showSubmit();
+      showInput();
+      //showSubmit
     }, transitionDuration);
   }
 }
@@ -134,15 +143,34 @@ function convertToExpectedFormat(arrayOfObjects) {
   return result;
 }
 
+function filterGeneSets(selectedgenes) {
+  const sigGenes = localStorage.getItem("sigGenes") || "";
+  const insigGenes = localStorage.getItem("insigGenes") || "";
+  const userGenes = set()
+
+  const filePath = path.join(__dirname, 'static', 'gene_sets', 'msigdb.v2024.1.Hs.json');
+  const geneSetsData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+
+  const minMembers = localStorage.getItem("minInput")
+
+  const filtered = getSelectedGeneSetsWithRelevantMembers(userGenes, minMembers, selectedgenes, geneSetsData);
+
+
+}
 
 document.getElementById("submit-gene-button").addEventListener("click", async function () {
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
 
-  const pv = document.getElementById("pvalue-input").value;
-  const fdr = document.getElementById("fdr-input").value;
+  const pvThr = document.getElementById("pvalue-input").value;
+  const fdrThr = document.getElementById("fdr-input").value;
 
-  if (pv === "" && fdr === "") {
+  const selectedGeneSets = window?.GSP?.selectedGeneSets || [];
+
+  const minInput = document.getElementById("min-member-input");
+  let minMembers = 5; // default
+
+  if (pvThr === "" && fdrThr === "") {
     alert("Please enter either a p-value or an FDR threshold.");
     return;
   }
@@ -152,12 +180,30 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     return;
   }
 
-  if (pv !== "") localStorage.setItem("p-value", parseFloat(pv));
-  if (fdr !== "") localStorage.setItem("fdr", parseFloat(fdr));
+  if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
+  if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
 
   // Save values to localStorage so the iframe can access them
   localStorage.setItem("sigGenes", sigGenes.trim());
   localStorage.setItem("insigGenes", insigGenes.trim());
+
+
+  if (minInput) {
+    const raw = minInput.value.trim();
+    if (raw !== "" && !isNaN(raw)) {
+      const val = Number(raw);
+      if (val >= 5) {
+        minMembers = val;
+      }
+    }
+  }
+
+  localStorage.setItem("minInput", minMembers);
+
+  if (selectedGeneSets.length === 0) {
+    alert("Please select at least one category of gene sets from the tree.");
+    return;
+  }
 
   try {
     loadingSpinner.style.display = "block";
@@ -168,7 +214,9 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   }
 
   hideUpload();
-  hideSubmit()
+  hideGenes();
+  hideSubmit();
+  hideInput();
   setTimeout(() => showGraph(), transitionDuration);
 
 });
@@ -213,22 +261,34 @@ function hideUpload() {
   }, transitionDuration);
 }
 
+function showGenes() {
+  treeContainer.style.display = "block";
+}
+
+function hideGenes() {
+  treeContainer.style.display = "none";
+}
 function showSubmit() {
-  submitContainer.classList.add("no-click");
-  submitContainer.style.display = "flex";
-  setTimeout(() => {
-    submitContainer.style.opacity = "1";
-    submitContainer.classList.remove("no-click");
-  }, 100);
+  submitContainer.style.display = "block";
 }
 function hideSubmit() {
-  submitContainer.classList.add("no-click");
-  submitContainer.style.opacity = "0";
-  setTimeout(() => {
-    submitContainer.style.display = "none";
-    submitContainer.classList.remove("no-click");
-  }, transitionDuration);
+  submitContainer.style.display = "none";
 }
+function showInput() {
+  InputContainer.style.display = "flex";
+}
+function hideInput() {
+  InputContainer.style.display = "none";
+}
+function clearSignificantGenes() {
+  document.getElementById("id_significant_genes").value = "";
+}
+
+function clearInsignificantGenes() {
+  document.getElementById("id_insignificant_genes").value = "";
+}
+
+
 
 function clearLocalStorageExceptSettings() {
   const settingsBackup = localStorage.getItem("settings");

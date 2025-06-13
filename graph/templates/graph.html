@@ -328,11 +328,14 @@
         // Get new graph data from gene input on backend
         function getGeneInputData() {
           return new Promise((resolve, reject) => {
-            // Get the gene input values from your input fields (replace with your actual input element IDs)
-            //const sigGenes = localStorage.getItem("sigGenes") || "";
-            //const insigGenes = localStorage.getItem("insigGenes") || "";
             const sigGenes = localStorage.getItem("sigGenes")
             const insigGenes = localStorage.getItem("insigGenes")
+            const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
+            const minInput = localStorage.getItem("minInput")
+            const pVal = localStorage.getItem("p-value")
+            const fdr = localStorage.getItem("fdr")
+
+            console.log(selectedGeneSets);
 
             if (!sigGenes.trim() && !insigGenes.trim()) {
               reject(new Error("Please enter at least one gene in either field."));
@@ -352,6 +355,10 @@
               body: JSON.stringify({
                 significant_genes: sigGenes,
                 insignificant_genes: insigGenes,
+                selected_genes_sets: selectedGeneSets,
+                min_input: minInput,
+                p_thr: pVal,
+                fdr_thr: fdr,
               }),
             })
               .then((response) => {

@@ -78,9 +78,4 @@ document.addEventListener("DOMContentLoaded", () => {
     window.GSP.userGenes = JSON.parse(savedGenes);
     console.log("Restored userGenes from localStorage:", window.GSP.userGenes);
   }
-
-  const submitBtn = document.getElementById("submit-gene-button");
-  if (submitBtn) {
-    submitBtn.addEventListener("click", submitGenes);
-  }
 });
