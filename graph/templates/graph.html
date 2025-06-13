@@ -331,7 +331,7 @@
             const sigGenes = localStorage.getItem("sigGenes")
             const insigGenes = localStorage.getItem("insigGenes")
             const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
-            const minInput = localStorage.getItem("minInput")
+            const minMembers = localStorage.getItem("minMembers")
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
@@ -346,6 +346,11 @@
             // Get CSRF token as before
             const csrftoken = getCookie("csrftoken");
 
+            const customGeneSets = window.parent?.GSP?.customGeneSetsData || window.parent?.GSP?.customGeneSets?.data || window.parent?.GSP?.customGeneSets || null;
+            if (customGeneSets) {
+              console.log("Received custom gene sets from parent:", customGeneSets)
+            }
+
             // POST gene data to /gene-input/ endpoint
             fetch("/gene-input/", {
               method: "POST",
@@ -357,10 +362,11 @@
                 significant_genes: sigGenes,
                 insignificant_genes: insigGenes,
                 selected_genes_sets: selectedGeneSets,
-                min_input: minInput,
+                min_input: minMembers,
                 p_thr: pVal,
                 fdr_thr: fdr,
                 species: species,
+                custom_data: customGeneSets
               }),
             })
               .then((response) => {

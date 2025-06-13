@@ -185,7 +185,16 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     }
   }
 
-  localStorage.setItem("minInput", minMembers);
+  localStorage.setItem("minMembers", minMembers);
+
+  if (species === "custom") {
+    const customData = window?.GSP?.customGeneSets?.data || window?.GSP?.customGeneSets;
+    if (!customData || typeof customData !== "object") {
+      alert("Custom data missing. Please reupload your JSON file.");
+      return;
+    }
+    window.GSP.customGeneSets = customData;
+  }
 
   if (selectedGeneSets.length === 0) {
     alert("Please select at least one category of gene sets from the tree.");

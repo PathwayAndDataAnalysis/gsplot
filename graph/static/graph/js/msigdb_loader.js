@@ -508,12 +508,17 @@ document.addEventListener("DOMContentLoaded", () => {
           if (data.treeType === "msigdb") {
             const treeData = buildSimpleTree(data.data);
             drawD3Tree(treeData);
+            window.GSP = window.GSP || {};
+            window.GSP.customGeneSets = {
+              data: data.data
+            };
           } else if (data.treeType === "flat") {
             d3.select("#tree-container").select("svg").remove();
             alert(`Successfully loaded ${data.count} gene sets. All will be used.`);
             // Store for later filtering step
             window.GSP = window.GSP || {};
             window.GSP.customGeneSets = data;
+            localStorage.setItem("customGeneSetsData", JSON.stringify(data.data));
           } else {
             throw new Error("Unknown tree type");
           }
