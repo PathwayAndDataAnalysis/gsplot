@@ -334,6 +334,7 @@
             const minInput = localStorage.getItem("minInput")
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
+            const species = localStorage.getItem("species")
 
             console.log(selectedGeneSets);
 
@@ -359,6 +360,7 @@
                 min_input: minInput,
                 p_thr: pVal,
                 fdr_thr: fdr,
+                species: species,
               }),
             })
               .then((response) => {

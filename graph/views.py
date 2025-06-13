@@ -38,13 +38,23 @@ def gene_input_view(request):
             min_members = int(data.get("minMembers", 5))
             p_thr = (data.get("p_thr"))
             fdr_thr = (data.get("fdr_thr"))
+            species = data.get("species", "human")
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
             insig_genes = [gene.strip().upper() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
             # Load MSigDB JSON
-            file_path = os.path.join(os.path.dirname(__file__), 'static', 'gene_sets', 'msigdb.v2024.1.Hs.json')
+            species = species.lower()
+            file_map = {
+                "human": "msigdb.v2025.1.Hs.json",
+                "mouse": "msigdb.v2025.1.Mm.json"
+            }
+            filename = file_map.get(species)
+            if not filename:
+                return JsonResponse({"error": "Invalid species"}, status=400)
+
+            file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
             with open(file_path, 'r') as f:
                 gene_sets_data = json.load(f)
 

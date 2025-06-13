@@ -143,24 +143,11 @@ function convertToExpectedFormat(arrayOfObjects) {
   return result;
 }
 
-function filterGeneSets(selectedgenes) {
-  const sigGenes = localStorage.getItem("sigGenes") || "";
-  const insigGenes = localStorage.getItem("insigGenes") || "";
-  const userGenes = set()
-
-  const filePath = path.join(__dirname, 'static', 'gene_sets', 'msigdb.v2024.1.Hs.json');
-  const geneSetsData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-
-  const minMembers = localStorage.getItem("minInput")
-
-  const filtered = getSelectedGeneSetsWithRelevantMembers(userGenes, minMembers, selectedgenes, geneSetsData);
-
-
-}
-
 document.getElementById("submit-gene-button").addEventListener("click", async function () {
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
+
+  const species = document.getElementById("species-select").value;
 
   const pvThr = document.getElementById("pvalue-input").value;
   const fdrThr = document.getElementById("fdr-input").value;
@@ -186,7 +173,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   // Save values to localStorage so the iframe can access them
   localStorage.setItem("sigGenes", sigGenes.trim());
   localStorage.setItem("insigGenes", insigGenes.trim());
-
+  localStorage.setItem("species", species)
 
   if (minInput) {
     const raw = minInput.value.trim();

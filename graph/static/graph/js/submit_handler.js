@@ -1,3 +1,4 @@
+/*
 window.GSP = window.GSP || {};
 
 function submitGenes() {
@@ -79,3 +80,4 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("Restored userGenes from localStorage:", window.GSP.userGenes);
   }
 });
+*/
