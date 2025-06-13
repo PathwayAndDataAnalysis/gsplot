@@ -21,7 +21,6 @@ const transitionDuration = 300;
 
 // To cler storge for testing purposes
 clearLocalStorageExceptSettings()
-//localStorage.clear();
 
 // This becomes a refrence to the iframe once it has loaded
 let frame;
