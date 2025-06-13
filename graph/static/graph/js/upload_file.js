@@ -162,15 +162,15 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
 
-  const pv = document.getElementById("pvalue-input").value;
-  const fdr = document.getElementById("fdr-input").value;
+  const pvThr = document.getElementById("pvalue-input").value;
+  const fdrThr = document.getElementById("fdr-input").value;
 
   const selectedGeneSets = window?.GSP?.selectedGeneSets || [];
 
   const minInput = document.getElementById("min-member-input");
   let minMembers = 5; // default
 
-  if (pv === "" && fdr === "") {
+  if (pvThr === "" && fdrThr === "") {
     alert("Please enter either a p-value or an FDR threshold.");
     return;
   }
@@ -180,8 +180,8 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     return;
   }
 
-  if (pv !== "") localStorage.setItem("p-value", parseFloat(pv));
-  if (fdr !== "") localStorage.setItem("fdr", parseFloat(fdr));
+  if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
+  if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
 
   // Save values to localStorage so the iframe can access them
   localStorage.setItem("sigGenes", sigGenes.trim());

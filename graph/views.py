@@ -36,7 +36,8 @@ def gene_input_view(request):
             insig_input = data.get('insignificant_genes', '')
             selected_gene_sets = data.get("selected_genes_sets", [])
             min_members = int(data.get("minMembers", 5))
-            p_val = float(data.get("p_val"))
+            p_thr = (data.get("p_thr"))
+            fdr_thr = (data.get("fdr_thr"))
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
@@ -47,6 +48,11 @@ def gene_input_view(request):
             with open(file_path, 'r') as f:
                 gene_sets_data = json.load(f)
 
+            if p_thr:
+                p_thr = float(p_thr)
+            if fdr_thr:
+                fdr_thr = float(fdr_thr)
+
 
             filtered = get_selected_gene_sets_with_relevant_members(
                 gene_list= set(sig_genes + insig_genes),
@@ -56,7 +62,7 @@ def gene_input_view(request):
             )
 
             # Run your analysis
-            results = run_fishers_test(filtered,p_val,sig_genes, insig_genes)
+            results = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes)
 
             # Return result as JSON
             data = json.loads(results)

@@ -4,6 +4,7 @@ import numpy as np
 import base64
 from io import BytesIO
 from scipy.stats import fisher_exact
+from statsmodels.stats.multitest import multipletests
 
 #python manage.py runserver
 #python manage.py migrate
@@ -18,10 +19,13 @@ def jaccard_distance(set1, set2):
 
 
 
-def run_fishers_test(filtered_genes,p_val,sig_genes, insig_genes):
+def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     sig_set = set(sig_genes)
     insig_set = set(insig_genes)
 
+    reject_count = 0
+    total = 0
+    fdr_val = False
 
     gene_sets_for_umap = {}
 
@@ -38,8 +42,42 @@ def run_fishers_test(filtered_genes,p_val,sig_genes, insig_genes):
 
         _, p_value = fisher_exact(table, alternative='greater')
 
+        total += 1
+
         gene_string = ' '.join(str(gene) for gene in gene_set)
         gene_sets_for_umap[set_name] = (gene_string, p_value)
+        if not fdr and p_value <= p_val:
+            reject_count += 1
+
+    sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
+    p_vals = np.array([item[1][1] for item in sorted_items])  # Get just the p-values
+
+    if (fdr): # Get Estimate of P-Value
+        reject, q_values, _, _ = multipletests(p_vals, method='fdr_bh')
+        if not (reject.any()):
+            print("No p-values passed the FDR threshold.")
+            gene_sets_for_umap = {}  # Or keep as is
+            return
+        threshold_index = np.where(reject)[0].max()
+        pval_threshold = p_vals[threshold_index]
+        print(f"pval_threshold @ {threshold_index} w val {pval_threshold}")
+
+    else:
+        # Get Estimate of FDR
+        if reject_count <= 0:  # number of p values under threshold
+            print("no values are under the threshold")
+            return
+
+        estimated_fdr = (p_val * total) / reject_count
+        print(f"Estimated FDR at threshold {p_val}: {estimated_fdr:.4f}")
+
+        # find threshold_index
+        threshold_index = max((i for i, (_, val) in enumerate(sorted_items) if val[1] <= p_val), default=-1)
+
+    filtered_gene_sets = dict(list(sorted_items)[:threshold_index + 1])
+
+    # Optional: overwrite or use elsewhere
+    gene_sets_for_umap = filtered_gene_sets
 
 
     ret = umap_reduction(gene_sets_for_umap, "2", "0.1", "0")

@@ -333,6 +333,7 @@
             const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
             const minInput = localStorage.getItem("minInput")
             const pVal = localStorage.getItem("p-value")
+            const fdr = localStorage.getItem("fdr")
 
             console.log(selectedGeneSets);
 
@@ -356,7 +357,8 @@
                 insignificant_genes: insigGenes,
                 selected_genes_sets: selectedGeneSets,
                 min_input: minInput,
-                p_val: pVal,
+                p_thr: pVal,
+                fdr_thr: fdr,
               }),
             })
               .then((response) => {
