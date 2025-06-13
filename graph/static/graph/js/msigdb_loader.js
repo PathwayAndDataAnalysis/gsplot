@@ -78,7 +78,7 @@ function drawD3Tree(treeData) {
     const treeWidth = bottom.y - top.y + 200; // Increased padding for node boxes
 
     // Update SVG height
-    containerHeight = treeHeight + 80;
+    const containerHeight = treeHeight + 80;
     svg.attr("height", containerHeight);
 
     // Calculate centering offsets - make tree larger by reducing centering
@@ -306,11 +306,26 @@ function drawD3Tree(treeData) {
 
   function selectAllNodes() {
     window.selectedItems.clear();
+
+    const selectedGeneSetNames = new Set();
+
     root.descendants().forEach(d => {
-      if (d.parent) { // Skip root node
-        window.selectedItems.add(d.id || (d.id = ++i));
+      // Only allow top-level nodes with geneSets
+      if (
+        d.parent &&
+        d.parent.data.name === "Gene Set Collections" && // Top-level only
+        Array.isArray(d.data.geneSets)
+      ) {
+        const id = d.id || (d.id = ++i);
+        window.selectedItems.add(id);
+
+        // Track geneSet names to avoid duplicates
+        d.data.geneSets.forEach(gs => {
+          selectedGeneSetNames.add(`${gs.collection}:::${gs.name}`);
+        });
       }
     });
+
     updateSelectionDisplay();
     updateNodeStyles();
   }
