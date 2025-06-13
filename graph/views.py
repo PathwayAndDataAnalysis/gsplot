@@ -148,50 +148,6 @@ def serve_msigdb(request):
         return JsonResponse({"error": str(e)}, status=500)
     
 @csrf_exempt
-def filter_gene_sets_view(request):
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Only POST allowed'}, status=405)
-    
-    try:
-        data = json.loads(request.body)
-
-        selected_gene_sets = data.get("selectedGeneSets", [])
-        user_genes = data.get("userGenes", [])
-        min_members = int(data.get("minMembers", 5))
-        species = data.get("species", "human").lower()
-
-        if not selected_gene_sets:# old code ->  (if not selected_gene_sets or not user_genes:)
-            return JsonResponse({"error": "Missing input"}, status=400)
-
-        # Load MSigDB JSON
-        file_map ={
-            "human": "msigdb.v2025.1.Hs.json",
-            "mouse": "msigdb.v2025.1.Mm.json"
-        }
-        filename = file_map.get(species)
-        if not filename:
-            return JsonResponse({"error": "Invalid species"}, status=400)
-        
-        file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-        with open(file_path, 'r') as f:
-            gene_sets_data = json.load(f)
-
-        filtered = get_selected_gene_sets_with_relevant_members(
-            gene_list=set(user_genes),
-            min_members_threshold=min_members,
-            selected_gene_sets=selected_gene_sets,
-            gene_sets_data=gene_sets_data
-        )
-
-        return JsonResponse(filtered, safe=False)
-
-    except Exception as e:
-        import traceback
-        print("BACKEND ERROR:", e)
-        traceback.print_exc()
-        return JsonResponse({"error": str(e)}, status=500)
-    
-@csrf_exempt
 def upload_custom_gene_sets(request):
     if request.method != 'POST':
         return JsonResponse({"error": "Only POST allowed"}, status=405)
