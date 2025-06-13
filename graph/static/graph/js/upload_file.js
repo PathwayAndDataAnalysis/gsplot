@@ -93,49 +93,6 @@ settingsButton.addEventListener("click", function () {
   graph.classList.toggle("settings-open");
 });
 
-/*
-// When user selects a file, save it in local storage in base64 to send to backend endpoint
-fileInput.addEventListener("change", function (event) {
-  const file = event.target.files[0];
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    const fileData = e.target.result;
-    localStorage.setItem("rawFile", fileData);
-  };
-  reader.readAsDataURL(file);
-});
-
-// When user clicks upload, call iframe.main() which will use file in local storage
-document
-  .getElementById("initial-upload-button")
-  .addEventListener("click", async function () {
-    // If there is no file saved or selected, return
-    if (!localStorage.getItem("rawFile") || fileInput.value === "") {
-      return;
-    }
-
-    // Try to draw graph, catch any error that comes up and display it
-    try {
-      loadingSpinner.style.display = "block";
-      await frame.main();
-      loadingSpinner.style.display = "none";
-
-    } catch (error) {
-      alert(`Check that file was formatted correctly, error: ${error}`);
-      return;
-    }
-
-    // Clear the fileInput button and show graph
-    fileInput.value = "";
-    hideUpload();
-    hideSubmit()
-    setTimeout(() => {
-      showGraph();
-    }, transitionDuration);
-  });
-
-*/
-
 function convertToExpectedFormat(arrayOfObjects) {
   const keys = Object.keys(arrayOfObjects[0]);
   const result = {};
