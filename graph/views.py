@@ -6,6 +6,7 @@ from django.conf import settings
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from .dataReduction import umap_reduction
+from .dataReduction import calculate_pvals
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
 from .dataReduction import run_fishers_test
@@ -40,6 +41,9 @@ def gene_input_view(request):
             fdr_thr = (data.get("fdr_thr"))
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
+            neighbors = data.get('neighbors')
+            seed = data.get('seed')
+            minDistance = data.get('minDistance')
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
@@ -81,7 +85,78 @@ def gene_input_view(request):
             )
 
             # Run Fisher's test analysis
-            results,pvl,fdr = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes)
+            results,pvl,fdr = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes,neighbors,seed,minDistance)
+
+            # Return result as JSON
+            data = json.loads(results)  # or skip if already a Python object
+            return JsonResponse({
+                "umap": data,
+                "p_value": pvl,
+                "fdr_value": fdr
+            })
+
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+
+    # Method not allowed
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+
+@csrf_exempt
+def gene_input_view2(request):
+    if request.method == 'POST':
+        try:
+            # Parse JSON body
+            data = json.loads(request.body)
+
+            # Get gene inputs
+            ranked_genes = data.get('ranked_genes', '')
+            selected_gene_sets = data.get("selected_genes_sets", [])
+            min_members = int(data.get("minMembers", 5))
+            p_thr = (data.get("p_thr"))
+            fdr_thr = (data.get("fdr_thr"))
+            species = data.get("species", "human")
+            custom_data = data.get("custom_data")  # Fetch custom data if user provides it
+
+            # Split inputs into cleaned gene lists
+            ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
+
+            # Load gene set data
+            species = species.lower()
+            if species == "custom":
+                if not custom_data:
+                    return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                gene_sets_data = custom_data
+            else:
+                file_map = {
+                    "human": "msigdb.v2025.1.Hs.json",
+                    "mouse": "msigdb.v2025.1.Mm.json"
+                }
+                filename = file_map.get(species)
+                if not filename:
+                    return JsonResponse({"error": "Invalid species"}, status=400)
+
+                file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                with open(file_path, 'r') as f:
+                    gene_sets_data = json.load(f)
+
+            # Convert thresholds to float if provided
+            if p_thr:
+                p_thr = float(p_thr)
+            if fdr_thr:
+                fdr_thr = float(fdr_thr)
+
+
+            # Filter selected gene sets
+            filtered = get_selected_gene_sets_with_relevant_members(
+                gene_list=ranked_genes,
+                min_members_threshold=min_members,
+                selected_gene_sets=selected_gene_sets,
+                gene_sets_data=gene_sets_data,
+            )
+
+            results,pvl,fdr = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
+
 
             # Return result as JSON
             data = json.loads(results)  # or skip if already a Python object

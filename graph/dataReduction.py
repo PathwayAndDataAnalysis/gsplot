@@ -19,15 +19,16 @@ def jaccard_distance(set1, set2):
 
 
 
-def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
+def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes, neighbors,seed,minDistance):
     sig_set = set(sig_genes)
     insig_set = set(insig_genes)
 
     reject_count = 0
     total = 0
-    fdr_val = False
 
     gene_sets_for_umap = {}
+
+
 
     for geneset in filtered_genes:
         gene_set = geneset['matched_genes']
@@ -52,7 +53,6 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
 
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
     p_vals = np.array([item[1][1] for item in sorted_items])  # Get just the p-values
-
     if (fdr): # Get Estimate of P-Value
         reject, q_values, _, _ = multipletests(p_vals, method='fdr_bh')
         if not (reject.any()):
@@ -75,19 +75,22 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
 
         # find threshold_index
         threshold_index = max((i for i, (_, val) in enumerate(sorted_items) if val[1] <= p_val), default=-1)
-
     filtered_gene_sets = dict(list(sorted_items)[:threshold_index + 1])
 
     # Optional: overwrite or use elsewhere
     gene_sets_for_umap = filtered_gene_sets
 
     # round the variables to 3rd decimal point
-    p_val = round(p_val, 3)
-    fdr = round(fdr, 3)
+    p_val = round(p_val, 5)
+    fdr = round(fdr, 5)
 
-    ret = umap_reduction(gene_sets_for_umap, "2", "0.1", "0")
+    ret = umap_reduction(gene_sets_for_umap,neighbors,minDistance,seed)
     return ret,p_val,fdr
 
+def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
+    # Here calculate p value nd then the fdr similr to wht ws done in fishers exct test. be sure to return similr type to fishers test
+    # run similr to the fishers exct test
+    print('calculating p_values')
 
 
 def umap_reduction(fileDataOrString, neighbors, minDistance, seed):

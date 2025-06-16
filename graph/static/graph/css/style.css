@@ -303,6 +303,91 @@ tbody th {
   vertical-align: top;
   width: 10%;
 }
+/* Styles for the new tabbed gene input section */
+.gene-input-tabs {
+  display: flex;
+  margin-bottom: 20px; /* Space between tabs and content */
+}
+
+.gene-input-tab-button {
+  padding: 10px 15px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-bottom: none; /* Make border appear seamless with content box */
+  background-color: #f0f0f0;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  margin-right: 5px; /* Space between tabs */
+  transition: background-color 0.2s ease; /* Smooth transition for hover/active */
+}
+
+.gene-input-tab-button:hover {
+  background-color: #e0e0e0;
+}
+
+.gene-input-tab-button.active {
+  background-color: #fff;
+  border-color: #ccc; /* Border color for active tab */
+  border-bottom: 1px solid #fff; /* Match background for seamless look */
+  font-weight: bold;
+}
+
+.gene-input-content {
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fff;
+}
+
+/* --- Core Flexbox Styles for Side-by-Side Text Areas --- */
+.gene-input-side-by-side {
+  display: flex; /* This is essential for horizontal alignment */
+  flex-wrap: wrap; /* Allows items to wrap to the next line on smaller screens */
+  gap: 20px; /* Space between the two text areas */
+  justify-content: space-between; /* Distributes space between items */
+  align-items: flex-start; /* Aligns items to the top if they have different heights */
+  /* background-color: #f9f9f9; /* Diagnostic: Uncomment to see the flex container area */
+}
+
+.gene-input-column {
+  flex: 1; /* Allows columns to take equal width */
+  min-width: 280px; /* Ensures columns don't become too narrow on small screens */
+  position: relative; /* For positioning the clear button inside */
+  /* background-color: #e6ffe6; /* Diagnostic: Uncomment to see individual column areas */
+}
+
+.gene-input-column label {
+    display: block; /* Ensures label takes its own line */
+    margin-bottom: 5px;
+}
+
+.gene-input-column textarea {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  resize: vertical; /* Allow vertical resizing */
+  box-sizing: border-box; /* Include padding in width calculation to prevent overflow */
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.gene-input-column button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  background-color: grey;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.gene-input-column button:hover {
+  background-color: #666;
+}
 
 /* loading spinner */
 .spinner-overlay {

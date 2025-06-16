@@ -69,52 +69,59 @@
       </div>
     </div>
 
-    <!-- Manual Gene Input (No form) -->
-    <div id="manual-gene-input" style="margin-top: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 8px;">
+   <div
+      id="manual-gene-input"
+      style="margin-top: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 8px"
+    >
       <h2>Manual Gene Input</h2>
 
-      <!-- Significant Genes -->
-      <label for="id_significant_genes" style="font-weight: bold;">Significant Genes:</label><br/>
-      <div style="position: relative; margin-bottom: 20px;">
-        <textarea id="id_significant_genes" rows="5" cols="40"
-          placeholder="Enter significant genes, comma or newline separated"
-          style="width: 100%; padding: 10px; font-size: 16px; resize: vertical;"></textarea>
-        <button onclick="clearSignificantGenes()"
-          style="
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background-color: grey;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            font-size: 12px;
-            border-radius: 4px;
-            cursor: pointer;
-          ">Clear</button>
+      <div class="gene-input-tabs">
+        <span class="gene-input-tab-button active" onclick="showGeneInputTab('two-textareas')">Thresholded Input</span>
+        <span class="gene-input-tab-button" onclick="showGeneInputTab('single-textarea')">Single List Input</span>
       </div>
 
-      <!-- Insignificant Genes -->
-      <label for="id_insignificant_genes" style="font-weight: bold;">Insignificant Genes:</label><br/>
-      <div style="position: relative;">
-        <textarea id="id_insignificant_genes" rows="5" cols="40"
-          placeholder="Enter insignificant genes, comma or newline separated"
-          style="width: 100%; padding: 10px; font-size: 16px; resize: vertical;"></textarea>
-        <button onclick="clearInsignificantGenes()"
-          style="
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background-color: grey;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            font-size: 12px;
-            border-radius: 4px;
-            cursor: pointer;
-          ">Clear</button>
+      <div id="two-textareas-content" class="gene-input-content">
+        <div class="gene-input-side-by-side">
+          <div class="gene-input-column">
+            <label for="id_significant_genes" style="font-weight: bold">Significant Genes:</label><br />
+            <textarea
+              id="id_significant_genes"
+              rows="5"
+              cols="40"
+              placeholder="Enter significant genes, comma or newline separated"
+            ></textarea>
+            <button onclick="clearSignificantGenes()">Clear</button>
+          </div>
+
+          <div class="gene-input-column">
+            <label for="id_insignificant_genes" style="font-weight: bold"
+              >Insignificant Genes:</label
+            ><br />
+            <textarea
+              id="id_insignificant_genes"
+              rows="5"
+              cols="40"
+              placeholder="Enter insignificant genes, comma or newline separated"
+            ></textarea>
+            <button onclick="clearInsignificantGenes()">Clear</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="single-textarea-content" class="gene-input-content" style="display: none;">
+        <label for="id_single_gene_list" style="font-weight: bold">Enter Gene List:</label><br />
+        <div class="gene-input-column">
+          <textarea
+            id="id_single_gene_list"
+            rows="10"
+            cols="80"
+            placeholder="Enter all genes, comma or newline separated. You might need to specify significance in a separate file or method."
+          ></textarea>
+          <button onclick="clearSingleGeneList()">Clear</button>
+        </div>
       </div>
     </div>
+
 
     <!--Display for tree of collections-->
     <div id="tree-container" style="margin: 40px auto; padding: 10px; max-width: 1000px; width: 90%; border: 1px solid #ccc; overflow: visible; height: auto; max-height: none;">
@@ -224,6 +231,33 @@
             <label for="seed">Seed (0 is random):</label>
             <input type="numeric" id="seed" name="seed" />
           </div>
+
+          <!-- START Additional Settings Section -->
+          <div class="additional-settings-header"><h3>Additional Settings</h3></div>
+          <div class="option">
+            <label for="distance-metric">Distance Metric:</label>
+            <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
+              <option value="overlap_coeff" selected>Overlap Coeff</option>
+              <option value="jaccard_distance">Jaccard Distance</option>
+              <!-- Add more options here if needed -->
+            </select>
+          </div>
+
+          <div id="jaccard-options-container" class="option" style="display: none;">
+            <label>Jaccard Type:</label><br/>
+            <div class="radio-container">
+              <div class="option">
+                <label for="fixed-jaccard">Fixed Jaccard Distance:</label>
+                <input type="radio" id="fixed-jaccard" name="jaccard-type" value="fixed" checked />
+              </div>
+              <div class="option">
+                <label for="weighted-jaccard">Weighted Jaccard Distance:</label>
+                <input type="radio" id="weighted-jaccard" name="jaccard-type" value="weighted" />
+              </div>
+              <!-- Add more Jaccard types here if needed -->
+            </div>
+          </div>
+          <!-- END Additional Settings Section -->
 
           <div class="button-container">
             <button onclick="clearSelected()">Clear Selected</button>

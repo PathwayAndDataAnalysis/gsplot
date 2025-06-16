@@ -43,6 +43,7 @@
           const hasRawFile = localStorage.getItem("rawFile");
           const sigGenes = localStorage.getItem("sigGenes") || "";
           const insigGenes = localStorage.getItem("insigGenes") || "";
+          const rankedGenes = localStorage.getItem("rankedGenes") || "";
 
           const hasGeneInput = sigGenes.trim() || insigGenes.trim();
 
@@ -53,9 +54,11 @@
               if (hasRawFile) {
                 await getUmapData(settings);
               }
-
+              if (rankedGenes.trim()) {
+                await getGeneData(settings);
+              }
               if (hasGeneInput) {
-                await getGeneInputData();
+                await getGeneInputData(settings);
               }
             } catch (error) {
               hideSpinner();
@@ -324,24 +327,14 @@
           });
         }
 
-
-        // Get new graph data from gene input on backend
-        function getGeneInputData() {
+        function getGeneData() {
           return new Promise((resolve, reject) => {
-            const sigGenes = localStorage.getItem("sigGenes")
-            const insigGenes = localStorage.getItem("insigGenes")
+            const rankedGenes = localStorage.getItem("rankedGenes")
             const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
             const minMembers = localStorage.getItem("minMembers")
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
-
-            console.log(selectedGeneSets);
-
-            if (!sigGenes.trim() && !insigGenes.trim()) {
-              reject(new Error("Please enter at least one gene in either field."));
-              return;
-            }
 
             // Get CSRF token as before
             const csrftoken = getCookie("csrftoken");
@@ -352,15 +345,14 @@
             }
 
             // POST gene data to /gene-input/ endpoint
-            fetch("/gene-input/", {
+            fetch("/gene-input2/", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
                 "X-CSRFToken": csrftoken,
               },
               body: JSON.stringify({
-                significant_genes: sigGenes,
-                insignificant_genes: insigGenes,
+                ranked_genes: rankedGenes,
                 selected_genes_sets: selectedGeneSets,
                 min_input: minMembers,
                 p_thr: pVal,
@@ -418,9 +410,104 @@
         }
 
 
+        // Get new graph data from gene input on backend
+        function getGeneInputData(settings) {
+          return new Promise((resolve, reject) => {
+            const sigGenes = localStorage.getItem("sigGenes")
+            const insigGenes = localStorage.getItem("insigGenes")
+            const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
+            const minMembers = localStorage.getItem("minMembers")
+            const pVal = localStorage.getItem("p-value")
+            const fdr = localStorage.getItem("fdr")
+            const species = localStorage.getItem("species")
+
+            if (!sigGenes.trim() && !insigGenes.trim()) {
+              reject(new Error("Please enter at least one gene in either field."));
+              return;
+            }
+
+            // Get CSRF token as before
+            const csrftoken = getCookie("csrftoken");
+
+            const customGeneSets = window.parent?.GSP?.customGeneSetsData || window.parent?.GSP?.customGeneSets?.data || window.parent?.GSP?.customGeneSets || null;
+            if (customGeneSets) {
+              console.log("Received custom gene sets from parent:", customGeneSets)
+            }
+
+            // POST gene data to /gene-input/ endpoint
+            fetch("/gene-input/", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrftoken,
+              },
+              body: JSON.stringify({
+                significant_genes: sigGenes,
+                insignificant_genes: insigGenes,
+                selected_genes_sets: selectedGeneSets,
+                min_input: minMembers,
+                p_thr: pVal,
+                fdr_thr: fdr,
+                species: species,
+                custom_data: customGeneSets,
+                neighbors: settings["number-of-neighbors"],
+                minDistance: settings["minimum-distance"],
+                seed: settings["seed"],
+              }),
+            })
+              .then((response) => {
+                if (!response.ok) {
+                  return response.json().then((errorData) => {
+                    reject(new Error(errorData.error || "Unknown error occurred"));
+                  });
+                }
+                return response.json();
+              })
+              .then((data) => {
+                // Clear camera and annotations as data changed
+                localStorage.removeItem("camera");
+                localStorage.removeItem("annotations");
+
+                const pvalDisplay = data.p_value;
+                const fdrDisplay = data.fdr_value;
+                const umapData = data.umap;
+
+                window.parent.document.getElementById("text-display-1").textContent = `P-value Threshold: ${pvalDisplay}`;
+                window.parent.document.getElementById("text-display-2").textContent = `Estimated FDR: ${fdrDisplay}`;
+
+                // Convert returned data into the localStorage.data structure
+                let dataStorage = {};
+                dataKeys.forEach((key) => {
+                  dataStorage[key] = [];
+                });
+
+                for (let i = 0; i < umapData.length; i++) {
+                  dataKeys.forEach((key) => {
+                    if (key === "color") {
+                      dataStorage["color"].push("white");
+                    } else if (key === "pointNumber") {
+                      dataStorage["pointNumber"].push(i);
+                    } else {
+                      dataStorage[key].push(umapData[i][key]);
+                    }
+                  });
+                }
+
+                // Save data
+                setLocalStorage("data", dataStorage);
+                resolve();
+              })
+              .catch((error) => {
+                reject(error);
+              });
+          });
+        }
+
+
         // This listens for a settigns change, when changed apply them
         window.addEventListener("storage", function (e) {
           if (e.key === "settings") {
+            console.log("trying to chnge settings")
             let selected = getLocalStorage("selected");
             let fullGraphData = getLocalStorage("data");
             let settings = getLocalStorage("settings");
@@ -451,7 +538,7 @@
         // Get umap data once more and draw graph. Selected are cleared as new UMAP data doesn't carry over selected points since they are in new positions
         async function applyUmapChange(settings) {
           showSpinner();
-          await getUmapData(settings);
+          await getGeneInputData(settings);
           hideSpinner();
           graph();
           clearSelected();
