@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b4112fad-1cc0-4f89-a3c8-66ff8f42a414" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/gsplot/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/LICENSE" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/gsplot/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/admin.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/apps.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/dataReduction.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/migrations/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/about/css/about.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/about/images/UMass_Boston_logo.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/about/images/temp.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/graph/css/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/graph/data/example_data.tsv" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/graph/js/modify_selected.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/graph/js/update_settings.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/graph/js/upload_file.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/help/css/help_style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/static/help/js/help.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/templates/about.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/templates/base.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/templates/graph.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/templates/help.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/tests.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/urls.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/graph/views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/gsplot/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/gsplot/asgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/gsplot/asgi.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/gsplot/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/gsplot/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/gsplot/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/gsplot/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/gsplot/wsgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/gsplot/wsgi.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gsplot/manage.py" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="ROOT_SYNC" value="DONT_SYNC" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7
+}</component>
+  <component name="ProjectId" id="2xxisajirUM8b88KXUAYH7wbT9E" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;testing/branch&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Crist/Research&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Crist\Research\gsplot" />
+      <recent name="C:\Users\Crist\Research\gsplot\graph" />
+    </key>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="b4112fad-1cc0-4f89-a3c8-66ff8f42a414" name="Changes" comment="" />
+      <created>1748886332660</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1748886332660</updated>
+    </task>
+    <servers />
+  </component>
+</project>

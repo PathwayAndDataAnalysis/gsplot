@@ -39,25 +39,32 @@ def gene_input_view(request):
             p_thr = (data.get("p_thr"))
             fdr_thr = (data.get("fdr_thr"))
             species = data.get("species", "human")
+            custom_data = data.get("custom_data")   # Fetch custom data if user provides it
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
             insig_genes = [gene.strip().upper() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
-            # Load MSigDB JSON
+            # Load gene set data
             species = species.lower()
-            file_map = {
-                "human": "msigdb.v2025.1.Hs.json",
-                "mouse": "msigdb.v2025.1.Mm.json"
-            }
-            filename = file_map.get(species)
-            if not filename:
-                return JsonResponse({"error": "Invalid species"}, status=400)
+            if species == "custom":
+                if not custom_data:
+                    return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                gene_sets_data = custom_data
+            else:
+                file_map = {
+                    "human": "msigdb.v2025.1.Hs.json",
+                    "mouse": "msigdb.v2025.1.Mm.json"
+                }
+                filename = file_map.get(species)
+                if not filename:
+                    return JsonResponse({"error": "Invalid species"}, status=400)
 
-            file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-            with open(file_path, 'r') as f:
-                gene_sets_data = json.load(f)
-
+                file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                with open(file_path, 'r') as f:
+                    gene_sets_data = json.load(f)
+            
+            # Convert thresholds to float if provided
             if p_thr:
                 p_thr = float(p_thr)
             if fdr_thr:
@@ -65,6 +72,7 @@ def gene_input_view(request):
 
             genes = sig_genes + insig_genes
 
+            # Filter selected gene sets
             filtered = get_selected_gene_sets_with_relevant_members(
                 gene_list=genes,
                 min_members_threshold=min_members,
@@ -72,11 +80,8 @@ def gene_input_view(request):
                 gene_sets_data=gene_sets_data,
             )
 
-            # Run your analysis
+            # Run Fisher's test analysis
             results,pvl,fdr = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes)
-
-            #data = json.loads(results)
-            #return JsonResponse(data, safe=False)
 
             # Return result as JSON
             data = json.loads(results)  # or skip if already a Python object
