@@ -1,5 +1,5 @@
 def get_selected_gene_sets_with_relevant_members(
-    gene_list: set[str],
+    gene_list: list[str],
     min_members_threshold: int,
     selected_gene_sets: list[dict],
     gene_sets_data: dict
@@ -18,7 +18,12 @@ def get_selected_gene_sets_with_relevant_members(
             continue
 
         gene_symbols = gene_set_info.get("geneSymbols", [])
-        matched = list(set(gene_symbols) & gene_list)
+
+        matched = []
+
+        for gene in gene_list:
+            if gene in gene_symbols:
+                matched.append(gene)
 
         if len(matched) >= min_members_threshold:
             result.append({

@@ -30,12 +30,13 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     gene_sets_for_umap = {}
 
     for geneset in filtered_genes:
-        gene_set = set(geneset['matched_genes'])
+        gene_set = geneset['matched_genes']
         set_name = geneset['gene_set_name']
+        set_gene_set = set(geneset['matched_genes'])
 
-        a = len(sig_set & gene_set)    # sig & in gene set
+        a = len(sig_set & set_gene_set)    # sig & in gene set
         b = len(sig_set) - a          # sig & not in gene set
-        c = len(insig_set & gene_set)  # insig & in gene set
+        c = len(insig_set & set_gene_set)  # insig & in gene set
         d = len(insig_set) - c        # insig & not gene set
 
         table = [[a, b], [c, d]]
@@ -84,9 +85,7 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     p_val = round(p_val, 3)
     fdr = round(fdr, 3)
 
-
     ret = umap_reduction(gene_sets_for_umap, "2", "0.1", "0")
-
     return ret,p_val,fdr
 
 

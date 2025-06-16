@@ -63,9 +63,10 @@ def gene_input_view(request):
             if fdr_thr:
                 fdr_thr = float(fdr_thr)
 
+            genes = sig_genes + insig_genes
 
             filtered = get_selected_gene_sets_with_relevant_members(
-                gene_list= set(sig_genes + insig_genes),
+                gene_list=genes,
                 min_members_threshold=min_members,
                 selected_gene_sets=selected_gene_sets,
                 gene_sets_data=gene_sets_data,
