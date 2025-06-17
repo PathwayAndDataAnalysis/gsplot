@@ -19,7 +19,7 @@ def jaccard_distance(set1, set2):
 
 
 
-def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes, neighbors,seed,minDistance):
+def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     sig_set = set(sig_genes)
     insig_set = set(insig_genes)
 
@@ -77,15 +77,11 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes, neighbors,
         threshold_index = max((i for i, (_, val) in enumerate(sorted_items) if val[1] <= p_val), default=-1)
     filtered_gene_sets = dict(list(sorted_items)[:threshold_index + 1])
 
-    # Optional: overwrite or use elsewhere
-    gene_sets_for_umap = filtered_gene_sets
-
     # round the variables to 3rd decimal point
     p_val = round(p_val, 5)
     fdr = round(fdr, 5)
 
-    ret = umap_reduction(gene_sets_for_umap,neighbors,minDistance,seed)
-    return ret,p_val,fdr
+    return filtered_gene_sets,p_val,fdr
 
 def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
     # Here calculate p value nd then the fdr similr to wht ws done in fishers exct test. be sure to return similr type to fishers test

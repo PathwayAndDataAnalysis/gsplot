@@ -137,10 +137,11 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     clearInsignificantGenes();
     clearSignificantGenes();
   }
-
+  added Tabs
+Umap
   console.log(currentActiveGeneInputTabId);
 */
-
+  clearLocalStorageExceptSettings()
   if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
   if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
 

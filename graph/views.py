@@ -85,10 +85,23 @@ def gene_input_view(request):
             )
 
             # Run Fisher's test analysis
-            results,pvl,fdr = run_fishers_test(filtered,p_thr,fdr_thr,sig_genes, insig_genes,neighbors,seed,minDistance)
+            result, pvl, fdr = run_fishers_test(filtered, p_thr, fdr_thr, sig_genes, insig_genes)
+
+            try:
+                if len(result) < 4: # if we have less than 4 points
+                    # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
+                    raise ValueError(
+                        "Please choose a higher FDR/p_val, this choice leads to less than 4 points which cannot be graphed.")
+
+            except ValueError as e:
+                return JsonResponse({'error': str(e)}, status=400)
+
+            # Run Ump
+            mapped_result = umap_reduction(result, neighbors, minDistance, seed)
+            print(mapped_result)
 
             # Return result as JSON
-            data = json.loads(results)  # or skip if already a Python object
+            data = json.loads(mapped_result)  # or skip if already a Python object
             return JsonResponse({
                 "umap": data,
                 "p_value": pvl,
