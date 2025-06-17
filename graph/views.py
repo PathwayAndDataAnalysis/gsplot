@@ -84,8 +84,16 @@ def gene_input_view(request):
                 gene_sets_data=gene_sets_data,
             )
 
+            # If there is no matching gene set after filtering, return error
+            if not filtered:
+                return JsonResponse({"error": "No gene sets matched after filtering. Please select other categories or adjust your input."}, status=400)
+
             # Run Fisher's test analysis
-            result, pvl, fdr = run_fishers_test(filtered, p_thr, fdr_thr, sig_genes, insig_genes)
+            fisher_result = run_fishers_test(filtered, p_thr, fdr_thr, sig_genes, insig_genes)
+            if fisher_result is None:
+                return JsonResponse({"error": "Fisher's test returned no results. Please enter higher p-value/FDR threshold or change the selections."}, status=400)
+            
+            result, pvl, fdr = fisher_result
 
             try:
                 if len(result) < 4: # if we have less than 4 points

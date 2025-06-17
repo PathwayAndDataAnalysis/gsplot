@@ -180,16 +180,18 @@ Umap
     loadingSpinner.style.display = "block";
     await frame.main();
     loadingSpinner.style.display = "none";
+
+    // Hide input and show graph only when there is no error
+    hideUpload();
+    hideGenes();
+    hideSubmit();
+    hideInput();
+    setTimeout(() => showGraph(), transitionDuration);
+
   } catch (error) {
+    loadingSpinner.style.display = "none";
     alert("Error submitting genes: " + error.message);
   }
-
-  hideUpload();
-  hideGenes();
-  hideSubmit();
-  hideInput();
-  setTimeout(() => showGraph(), transitionDuration);
-
 });
 function toggleJaccardOptions() {
   const distanceMetricSelect = document.getElementById('distance-metric');
