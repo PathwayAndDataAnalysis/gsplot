@@ -1,3 +1,5 @@
+import math
+
 import pandas as pd
 import umap.umap_ as umap
 import numpy as np
@@ -5,6 +7,8 @@ import base64
 from io import BytesIO
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
+from scipy.stats import norm
+
 
 #python manage.py runserver
 #python manage.py migrate
@@ -93,6 +97,7 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
         if not fdr and p_value <= p_val:
             reject_count += 1
 
+def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
     p_vals = np.array([item[1][1] for item in sorted_items])  # Get just the p-values
     if (fdr): # Get Estimate of P-Value
@@ -125,21 +130,86 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
 
     return filtered_gene_sets,p_val,fdr
 
-def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
-    # Here calculate p value nd then the fdr similr to wht ws done in fishers exct test. be sure to return similr type to fishers test
-    # run similr to the fishers exct test
-    print('calculating p_values')
 
+
+def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
+    sig_set = set(sig_genes)
+    insig_set = set(insig_genes)
+
+    reject_count = 0
+    total = len(filtered_genes)
+
+    gene_sets_for_umap = {}
+
+
+
+    for geneset in filtered_genes:
+        gene_set = geneset['matched_genes']
+        set_name = geneset['gene_set_name']
+        set_gene_set = set(geneset['matched_genes'])
+
+        a = len(sig_set & set_gene_set)    # sig & in gene set
+        b = len(sig_set) - a          # sig & not in gene set
+        c = len(insig_set & set_gene_set)  # insig & in gene set
+        d = len(insig_set) - c        # insig & not gene set
+
+        table = [[a, b], [c, d]]
+
+        _, p_value = fisher_exact(table, alternative='greater')
+
+        gene_string = ' '.join(str(gene) for gene in gene_set)
+        gene_sets_for_umap[set_name] = (gene_string, p_value)
+        if not fdr and p_value <= p_val:
+            reject_count += 1
+
+    filtered_gene_sets,p_val,fdr = get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr)
+
+    return filtered_gene_sets,p_val,fdr
+
+def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
+    n = len(ranked_genes)
+    ranks = dict()
+    gene_sets_for_umap = {}
+    reject_count = 0
+    for i in range(n-1):
+        rank = i + 1
+        gene = ranked_genes[i]
+        norm_rank = (rank-0.5)/n
+        ranks[gene] = norm_rank
+
+    total = len(filtered)
+    for geneset in filtered:
+        gene_set = geneset['matched_genes']
+        set_name = geneset['gene_set_name']
+
+        gene_n = len(gene_set)
+        total_w = 0
+        for gene in gene_set:
+            total_w += ranks[gene]
+        geneset_mw = total_w/gene_n
+        sd = math.sqrt(((n + 1) * (n - gene_n)) / (12 * (n**2) * gene_n))
+        # Calculate CDF for a normal distribution with mean 76 and std dev 2.5 at x = 80
+        p_value = norm.cdf(geneset_mw, loc=0.5, scale=sd)
+
+        gene_string = ' '.join(str(gene) for gene in gene_set)
+        gene_sets_for_umap[set_name] = (gene_string, p_value)
+        if not fdr_thr and p_value <= p_thr:
+            reject_count += 1
+
+    filtered_gene_sets, p_val, fdr = get_vals(gene_sets_for_umap, reject_count, total, p_thr, fdr_thr)
+
+    return filtered_gene_sets, p_val, fdr
 
 def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=None, distance_type='weighted'):
     # Check if use weighted Jaccard  without weights
     if distance_type == 'weighted' and user_weights is None:
         raise ValueError("user_weights must be provided when using weighted Jaccard distance.")
-    
     try:
         # Check if input looks like a base64-encoded file
         if ';base64,' in fileDataOrString:
             # --- FILE MODE ---
+            print("its a file")
+            print(neighbors, minDistance, seed)
             format, tsvData = fileDataOrString.split(';base64,')
             file_content = base64.b64decode(tsvData)
             tsvFile = BytesIO(file_content)
@@ -183,7 +253,6 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
                 distance_matrix[j, i] = dist
 
         reducer = umap.UMAP(metric='precomputed', n_neighbors=int(neighbors), random_state=int(seed) if int(seed) != 0 else None, min_dist=float(minDistance))
-
 
         embedding = reducer.fit_transform(distance_matrix)
 

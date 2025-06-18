@@ -36,6 +36,9 @@ function main() {
 
   addRadioEventListeners();
   addSpinnerOverlay();
+
+  localStorage.setItem("single-list",JSON.stringify(false));
+
   if (localStorage.getItem("settings") !== null) {
     const currentSettings = JSON.parse(localStorage.getItem("settings"));
     currentSettings.weighted = true;

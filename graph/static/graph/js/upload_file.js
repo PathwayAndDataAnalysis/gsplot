@@ -120,6 +120,12 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
 
   const selectedGeneSets = window?.GSP?.selectedGeneSets || [];
 
+  let singleList = false; // Default value if not found
+  const storedSingleList = localStorage.getItem("single-list");
+  if (storedSingleList !== null) {
+      singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
+  }
+
   const minInput = document.getElementById("min-member-input");
   let minMembers = 5; // default
 
@@ -138,24 +144,33 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       alert("Please enter ranked genes in the single list.");
       return;
     }
+  if (!sigGenes.trim() && !insigGenes.trim() && (singleList == false)) {
+    alert("Please enter at least one gene in either field.");
+    return;
   }
 
   clearLocalStorageExceptSettings()
   if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
   if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
 
-  localStorage.setItem("species", species);
 
   // Save values to localStorage so the iframe can access them
-  if (currentActiveGeneInputTabId === "single-textarea") {
-    localStorage.setItem("rankedGenes", rankedGenes.trim());
-    localStorage.setItem("sigGenes", "");
-    localStorage.setItem("insigGenes", "");
-  } else if (currentActiveGeneInputTabId === "two-textareas") {
-    localStorage.setItem("rankedGenes", "");
-    localStorage.setItem("sigGenes", sigGenes.trim());
-    localStorage.setItem("insigGenes", insigGenes.trim());
-  }
+  if (singleList == true) {
+    if (rankedGenes !== "") {
+      localStorage.setItem("rankedGenes", rankedGenes);
+      const sigGenes = "";
+      const insigGenes = "";
+      clearInsignificantGenes();
+      clearSignificantGenes();
+    } else {
+      alert("Please enter genes");
+    }
+  } else {
+      localStorage.setItem("sigGenes", sigGenes.trim());
+      localStorage.setItem("insigGenes", insigGenes.trim());
+    }
+  localStorage.setItem("species", species);
+
 
   if (minInput) {
     const raw = minInput.value.trim();
@@ -225,8 +240,9 @@ function toggleJaccardOptions() {
 function showGeneInputTab(tabId) {
   // Assign the tabId to the global variable
   currentActiveGeneInputTabId = tabId;
-  console.log("Current active gene input tab (global):", currentActiveGeneInputTabId); // For debugging
 
+  let isSingleTextArea = (currentActiveGeneInputTabId == "single-textarea");
+  localStorage.setItem("single-list", JSON.stringify(isSingleTextArea)); // <<< FIX HERE: Stringify the boolean
 
   // Hide sall content divs
   document.getElementById('two-textareas-content').style.display = 'none';
@@ -331,8 +347,10 @@ function clearInsignificantGenes() {
 
 function clearLocalStorageExceptSettings() {
   const settingsBackup = localStorage.getItem("settings");
+  const listBackup = localStorage.getItem("single-list");
   localStorage.clear();
   if (settingsBackup) {
+    localStorage.setItem("single-list", listBackup);
     localStorage.setItem("settings", settingsBackup);
   }
 }

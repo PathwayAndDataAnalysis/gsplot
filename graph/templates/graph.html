@@ -44,18 +44,21 @@
           const sigGenes = localStorage.getItem("sigGenes") || "";
           const insigGenes = localStorage.getItem("insigGenes") || "";
           const rankedGenes = localStorage.getItem("rankedGenes") || "";
+          let singleList = false; // Default value if not found
+          const storedSingleList = localStorage.getItem("single-list");
+          if (storedSingleList !== null) {
+            singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
+          }
 
           const hasGeneInput = sigGenes.trim() || insigGenes.trim();
 
-
+          console.log(singleList == true);
           if (getLocalStorage("data") === null) {
             showSpinner();
             try {
-              if (hasRawFile) {
-                await getUmapData(settings);
-              } else if (rankedGenes.trim()) {
+              if (singleList == true) {
                 await getGeneData(settings);
-              } else if (hasGeneInput) {
+              } else {
                 await getGeneInputData(settings);
               }
             } catch (error) {
@@ -512,7 +515,6 @@
         // This listens for a settigns change, when changed apply them
         window.addEventListener("storage", function (e) {
           if (e.key === "settings") {
-            console.log("trying to chnge settings")
             let selected = getLocalStorage("selected");
             let fullGraphData = getLocalStorage("data");
             let settings = getLocalStorage("settings");
@@ -542,8 +544,19 @@
 
         // Get umap data once more and draw graph. Selected are cleared as new UMAP data doesn't carry over selected points since they are in new positions
         async function applyUmapChange(settings) {
+          let singleList = false; // Default value if not found
+          const storedSingleList = localStorage.getItem("single-list");
+          if (storedSingleList !== null) {
+            singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
+          }
           showSpinner();
-          await getGeneInputData(settings);
+
+          if (singleList == true) {
+            await getGeneData(settings);
+          } else {
+            await getGeneInputData(settings);
+          }
+
           hideSpinner();
           graph();
           clearSelected();

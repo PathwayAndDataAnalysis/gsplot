@@ -180,10 +180,17 @@ def gene_input_view2(request):
                 gene_sets_data=gene_sets_data,
             )
 
-            results,pvl,fdr = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
-            
+            pvals_result = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
+
+            if pvals_result is None:
+                return JsonResponse({
+                                        "error": "calculate_pvals returned no results. Please enter higher p-value/FDR threshold or change the selections."},
+                                    status=400)
+
+            result, pvl, fdr = pvals_result
+
             try:
-                if len(results) < 4: # if we have less than 4 points
+                if len(result) < 4:  # if we have less than 4 points
                     # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
                     raise ValueError(
                         "Please choose a higher FDR/p_val, this choice leads to less than 4 points which cannot be graphed.")
@@ -194,8 +201,7 @@ def gene_input_view2(request):
             # Run Ump
             distance_type = (data.get('distance-type') or 'weighted').lower()
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
-            mapped_result = umap_reduction(results, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
-
+            mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
