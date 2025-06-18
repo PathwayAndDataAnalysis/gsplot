@@ -10,13 +10,14 @@ const defaultSettings = {
   "dynamic-size-scalar": "1",
   "number-of-neighbors": "15",
   "minimum-distance": "0.1",
-  seed: "0",
+  "seed": "0"
 };
 
 const inputRefrences = {};
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
+const weightedJ = document.getElementById("weighted-jaccard");
 
 const fixedInput = document.getElementById("fixed-size-input-reveal");
 const dynamicInput = document.getElementById("dynamic-size-input-reveal");
@@ -25,18 +26,23 @@ main();
 
 function main() {
   Object.keys(defaultSettings).forEach((key) => {
-    if (key !== "umap") {
-      inputRefrences[key] = document.getElementById(key);
+    const el = document.getElementById(key);
+    if (el) {
+      inputRefrences[key] = el;
+    } else {
+      console.warn(`Element with id "${key}" not found in DOM`);
     }
   });
 
   addRadioEventListeners();
   addSpinnerOverlay();
-
   if (localStorage.getItem("settings") !== null) {
     const currentSettings = JSON.parse(localStorage.getItem("settings"));
+    currentSettings.weighted = true;
+    localStorage.setItem("settings", JSON.stringify(currentSettings));
     displayValues(currentSettings);
   } else {
+    defaultSettings.weighted = true;
     localStorage.setItem("settings", JSON.stringify(defaultSettings));
     displayValues(defaultSettings);
   }
@@ -51,14 +57,22 @@ function displayValues(settings) {
       value.value = settings[key];
     }
   }
+
+  // Display Jaccard type
+  if (settings["distance_type" === "fixed"]) {
+    document.getElementById("fixed-jaccard").checked = true;
+  } else if (settings["distance_type" === "weighted"]) {
+    document.getElementById("weighted-jaccard").checked = true;
+  }
 }
 
 function updateSettings() {
   let newSettings = {};
-
   newSettings.umapChange = false;
 
+  // Collect input
   for (const [key, value] of Object.entries(inputRefrences)) {
+    if (value === null) continue;  // Skip input not found
     if (key === "fixed-size" || key === "dynamic-size") {
       newSettings[key] = value.checked;
     } else {
@@ -66,20 +80,38 @@ function updateSettings() {
     }
   }
 
-  let oldSettings = JSON.parse(localStorage.getItem("settings"));
+  // Jaccard type
+  if (document.getElementById("fixed-jaccard")?.checked) {
+    newSettings["distance_type"] = "fixed";
+  } else if (document.getElementById("weighted-jaccard")?.checked) {
+    newSettings["distance_type"] = "weighted";
+  }
 
+  // Compare UMAP settings
+  let oldSettings = JSON.parse(localStorage.getItem("settings"));
   if (isUmapSettingDifferent(newSettings, oldSettings)) {
     newSettings.umapChange = true;
   }
 
+  // Save settings
   localStorage.setItem("settings", JSON.stringify(newSettings));
+
+  // Check data before rendering
+  const data = localStorage.getItem("data");
+  if (data) {
+    // Send signal for iframe to render
+    window.graph?.contentWindow?.graph?.();
+  } else {
+    alert("Settings saved! No graph to redraw yet (no data).");
+  }
 }
 
 function isUmapSettingDifferent(setting1, setting2) {
   return (
     setting1["number-of-neighbors"] !== setting2["number-of-neighbors"] ||
     setting1["minimum-distance"] !== setting2["minimum-distance"] ||
-    setting1["seed"] !== setting2["seed"]
+    setting1["seed"] !== setting2["seed"] ||
+    setting1["weighted"] !== setting2["weighted"]
   );
 }
 
@@ -91,6 +123,16 @@ function addRadioEventListeners() {
   dynamicSizeButton.addEventListener("change", () => {
     toggleSizeVisibility();
   });
+  weightedJ.addEventListener("change", () => {
+    updateWeighted();
+  });
+  
+}
+function updateWeighted() {
+  settings = JSON.parse(localStorage.getItem("settings"));
+  const current = settings["weighted"];
+  settings["weighted"] = !current;
+  localStorage.setItem("settings", JSON.stringify(settings));
 }
 
 function toggleSizeVisibility() {

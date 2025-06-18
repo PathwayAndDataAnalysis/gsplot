@@ -17,6 +17,48 @@ from statsmodels.stats.multitest import multipletests
 def jaccard_distance(set1, set2):
     return 1 - (len(set1.intersection(set2)) / len(set1.union(set2)))
 
+def weighted_jaccard_distance(user_weights, gene_set):
+    numerator = 0.0
+    denominator = 0.0
+    for gene in set(user_weights.keys()).union(gene_set):
+        w_list = user_weights.get(gene, 0.0)
+        w_set = 1.0 if gene in gene_set else 0.0
+        numerator += min(w_list, w_set)
+        denominator += max(w_list, w_set)
+    return 1 - (numerator / denominator) if denominator else 1.0    # distance = 1 - similarity
+
+def build_weights_from_ranked_list(ranked_genes):
+    """
+    ranked_genes: list of gene names in order from highest to lowest rank
+    Returns: dict {gene: normalized_rank}
+    """
+    n = len(ranked_genes)
+    user_weights = {}
+    for i, gene in enumerate(ranked_genes):
+        norm_rank = (i + 1 - 0.5) / n
+        user_weights[gene.strip().upper()] = norm_rank
+    return user_weights
+
+def build_weights_from_sets(sig_genes, insig_genes):
+    """
+    sig_genes: list of sig genes in ranked order (high to low)
+    insig_genes: list of insig genes (no rank needed, all = 0)
+    Returns: dict {gene: normalized_rank}
+    """
+    user_weights = {}
+    n = len(sig_genes)
+
+    # Assign normalized rank to sig_genes
+    for i, gene in enumerate(sig_genes):
+        norm_rank = (i + 1 - 0.5) / n
+        user_weights[gene.strip().upper()] = norm_rank
+    # Assign 0 to insig genes if not already in sig
+    for gene in insig_genes:
+        gene = gene.strip().upper()
+        user_weights.setdefault(gene, 0.0)
+
+    return user_weights  
+
 
 
 def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
@@ -89,7 +131,11 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
     print('calculating p_values')
 
 
-def umap_reduction(fileDataOrString, neighbors, minDistance, seed):
+def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=None, distance_type='weighted'):
+    # Check if use weighted Jaccard  without weights
+    if distance_type == 'weighted' and user_weights is None:
+        raise ValueError("user_weights must be provided when using weighted Jaccard distance.")
+    
     try:
         # Check if input looks like a base64-encoded file
         if ';base64,' in fileDataOrString:
@@ -117,23 +163,26 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed):
 
         numberOfEnrichedMolecules = []
 
+        print("distance type:", distance_type)
+        print(f"user_weights: {user_weights}")
+
         for i in range(n):
             set1 = set(df.loc[i, "Molecules"].split())
             numberOfEnrichedMolecules.append(len(set1))
             for j in range (i + 1, n):
                 set2 = set(df.loc[j, "Molecules"].split())
-                dist = jaccard_distance(set1, set2)
+
+                if distance_type == 'weighted' and user_weights:
+                    dist_i = weighted_jaccard_distance(user_weights, set1)
+                    dist_j = weighted_jaccard_distance(user_weights, set2)
+                    dist = (dist_i + dist_j) / 2
+                else:
+                    dist = jaccard_distance(set1, set2)
+                
                 distance_matrix[i, j] = dist
                 distance_matrix[j, i] = dist
 
-        seed = int(seed)
-        if seed == 0:
-            seed = None
-
-        n_rows = df.shape[0]
-        neighbors = int(neighbors)
-
-        reducer = umap.UMAP(metric='precomputed', n_neighbors=int(neighbors), random_state=seed, min_dist=float(minDistance))
+        reducer = umap.UMAP(metric='precomputed', n_neighbors=int(neighbors), random_state=int(seed) if int(seed) != 0 else None, min_dist=float(minDistance))
 
 
         embedding = reducer.fit_transform(distance_matrix)

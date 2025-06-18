@@ -53,11 +53,9 @@
             try {
               if (hasRawFile) {
                 await getUmapData(settings);
-              }
-              if (rankedGenes.trim()) {
+              } else if (rankedGenes.trim()) {
                 await getGeneData(settings);
-              }
-              if (hasGeneInput) {
+              } else if (hasGeneInput) {
                 await getGeneInputData(settings);
               }
             } catch (error) {
@@ -327,7 +325,7 @@
           });
         }
 
-        function getGeneData() {
+        function getGeneData(settings) {
           return new Promise((resolve, reject) => {
             const rankedGenes = localStorage.getItem("rankedGenes")
             const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
@@ -335,6 +333,7 @@
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
+            const distanceType = settings["weighted"]
 
             // Get CSRF token as before
             const csrftoken = getCookie("csrftoken");
@@ -358,7 +357,11 @@
                 p_thr: pVal,
                 fdr_thr: fdr,
                 species: species,
-                custom_data: customGeneSets
+                custom_data: customGeneSets,
+                neighbors: settings["number-of-neighbors"],
+                minDistance: settings["minimum-distance"],
+                seed: settings["seed"],
+                distance_type: distanceType
               }),
             })
               .then((response) => {
@@ -420,6 +423,7 @@
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
+            const distanceType = settings["distance_type"]
 
             if (!sigGenes.trim() && !insigGenes.trim()) {
               reject(new Error("Please enter at least one gene in either field."));
@@ -453,6 +457,7 @@
                 neighbors: settings["number-of-neighbors"],
                 minDistance: settings["minimum-distance"],
                 seed: settings["seed"],
+                distance_type: distanceType
               }),
             })
               .then((response) => {

@@ -238,21 +238,21 @@
             <label for="distance-metric">Distance Metric:</label>
             <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
               <option value="overlap_coeff" selected>Overlap Coeff</option>
-              <option value="jaccard_distance">Jaccard Distance</option>
+              <option value="jaccard_distance" selected>Jaccard Distance</option>
               <!-- Add more options here if needed -->
             </select>
           </div>
 
-          <div id="jaccard-options-container" class="option" style="display: none;">
+          <div id="jaccard-options-container" class="option" style="display: block;">
             <label>Jaccard Type:</label><br/>
             <div class="radio-container">
               <div class="option">
                 <label for="fixed-jaccard">Fixed Jaccard Distance:</label>
-                <input type="radio" id="fixed-jaccard" name="jaccard-type" value="fixed" checked />
+                <input type="radio" id="fixed-jaccard" name="jaccard-type" value="fixed" />
               </div>
               <div class="option">
                 <label for="weighted-jaccard">Weighted Jaccard Distance:</label>
-                <input type="radio" id="weighted-jaccard" name="jaccard-type" value="weighted" />
+                <input type="radio" id="weighted-jaccard" name="jaccard-type" value="weighted" checked />
               </div>
               <!-- Add more Jaccard types here if needed -->
             </div>

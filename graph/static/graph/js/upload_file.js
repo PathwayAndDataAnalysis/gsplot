@@ -24,6 +24,10 @@ const transitionDuration = 300;
 // To cler storge for testing purposes
 clearLocalStorageExceptSettings()
 
+// Ensure default tab and id
+LoadInput();
+currentActiveGeneInputTabId = 'two-textareas';
+
 // This becomes a refrence to the iframe once it has loaded
 let frame;
 graph.onload = () => {
@@ -124,31 +128,34 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     return;
   }
 
-  if (!sigGenes.trim() && !insigGenes.trim()) {
-    alert("Please enter at least one gene in either field.");
-    return;
+  if (currentActiveGeneInputTabId === "two-textareas") {
+    if (!sigGenes.trim() && !insigGenes.trim()) {
+      alert("Please enter at least one gene in either field.");
+      return;
+    }
+  } else if (currentActiveGeneInputTabId === "single-textarea") {
+    if (!rankedGenes.trim()) {
+      alert("Please enter ranked genes in the single list.");
+      return;
+    }
   }
 
-/*
-  if (rankedGenes !== "") {
-    localStorage.setItem("rankedGenes", rankedGenes);
-    const sigGenes = "";
-    const insigGenes = "";
-    clearInsignificantGenes();
-    clearSignificantGenes();
-  }
-  added Tabs
-Umap
-  console.log(currentActiveGeneInputTabId);
-*/
   clearLocalStorageExceptSettings()
   if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
   if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
 
-  // Save values to localStorage so the iframe can access them
-  localStorage.setItem("sigGenes", sigGenes.trim());
-  localStorage.setItem("insigGenes", insigGenes.trim());
   localStorage.setItem("species", species);
+
+  // Save values to localStorage so the iframe can access them
+  if (currentActiveGeneInputTabId === "single-textarea") {
+    localStorage.setItem("rankedGenes", rankedGenes.trim());
+    localStorage.setItem("sigGenes", "");
+    localStorage.setItem("insigGenes", "");
+  } else if (currentActiveGeneInputTabId === "two-textareas") {
+    localStorage.setItem("rankedGenes", "");
+    localStorage.setItem("sigGenes", sigGenes.trim());
+    localStorage.setItem("insigGenes", insigGenes.trim());
+  }
 
   if (minInput) {
     const raw = minInput.value.trim();
@@ -176,6 +183,15 @@ Umap
     return;
   }
 
+  let distanceType = "weighted";
+  const distanceMetric = document.getElementById("distance-metric")?.value;
+  if (distanceMetric === "jaccard_distance") {
+    distanceType = document.getElementById("weighted-jaccard")?.checked ? "weighted" : "fixed";
+  }
+
+  // Save or attach to request later
+  localStorage.setItem("distance_type", distanceType);
+
   try {
     loadingSpinner.style.display = "block";
     await frame.main();
@@ -200,11 +216,11 @@ function toggleJaccardOptions() {
   if (distanceMetricSelect.value === 'jaccard_distance') {
     jaccardOptionsContainer.style.display = 'block';
     // Set a default for the Jaccard type if it becomes visible
-    document.getElementById('fixed-jaccard').checked = true;
+    document.getElementById('weighted-jaccard').checked = true;
   } else {
     jaccardOptionsContainer.style.display = 'none';
-    }
   }
+}
 
 function showGeneInputTab(tabId) {
   // Assign the tabId to the global variable
@@ -225,7 +241,12 @@ function showGeneInputTab(tabId) {
   document.getElementById(tabId + '-content').style.display = 'block';
 
   // Activate the clicked tab button
-  event.currentTarget.classList.add('active');
+  if (event) {
+    event.currentTarget.classList.add('active');
+  } else {
+    // Fallback: activate button by matching tabId
+    document.querySelectorAll(`.gene-input-tab-button[onclick*="${tabId}"]`).classList.add('active');
+  }
 }
 
 function clearSingleGeneList() {

@@ -5,7 +5,7 @@ from django.http import JsonResponse, FileResponse
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
-from .dataReduction import umap_reduction
+from .dataReduction import umap_reduction, build_weights_from_ranked_list, build_weights_from_sets
 from .dataReduction import calculate_pvals
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
@@ -105,8 +105,9 @@ def gene_input_view(request):
                 return JsonResponse({'error': str(e)}, status=400)
 
             # Run Ump
-            mapped_result = umap_reduction(result, neighbors, minDistance, seed)
-            print(mapped_result)
+            distance_type = (data.get('distance-type') or 'weighted').lower()
+            user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
+            mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
@@ -138,6 +139,9 @@ def gene_input_view2(request):
             fdr_thr = (data.get("fdr_thr"))
             species = data.get("species", "human")
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
+            neighbors = data.get('neighbors')
+            seed = data.get('seed')
+            minDistance = data.get('minDistance')
 
             # Split inputs into cleaned gene lists
             ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
@@ -177,10 +181,24 @@ def gene_input_view2(request):
             )
 
             results,pvl,fdr = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
+            
+            try:
+                if len(results) < 4: # if we have less than 4 points
+                    # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
+                    raise ValueError(
+                        "Please choose a higher FDR/p_val, this choice leads to less than 4 points which cannot be graphed.")
+
+            except ValueError as e:
+                return JsonResponse({'error': str(e)}, status=400)
+
+            # Run Ump
+            distance_type = (data.get('distance-type') or 'weighted').lower()
+            user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
+            mapped_result = umap_reduction(results, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
 
 
             # Return result as JSON
-            data = json.loads(results)  # or skip if already a Python object
+            data = json.loads(mapped_result)  # or skip if already a Python object
             return JsonResponse({
                 "umap": data,
                 "p_value": pvl,
