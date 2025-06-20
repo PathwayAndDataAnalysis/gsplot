@@ -31,7 +31,6 @@ def weighted_jaccard_distance(user_weights, gene_seta, gene_setb):
         if gene in gene_setb:
             numerator += w_list
 
-    # complete the fraction by adding all the missing genes from gene_seta
     for gene in (gene_setb):
         if gene not in gene_seta:
             w_list = user_weights.get(gene, 0.0)
@@ -182,8 +181,6 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
         # Check if input looks like a base64-encoded file
         if ';base64,' in fileDataOrString:
             # --- FILE MODE ---
-            print("its a file")
-            print(neighbors, minDistance, seed)
             format, tsvData = fileDataOrString.split(';base64,')
             file_content = base64.b64decode(tsvData)
             tsvFile = BytesIO(file_content)
@@ -216,7 +213,7 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
 
                 if distance_type == 'weighted' and user_weights:
                     dist = weighted_jaccard_distance(user_weights, set1, set2)
-                else: #loading runtime
+                else:
                     dist = jaccard_distance(set1, set2)
                 
                 distance_matrix[i, j] = dist
