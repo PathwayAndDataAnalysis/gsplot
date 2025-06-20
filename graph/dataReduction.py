@@ -216,7 +216,7 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
 
                 if distance_type == 'weighted' and user_weights:
                     dist = weighted_jaccard_distance(user_weights, set1, set2)
-                else:
+                else: #loading runtime
                     dist = jaccard_distance(set1, set2)
                 
                 distance_matrix[i, j] = dist
