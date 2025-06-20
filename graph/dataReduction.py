@@ -24,18 +24,13 @@ def jaccard_distance(set1, set2):
 def weighted_jaccard_distance(user_weights, gene_seta, gene_setb):
     numerator = 0.0
     denominator = 0.0
-    # add all the overlap to the numerator & all of gene_seta to denominator
-    for gene in (gene_seta):
-        w_list = user_weights.get(gene, 0.0)
-        denominator += w_list
-        if gene in gene_setb:
-            numerator += w_list
+    all_genes = gene_seta.union(gene_setb)
 
-    # complete the fraction by adding all the missing genes from gene_seta
-    for gene in (gene_setb):
-        if gene not in gene_seta:
-            w_list = user_weights.get(gene, 0.0)
-            denominator += w_list
+    for gene in all_genes:
+        w_a = user_weights.get(gene, 0.0) if gene in gene_seta else 0.0
+        w_b = user_weights.get(gene, 0.0) if gene in gene_setb else 0.0
+        numerator += min(w_a, w_b)
+        denominator += max(w_a, w_b)
 
     return 1 - (numerator / denominator) if denominator else 1.0    # distance = 1 - similarity
 
