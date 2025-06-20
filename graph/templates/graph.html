@@ -77,6 +77,7 @@
 
         // Draws graph based on current data stored in local storage
         function graph() {
+          console.log("trying to grph");
           // Loads current user settings, data, and previous zoom view (called camera).
           // Getting resources from local storage
           let settings = getLocalStorage("settings");
@@ -519,24 +520,27 @@
             let settings = getLocalStorage("settings");
             let pointNumber;
 
-            // If umap settings changed, calculate umap again. Otherwise redraw graph
-            if (settings["umapChange"]) {
-              applyUmapChange(settings);
-            } else {
-              if (selected === null) {
-                selected = [];
-              }
+            if (fullGraphData) {
+              // If umap settings changed, calculate umap again. Otherwise redraw graph
+              if (settings["umapChange"]) {
+                applyUmapChange(settings);
+              } else {
+                if (selected === null) {
+                  selected = [];
+                }
 
-              // Update colors of selected points to new selected point color
-              for (let i = 0; i < selected.length; i++) {
-                pointNumber = selected[i]["pointNumber"];
-                fullGraphData["color"][pointNumber] =
-                  settings["selected-color"];
-              }
+                // Update colors of selected points to new selected point color
+                for (let i = 0; i < selected.length; i++) {
+                  pointNumber = selected[i]["pointNumber"];
+                  fullGraphData["color"][pointNumber] =
+                    settings["selected-color"];
+                }
 
-              // Apply changes to data and redraw graph
-              setLocalStorage("data", fullGraphData);
-              graph();
+                // Apply changes to data and redraw graph
+                setLocalStorage("data", fullGraphData);
+                console.log("this is trying to grph too erly");
+                graph();
+              }
             }
           }
         });
