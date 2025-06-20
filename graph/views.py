@@ -66,7 +66,7 @@ def gene_input_view(request):
                 file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
                 with open(file_path, 'r') as f:
                     gene_sets_data = json.load(f)
-            
+
             # Convert thresholds to float if provided
             if p_thr:
                 p_thr = float(p_thr)
@@ -106,10 +106,13 @@ def gene_input_view(request):
             # Run Ump
             distance_type = (data.get('distance_type') or 'weighted').lower()
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
+            print("running Ump")
             mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
+            print("finished ump")
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
+            print("returned the JSON")
             return JsonResponse({
                 "umap": data,
                 "p_value": pvl,
@@ -179,7 +182,11 @@ def gene_input_view2(request):
                 gene_sets_data=gene_sets_data,
             )
 
+            print("bout to get p_vls")
+
             pvals_result = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
+
+            print("got p_v;s")
 
             if pvals_result is None:
                 return JsonResponse({
@@ -187,7 +194,7 @@ def gene_input_view2(request):
                                     status=400)
 
             result, pvl, fdr = pvals_result
-
+            print("no errors from the pvals_result")
             try:
                 if len(result) < 4:  # if we have less than 4 points
                     # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
@@ -197,13 +204,18 @@ def gene_input_view2(request):
             except ValueError as e:
                 return JsonResponse({'error': str(e)}, status=400)
 
+            print(f"length of result is {result}")
+
             # Run Ump
             distance_type = (data.get('distance_type') or 'weighted').lower()
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
+            print("bout to run ump")
             mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
 
             # Return result as JSON
+            print("loding result into json")
             data = json.loads(mapped_result)  # or skip if already a Python object
+            print("returning teh response")
             return JsonResponse({
                 "umap": data,
                 "p_value": pvl,

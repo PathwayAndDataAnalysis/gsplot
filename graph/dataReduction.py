@@ -21,14 +21,22 @@ from scipy.stats import norm
 def jaccard_distance(set1, set2):
     return 1 - (len(set1.intersection(set2)) / len(set1.union(set2)))
 
-def weighted_jaccard_distance(user_weights, gene_set):
+def weighted_jaccard_distance(user_weights, gene_seta, gene_setb):
     numerator = 0.0
     denominator = 0.0
-    for gene in set(user_weights.keys()).union(gene_set):
+    # add all the overlap to the numerator & all of gene_seta to denominator
+    for gene in (gene_seta):
         w_list = user_weights.get(gene, 0.0)
-        w_set = 1.0 if gene in gene_set else 0.0
-        numerator += min(w_list, w_set)
-        denominator += max(w_list, w_set)
+        denominator += w_list
+        if gene in gene_setb:
+            numerator += w_list
+
+    # complete the fraction by adding all the missing genes from gene_seta
+    for gene in (gene_setb):
+        if gene not in gene_seta:
+            w_list = user_weights.get(gene, 0.0)
+            denominator += w_list
+
     return 1 - (numerator / denominator) if denominator else 1.0    # distance = 1 - similarity
 
 def build_weights_from_ranked_list(ranked_genes):
@@ -199,7 +207,6 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
 
         numberOfEnrichedMolecules = []
 
-        print("distance type:", distance_type)
 
         for i in range(n):
             set1 = set(df.loc[i, "Molecules"].split())
@@ -208,9 +215,7 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
                 set2 = set(df.loc[j, "Molecules"].split())
 
                 if distance_type == 'weighted' and user_weights:
-                    dist_i = weighted_jaccard_distance(user_weights, set1)
-                    dist_j = weighted_jaccard_distance(user_weights, set2)
-                    dist = (dist_i + dist_j) / 2
+                    dist = weighted_jaccard_distance(user_weights, set1, set2)
                 else:
                     dist = jaccard_distance(set1, set2)
                 
@@ -218,7 +223,6 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
                 distance_matrix[j, i] = dist
 
         reducer = umap.UMAP(metric='precomputed', n_neighbors=int(neighbors), random_state=int(seed) if int(seed) != 0 else None, min_dist=float(minDistance))
-
         embedding = reducer.fit_transform(distance_matrix)
 
         # Make Data Frame for website display with the embedding results
