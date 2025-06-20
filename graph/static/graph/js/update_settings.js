@@ -10,8 +10,7 @@ const defaultSettings = {
   "dynamic-size-scalar": "1",
   "number-of-neighbors": "15",
   "minimum-distance": "0.1",
-  "seed": "0",
-  "distance_type": "weighted"
+  "seed": "0"
 };
 
 const inputRefrences = {};

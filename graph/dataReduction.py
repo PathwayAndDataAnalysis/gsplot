@@ -200,7 +200,6 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
         numberOfEnrichedMolecules = []
 
         print("distance type:", distance_type)
-        print(f"user_weights: {user_weights}")
 
         for i in range(n):
             set1 = set(df.loc[i, "Molecules"].split())
