@@ -10,7 +10,6 @@ from .dataReduction import calculate_pvals
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
 from .dataReduction import run_fishers_test
-from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 # When someone goes to the website root (/), it shows the homepage (base.html).
@@ -105,7 +104,7 @@ def gene_input_view(request):
                 return JsonResponse({'error': str(e)}, status=400)
 
             # Run Ump
-            distance_type = (data.get('distance-type') or 'weighted').lower()
+            distance_type = (data.get('distance_type') or 'weighted').lower()
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
             mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
 
@@ -199,7 +198,7 @@ def gene_input_view2(request):
                 return JsonResponse({'error': str(e)}, status=400)
 
             # Run Ump
-            distance_type = (data.get('distance-type') or 'weighted').lower()
+            distance_type = (data.get('distance_type') or 'weighted').lower()
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
             mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
 

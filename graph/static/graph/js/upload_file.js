@@ -206,7 +206,9 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   }
 
   // Save or attach to request later
-  localStorage.setItem("distance_type", distanceType);
+  let settings = JSON.parse(localStorage.getItem("settings")) || {};
+  settings.distance_type = distanceType;
+  localStorage.setItem("settings", JSON.stringify(settings));
 
   try {
     loadingSpinner.style.display = "block";
@@ -232,7 +234,7 @@ function toggleJaccardOptions() {
   if (distanceMetricSelect.value === 'jaccard_distance') {
     jaccardOptionsContainer.style.display = 'block';
     // Set a default for the Jaccard type if it becomes visible
-    document.getElementById('weighted-jaccard').checked = true;
+    jaccardOptionsContainer.style.display = 'block';
   } else {
     jaccardOptionsContainer.style.display = 'none';
   }

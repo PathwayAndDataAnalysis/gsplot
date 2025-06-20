@@ -10,7 +10,8 @@ const defaultSettings = {
   "dynamic-size-scalar": "1",
   "number-of-neighbors": "15",
   "minimum-distance": "0.1",
-  "seed": "0"
+  "seed": "0",
+  "distance_type": "weighted"
 };
 
 const inputRefrences = {};
@@ -62,9 +63,9 @@ function displayValues(settings) {
   }
 
   // Display Jaccard type
-  if (settings["distance_type" === "fixed"]) {
+  if (settings["distance_type"] === "fixed") {
     document.getElementById("fixed-jaccard").checked = true;
-  } else if (settings["distance_type" === "weighted"]) {
+  } else if (settings["distance_type"] === "weighted") {
     document.getElementById("weighted-jaccard").checked = true;
   }
 }
@@ -114,7 +115,7 @@ function isUmapSettingDifferent(setting1, setting2) {
     setting1["number-of-neighbors"] !== setting2["number-of-neighbors"] ||
     setting1["minimum-distance"] !== setting2["minimum-distance"] ||
     setting1["seed"] !== setting2["seed"] ||
-    setting1["weighted"] !== setting2["weighted"]
+    setting1["distance_type"] !== setting2["distance_type"]
   );
 }
 
@@ -126,16 +127,6 @@ function addRadioEventListeners() {
   dynamicSizeButton.addEventListener("change", () => {
     toggleSizeVisibility();
   });
-  weightedJ.addEventListener("change", () => {
-    updateWeighted();
-  });
-  
-}
-function updateWeighted() {
-  settings = JSON.parse(localStorage.getItem("settings"));
-  const current = settings["weighted"];
-  settings["weighted"] = !current;
-  localStorage.setItem("settings", JSON.stringify(settings));
 }
 
 function toggleSizeVisibility() {

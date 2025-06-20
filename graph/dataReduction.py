@@ -63,40 +63,6 @@ def build_weights_from_sets(sig_genes, insig_genes):
 
     return user_weights  
 
-
-
-def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
-    sig_set = set(sig_genes)
-    insig_set = set(insig_genes)
-
-    reject_count = 0
-    total = 0
-
-    gene_sets_for_umap = {}
-
-
-
-    for geneset in filtered_genes:
-        gene_set = geneset['matched_genes']
-        set_name = geneset['gene_set_name']
-        set_gene_set = set(geneset['matched_genes'])
-
-        a = len(sig_set & set_gene_set)    # sig & in gene set
-        b = len(sig_set) - a          # sig & not in gene set
-        c = len(insig_set & set_gene_set)  # insig & in gene set
-        d = len(insig_set) - c        # insig & not gene set
-
-        table = [[a, b], [c, d]]
-
-        _, p_value = fisher_exact(table, alternative='greater')
-
-        total += 1
-
-        gene_string = ' '.join(str(gene) for gene in gene_set)
-        gene_sets_for_umap[set_name] = (gene_string, p_value)
-        if not fdr and p_value <= p_val:
-            reject_count += 1
-
 def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
     p_vals = np.array([item[1][1] for item in sorted_items])  # Get just the p-values
