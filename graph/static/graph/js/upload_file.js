@@ -144,6 +144,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       alert("Please enter ranked genes in the single list.");
       return;
     }
+  }
   if (!sigGenes.trim() && !insigGenes.trim() && (singleList == false)) {
     alert("Please enter at least one gene in either field.");
     return;
