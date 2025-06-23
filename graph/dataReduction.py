@@ -101,6 +101,9 @@ def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
 
 # Overlapping coefficient distance 
 def overlap_coef(user_weights, set1, set2):
+    if not set1 or not set2:
+        raise ValueError("One of the sets is empty in overlap coefficient calc.")
+    
     common = set1.intersection(set2)
     sum_common = sum(user_weights.get(gene, 0.0) for gene in common)
     sum1 = sum(user_weights.get(gene, 0.0) for gene in set1)
@@ -109,7 +112,10 @@ def overlap_coef(user_weights, set1, set2):
 
     if min_sum == 0:
         return 1.0 
-    return 1 - (sum_common / min_sum)
+    
+    raw_dist = 1 - (sum_common / min_sum)
+    dist = max(0.0, min(1.0, raw_dist)) # Clamp to [0, 1]
+    return dist
 
 def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     sig_set = set(sig_genes)
