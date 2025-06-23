@@ -5,8 +5,6 @@ def get_selected_gene_sets_with_relevant_members(
     gene_sets_data: dict
 ) -> list[dict]:
     result = []
-
-    print("seen gene_set_util")
     for gene_set_entry in selected_gene_sets:
         name = gene_set_entry["name"]
         collection = gene_set_entry["collection"]
