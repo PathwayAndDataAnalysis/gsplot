@@ -37,7 +37,7 @@ def weighted_jaccard_distance(user_weights, gene_seta, gene_setb):
 def build_weights_from_ranked_list(ranked_genes):
     """
     ranked_genes: list of gene names in order from highest to lowest rank
-    Returns: dict {gene: normalized_rank} add graph/dataReduction.py
+    Returns: dict {gene: normalized_rank}
     """
     n = len(ranked_genes)
     user_weights = {}
@@ -70,7 +70,7 @@ def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
     p_vals = np.array([item[1][1] for item in sorted_items])  # Get just the p-values
     if (fdr): # Get Estimate of P-Value
-        reject, q_values, _, _ = multipletests(p_vals, method='fdr_bh')
+        reject, q_values, _, _ = multipletests(p_vals, method='fdr_bh', alpha=fdr)
         if not (reject.any()):
             print("No p-values passed the FDR threshold.")
             gene_sets_for_umap = {}  # Or keep as is
@@ -140,7 +140,7 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
     ranks = dict()
     gene_sets_for_umap = {}
     reject_count = 0
-    for i in range(n-1):
+    for i in range(n):
         rank = i + 1
         gene = ranked_genes[i]
         norm_rank = (rank-0.5)/n
@@ -165,6 +165,7 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
         if not fdr_thr and p_value <= p_thr:
             reject_count += 1
 
+    print(reject_count)
     filtered_gene_sets, p_val, fdr = get_vals(gene_sets_for_umap, reject_count, total, p_thr, fdr_thr)
 
     return filtered_gene_sets, p_val, fdr

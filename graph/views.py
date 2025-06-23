@@ -76,23 +76,27 @@ def gene_input_view(request):
             genes = sig_genes + insig_genes
 
             # Filter selected gene sets
+            print("running filtered")
             filtered = get_selected_gene_sets_with_relevant_members(
                 gene_list=genes,
                 min_members_threshold=min_members,
                 selected_gene_sets=selected_gene_sets,
                 gene_sets_data=gene_sets_data,
             )
+            print("finished running filtered")
 
             # If there is no matching gene set after filtering, return error
             if not filtered:
                 return JsonResponse({"error": "No gene sets matched after filtering. Please select other categories or adjust your input."}, status=400)
 
             # Run Fisher's test analysis
+            print("running fishers")
             fisher_result = run_fishers_test(filtered, p_thr, fdr_thr, sig_genes, insig_genes)
             if fisher_result is None:
                 return JsonResponse({"error": "Fisher's test returned no results. Please enter higher p-value/FDR threshold or change the selections."}, status=400)
             
             result, pvl, fdr = fisher_result
+            print("got fishers result")
 
             try:
                 if len(result) < 4: # if we have less than 4 points
@@ -105,6 +109,7 @@ def gene_input_view(request):
 
             # Run Ump
             distance_type = (data.get('distance_type') or 'weighted').lower()
+            print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
             print("running Ump")
             mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
