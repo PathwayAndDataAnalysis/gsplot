@@ -84,10 +84,15 @@ function updateSettings() {
   }
 
   // Jaccard type
-  if (document.getElementById("fixed-jaccard")?.checked) {
-    newSettings["distance_type"] = "fixed";
-  } else if (document.getElementById("weighted-jaccard")?.checked) {
-    newSettings["distance_type"] = "weighted";
+  const distanceMetric = document.getElementById("distance-metric")?.value;
+  if (distanceMetric === "jaccard_distance") {
+    if (document.getElementById("fixed-jaccard")?.checked) {
+      newSettings["distance_type"] = "fixed";
+    } else if (document.getElementById("weighted-jaccard")?.checked) {
+      newSettings["distance_type"] = "weighted";
+    }
+  } else {
+    newSettings["distance_type"] = "overlapping";
   }
 
   // Compare UMAP settings

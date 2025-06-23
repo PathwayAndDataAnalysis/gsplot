@@ -203,6 +203,8 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   const distanceMetric = document.getElementById("distance-metric")?.value;
   if (distanceMetric === "jaccard_distance") {
     distanceType = document.getElementById("weighted-jaccard")?.checked ? "weighted" : "fixed";
+  } else if (distanceMetric === "overlap_coeff") {
+    distanceType = "overlapping";
   }
 
   // Save or attach to request later
@@ -232,7 +234,6 @@ function toggleJaccardOptions() {
   const jaccardOptionsContainer = document.getElementById('jaccard-options-container');
 
   if (distanceMetricSelect.value === 'jaccard_distance') {
-    jaccardOptionsContainer.style.display = 'block';
     // Set a default for the Jaccard type if it becomes visible
     jaccardOptionsContainer.style.display = 'block';
   } else {

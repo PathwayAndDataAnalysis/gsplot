@@ -99,7 +99,17 @@ def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
 
     return filtered_gene_sets,p_val,fdr
 
+# Overlapping coefficient distance 
+def overlap_coef(user_weights, set1, set2):
+    common = set1.intersection(set2)
+    sum_common = sum(user_weights.get(gene, 0.0) for gene in common)
+    sum1 = sum(user_weights.get(gene, 0.0) for gene in set1)
+    sum2 = sum(user_weights.get(gene, 0.0) for gene in set2)
+    min_sum = min(sum1, sum2)
 
+    if min_sum == 0:
+        return 1.0 
+    return 1 - (sum_common / min_sum)
 
 def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     sig_set = set(sig_genes)
@@ -211,13 +221,17 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
 
                 if distance_type == 'weighted' and user_weights:
                     dist = weighted_jaccard_distance(user_weights, set1, set2)
-                else: #loading runtime
+                elif distance_type == "fixed":
                     dist = jaccard_distance(set1, set2)
+                elif distance_type == "overlapping":
+                    dist = overlap_coef(user_weights, set1, set2)
+                else:
+                    raise ValueError(f"Unknown distance_type: {distance_type}")
                 
                 distance_matrix[i, j] = dist
                 distance_matrix[j, i] = dist
 
-        reducer = umap.UMAP(metric='precomputed', n_neighbors=int(neighbors), random_state=int(seed) if int(seed) != 0 else None, min_dist=float(minDistance))
+        reducer = umap.UMAP(metric='precomputed', n_neighbors=int(neighbors), random_state=int(seed) if seed and int(seed) != 0 else None, min_dist=float(minDistance))
         embedding = reducer.fit_transform(distance_matrix)
 
         # Make Data Frame for website display with the embedding results
