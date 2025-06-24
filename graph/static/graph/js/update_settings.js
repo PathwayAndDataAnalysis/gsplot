@@ -17,7 +17,6 @@ const inputRefrences = {};
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
-const weightedJ = document.getElementById("weighted-jaccard");
 
 const fixedInput = document.getElementById("fixed-size-input-reveal");
 const dynamicInput = document.getElementById("dynamic-size-input-reveal");
@@ -41,11 +40,9 @@ function main() {
 
   if (localStorage.getItem("settings") !== null) {
     const currentSettings = JSON.parse(localStorage.getItem("settings"));
-    currentSettings.weighted = true;
     localStorage.setItem("settings", JSON.stringify(currentSettings));
     displayValues(currentSettings);
   } else {
-    defaultSettings.weighted = true;
     localStorage.setItem("settings", JSON.stringify(defaultSettings));
     displayValues(defaultSettings);
   }
@@ -59,13 +56,6 @@ function displayValues(settings) {
     } else {
       value.value = settings[key];
     }
-  }
-
-  // Display Jaccard type
-  if (settings["distance_type"] === "fixed") {
-    document.getElementById("fixed-jaccard").checked = true;
-  } else if (settings["distance_type"] === "weighted") {
-    document.getElementById("weighted-jaccard").checked = true;
   }
 }
 
@@ -85,14 +75,18 @@ function updateSettings() {
 
   // Jaccard type
   const distanceMetric = document.getElementById("distance-metric")?.value;
-  if (distanceMetric === "jaccard_distance") {
-    if (document.getElementById("fixed-jaccard")?.checked) {
-      newSettings["distance_type"] = "fixed";
+  if (distanceMetric === "jaccard-distance") {
+    if (document.getElementById("plain-jaccard")?.checked) {
+      newSettings["distance_type"] = "jaccard_plain";
     } else if (document.getElementById("weighted-jaccard")?.checked) {
-      newSettings["distance_type"] = "weighted";
+      newSettings["distance_type"] = "jaccard_weighted";
     }
   } else {
-    newSettings["distance_type"] = "overlapping";
+    if (document.getElementById("plain-overlap")?.checked) {
+      newSettings["distance_type"] = "overlap_plain";
+    } else if (document.getElementById("weighted-overlap")?.checked) {
+      newSettings["distance_type"] = "overlap_weighted";
+    }
   }
 
   // Compare UMAP settings

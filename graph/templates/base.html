@@ -196,14 +196,16 @@
             </div>
           </div>
         </div>
-
-        <h4>Display Genes</h4>
-        <div class="option" style="align-items: center;">
-          <label for="show-sig-only" style="margin-right: 10px;">Show significant genes only</label>
-          <label class="toggle-switch">
-            <input type="checkbox" id="show-sig-only">
-            <span class="toggle-slider"></span>
-          </label>
+        
+        <div id="display-genes-container">
+          <h4>Display Genes</h4>
+          <div class="option" style="align-items: center;">
+            <label for="show-sig-only" style="margin-right: 10px;">Show significant genes only</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="show-sig-only">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
         </div>
 
         <div class="umap-settings-header">
@@ -229,24 +231,35 @@
         <div class="option">
           <label for="distance-metric">Distance Metric:</label>
           <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
-            <option value="overlap_coeff" selected>Overlap Coeff</option>
-            <option value="jaccard_distance" selected>Jaccard Distance</option>
+            <option value="overlap-coeff">Overlap Coeff</option>
+            <option value="jaccard-distance" selected>Jaccard Distance</option>
             <!-- Add more options here if needed -->
           </select>
         </div>
 
         <div id="jaccard-options-container" class="option" style="display: block;">
-          <label>Jaccard Type:</label><br />
           <div class="radio-container">
             <div class="option">
-              <label for="fixed-jaccard">Fixed Jaccard Distance:</label>
-              <input type="radio" id="fixed-jaccard" name="jaccard-type" value="fixed" />
+              <label for="plain-jaccard">Plain:</label>
+              <input type="radio" id="plain-jaccard" name="jaccard-type" value="jaccard_plain" />
             </div>
             <div class="option">
-              <label for="weighted-jaccard">Weighted Jaccard Distance:</label>
-              <input type="radio" id="weighted-jaccard" name="jaccard-type" value="weighted" checked />
+              <label for="weighted-jaccard">Weighted:</label>
+              <input type="radio" id="weighted-jaccard" name="jaccard-type" value="jaccard_weighted" checked />
             </div>
-            <!-- Add more Jaccard types here if needed -->
+          </div>
+        </div>
+
+        <div id="overlap-options-container" class="option" style="display: none;">
+          <div class="radio-container">
+            <div class="option">
+              <label for="plain-overlap">Plain:</label>
+              <input type="radio" id="plain-overlap" name="overlap-type" value="overlap_plain" />
+            </div>
+            <div class="option">
+              <label for="weighted-overlap">Weighted:</label>
+              <input type="radio" id="weighted-overlap" name="overlap-type" value="overlap_weighted" checked />
+            </div>
           </div>
         </div>
         <!-- END Additional Settings Section -->
