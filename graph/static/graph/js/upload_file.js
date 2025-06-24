@@ -123,7 +123,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   let singleList = false; // Default value if not found
   const storedSingleList = localStorage.getItem("single-list");
   if (storedSingleList !== null) {
-      singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
+    singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
   }
 
   const minInput = document.getElementById("min-member-input");
@@ -167,9 +167,9 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       alert("Please enter genes");
     }
   } else {
-      localStorage.setItem("sigGenes", sigGenes.trim());
-      localStorage.setItem("insigGenes", insigGenes.trim());
-    }
+    localStorage.setItem("sigGenes", sigGenes.trim());
+    localStorage.setItem("insigGenes", insigGenes.trim());
+  }
   localStorage.setItem("species", species);
 
 
@@ -266,6 +266,14 @@ function showGeneInputTab(tabId) {
   } else {
     // Fallback: activate button by matching tabId
     document.querySelectorAll(`.gene-input-tab-button[onclick*="${tabId}"]`).classList.add('active');
+  }
+  const sigToggleWrapper = document.getElementById("show-sig-only").closest(".option");
+  if (!isSingleTextArea) {
+    // two-textareas mode
+    sigToggleWrapper.style.display = "flex";  // or "block", tùy style
+  } else {
+    // single-textarea mode (ranked list)
+    sigToggleWrapper.style.display = "none";
   }
 }
 

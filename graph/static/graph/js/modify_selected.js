@@ -18,6 +18,9 @@ function main() {
 function updateContent() {
   // Get selected items
   let selecteditems = localStorage.getItem("selected");
+  let showSigOnly = document.getElementById("show-sig-only")?.checked;
+  let isSingleListMode = JSON.parse(localStorage.getItem("single-list"));
+
 
   // If nothing is selected then set empty list into local storage
   if (selecteditems !== null) {
@@ -48,7 +51,7 @@ function updateContent() {
 
   // Display sets with the molecules in the intersection bolded
   for (let i = 0; i < selecteditems.length; i++) {
-    tableCreator(selecteditems[i], intersection);
+    tableCreator(selecteditems[i], intersection, showSigOnly && !isSingleListMode);
   }
 }
 
@@ -60,7 +63,7 @@ window.addEventListener("storage", function (e) {
 });
 
 // Generate HTML table object of molecules
-function tableCreator(selectedPoint, intersection) {
+function tableCreator(selectedPoint, intersection, filterSig) {
   // Create table container div and table inside of it
   const tableContainer = document.createElement("div");
   tableContainer.classList.add("table-container");
@@ -94,9 +97,15 @@ function tableCreator(selectedPoint, intersection) {
   const moleculesHeader = document.createElement("th");
   moleculesHeader.textContent = "Molecules";
   const molecules = document.createElement("td");
-  // Bold the genes in common. InnerHTML is used instead of textContent because doing textContent doesn't apply <b> bolding
+  let moleculeList = selectedPoint["molecules"].split(" ");
+
+  if (filterSig) {
+    const sigGenes = selectedPoint["sigGenes"] || [];
+    moleculeList = moleculeList.filter(g => sigGenes.includes(g));
+  }
+
   molecules.innerHTML = boldSharedGenes(
-    selectedPoint["molecules"],
+    moleculeList.join(" "),
     intersection
   );
   thirdRow.appendChild(moleculesHeader);
@@ -107,6 +116,12 @@ function tableCreator(selectedPoint, intersection) {
   table.appendChild(tableBody);
   tableContainer.appendChild(table);
   allTablesContainer.appendChild(tableContainer);
+
+  // Debug
+  console.log("Selected Point:", selectedPoint);
+  console.log("Intersection:", intersection);
+  console.log("FilterSig:", filterSig);
+  console.log("sigGenes in point:", selectedPoint["sigGenes"]);
 }
 
 function displayPlaceholder() {
@@ -150,4 +165,9 @@ function clearSelected() {
 
 function toggleLabels() {
   iframe.toggleLabels();
+}
+
+const sigToggle = document.getElementById("show-sig-only");
+if (sigToggle) {
+  sigToggle.addEventListener("change", updateContent);
 }
