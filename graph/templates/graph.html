@@ -63,9 +63,6 @@
 
               // Clear selected + table after importing data
               localStorage.setItem("selected", JSON.stringify([]));
-              if (window.parent && window.parent.updateContent) {
-                window.parent.updateContent();
-              }
 
             } catch (error) {
               hideSpinner();
@@ -565,9 +562,6 @@
           
           // Clear selected + table after new data loaded
           localStorage.setItem("selected", JSON.stringify([]));
-          if (window.parent && window.parent.updateContent) {
-            window.parent.updateContent();
-          }
 
           hideSpinner();
           graph();
@@ -743,11 +737,6 @@
           setLocalStorage("selected", selected);
           // Restyle graph
           Plotly.restyle(myPlot, update, [curveNumber]);
-
-          // Notify parent to update table
-          if (window.parent && window.parent.updateContent) {
-            window.parent.updateContent();
-          }
         }
 
         // Clear out selected items

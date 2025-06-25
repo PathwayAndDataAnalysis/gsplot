@@ -370,4 +370,6 @@ function clearLocalStorageExceptSettings() {
     localStorage.setItem("single-list", listBackup);
     localStorage.setItem("settings", settingsBackup);
   }
+  localStorage.setItem("selected", "[]");
+
 }

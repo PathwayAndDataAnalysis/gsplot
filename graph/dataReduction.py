@@ -286,7 +286,7 @@ def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type=
                     dist = weighted_jaccard_distance(user_weights, set1, set2)
                 elif distance_type == "jaccard_plain":
                     dist = jaccard_distance(set1, set2)
-                elif distance_type == "overlap_weighted":
+                elif distance_type == "overlap_weighted" and user_weights:
                     dist = weighted_overlap_coef(user_weights, set1, set2)
                 elif distance_type == "overlap_plain":
                     dist = overlap_coef(set1, set2)
