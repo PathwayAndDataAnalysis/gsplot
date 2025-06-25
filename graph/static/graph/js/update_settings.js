@@ -31,7 +31,6 @@ const defaultIsoMap = {
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
-const weightedJ = document.getElementById("weighted-jaccard");
 
 
 const algorithmSelect = document.getElementById('algorithmSelect');
@@ -80,13 +79,6 @@ function displayValues(settings) {
       value.value = settings[key];
     }
   }
-
-  // Display Jaccard type
-  if (settings["distance_type"] === "fixed") {
-    document.getElementById("fixed-jaccard").checked = true;
-  } else if (settings["distance_type"] === "weighted") {
-    document.getElementById("weighted-jaccard").checked = true;
-  }
 }
 function getReduction() {
   const selectedAlgorithm = algorithmSelect.value;
@@ -124,14 +116,18 @@ function updateSettings() {
 
   // Jaccard type
   const distanceMetric = document.getElementById("distance-metric")?.value;
-  if (distanceMetric === "jaccard_distance") {
-    if (document.getElementById("fixed-jaccard")?.checked) {
-      newSettings["distance_type"] = "fixed";
+  if (distanceMetric === "jaccard-distance") {
+    if (document.getElementById("plain-jaccard")?.checked) {
+      newSettings["distance_type"] = "jaccard_plain";
     } else if (document.getElementById("weighted-jaccard")?.checked) {
-      newSettings["distance_type"] = "weighted";
+      newSettings["distance_type"] = "jaccard_weighted";
     }
   } else {
-    newSettings["distance_type"] = "overlapping";
+    if (document.getElementById("plain-overlap")?.checked) {
+      newSettings["distance_type"] = "overlap_plain";
+    } else if (document.getElementById("weighted-overlap")?.checked) {
+      newSettings["distance_type"] = "overlap_weighted";
+    }
   }
 
   // Compare UMAP settings

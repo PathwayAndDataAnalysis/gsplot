@@ -102,7 +102,8 @@ def gene_input_view(request):
                 return JsonResponse({'error': str(e)}, status=400)
 
             # Run Ump
-            distance_type = (data.get('distance_type') or 'weighted').lower()
+            distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
+            print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
             mapped_result = umap_reduction(result, settings, user_weights, distance_type)
 
@@ -196,7 +197,7 @@ def gene_input_view2(request):
 
 
             # Run Ump
-            distance_type = (data.get('distance_type') or 'weighted').lower()
+            distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
             print("bout to run ump")
             mapped_result = umap_reduction(result, settings, user_weights, distance_type)

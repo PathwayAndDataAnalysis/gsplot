@@ -60,6 +60,13 @@
               } else {
                 await getGeneInputData(settings);
               }
+
+              // Clear selected + table after importing data
+              localStorage.setItem("selected", JSON.stringify([]));
+              if (window.parent && window.parent.updateContent) {
+                window.parent.updateContent();
+              }
+
             } catch (error) {
               hideSpinner();
               throw error;
@@ -336,7 +343,7 @@
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
-            const distanceType = settings["distance_type"] || "weighted";
+            const distanceType = settings["distance_type"];
 
             // Get CSRF token as before
             const csrftoken = getCookie("csrftoken");
@@ -424,7 +431,7 @@
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
-            const distanceType = settings["distance_type"] || "weighted";
+            const distanceType = settings["distance_type"];
 
             if (!sigGenes.trim() && !insigGenes.trim()) {
               reject(new Error("Please enter at least one gene in either field."));
@@ -554,6 +561,12 @@
             await getGeneData(settings);
           } else {
             await getGeneInputData(settings);
+          }
+          
+          // Clear selected + table after new data loaded
+          localStorage.setItem("selected", JSON.stringify([]));
+          if (window.parent && window.parent.updateContent) {
+            window.parent.updateContent();
           }
 
           hideSpinner();
@@ -685,6 +698,7 @@
               qValue: fullGraphData["qValue"][pointNumber],
               molecules: fullGraphData["molecules"][pointNumber],
               setName: fullGraphData["setName"][pointNumber],
+              sigGenes: (localStorage.getItem("sigGenes") || "").toUpperCase().split(/[\s,]+/).filter(Boolean)
             };
 
             // If point needs to be unselected, and unselected is permitted
@@ -729,6 +743,11 @@
           setLocalStorage("selected", selected);
           // Restyle graph
           Plotly.restyle(myPlot, update, [curveNumber]);
+
+          // Notify parent to update table
+          if (window.parent && window.parent.updateContent) {
+            window.parent.updateContent();
+          }
         }
 
         // Clear out selected items

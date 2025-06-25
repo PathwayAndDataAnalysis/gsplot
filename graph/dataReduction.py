@@ -138,7 +138,23 @@ def get_reducer(settings):
 
 
 # Overlapping coefficient distance 
-def overlap_coef(user_weights, set1, set2):
+# Plain overlapping coefficient distance
+def overlap_coef(set1, set2):
+    if not set1 or not set2:
+        raise ValueError("One of the sets is empty in plain overlap coefficient calc.")
+
+    common = set1.intersection(set2)
+    min_size = min(len(set1), len(set2))
+
+    if min_size == 0:
+        return 1.0
+
+    raw_dist = 1 - (len(common) / min_size)
+    dist = max(0.0, min(1.0, raw_dist))  # Clamp to [0,1]
+    return dist
+
+# Weighted overlapping coefficient distance 
+def weighted_overlap_coef(user_weights, set1, set2):
     if not set1 or not set2:
         raise ValueError("One of the sets is empty in overlap coefficient calc.")
 
@@ -224,12 +240,10 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
 
     return filtered_gene_sets, p_val, fdr
 
-def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type='weighted'):
-    algorithm = "umap"
-    print(settings)
-    # Check if use weighted Jaccard  without weights
-    if distance_type == 'weighted' and user_weights is None:
-        raise ValueError("user_weights must be provided when using weighted Jaccard distance.")
+def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type='jaccard_weighted'):
+    # Check if use weighted option without weights
+    if (distance_type in ['jaccard_weighted', 'overlap_weighted']) and user_weights is None:
+        raise ValueError("user_weights must be provided when using weighted option.")
     try:
         # Check if input looks like a base64-encoded file
         if ';base64,' in fileDataOrString:
@@ -268,12 +282,14 @@ def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type=
             for j in range (i + 1, n):
                 set2 = molecule_sets[j]
 
-                if distance_type == 'weighted' and user_weights:
+                if distance_type == 'jaccard_weighted' and user_weights:
                     dist = weighted_jaccard_distance(user_weights, set1, set2)
-                elif distance_type == "fixed":
+                elif distance_type == "jaccard_plain":
                     dist = jaccard_distance(set1, set2)
-                elif distance_type == "overlapping":
-                    dist = overlap_coef(user_weights, set1, set2)
+                elif distance_type == "overlap_weighted":
+                    dist = weighted_overlap_coef(user_weights, set1, set2)
+                elif distance_type == "overlap_plain":
+                    dist = overlap_coef(set1, set2)
                 else:
                     raise ValueError(f"Unknown distance_type: {distance_type}")
 

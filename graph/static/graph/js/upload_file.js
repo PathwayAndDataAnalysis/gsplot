@@ -123,7 +123,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   let singleList = false; // Default value if not found
   const storedSingleList = localStorage.getItem("single-list");
   if (storedSingleList !== null) {
-      singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
+    singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
   }
 
   const minInput = document.getElementById("min-member-input");
@@ -167,9 +167,9 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       alert("Please enter genes");
     }
   } else {
-      localStorage.setItem("sigGenes", sigGenes.trim());
-      localStorage.setItem("insigGenes", insigGenes.trim());
-    }
+    localStorage.setItem("sigGenes", sigGenes.trim());
+    localStorage.setItem("insigGenes", insigGenes.trim());
+  }
   localStorage.setItem("species", species);
 
 
@@ -199,12 +199,11 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     return;
   }
 
-  let distanceType = "weighted";
   const distanceMetric = document.getElementById("distance-metric")?.value;
-  if (distanceMetric === "jaccard_distance") {
-    distanceType = document.getElementById("weighted-jaccard")?.checked ? "weighted" : "fixed";
-  } else if (distanceMetric === "overlap_coeff") {
-    distanceType = "overlapping";
+  if (distanceMetric === "jaccard-distance") {
+    distanceType = document.getElementById("weighted-jaccard")?.checked ? "jaccard_weighted" : "jaccard_plain";
+  } else {
+    distanceType = document.getElementById("weighted-overlap")?.checked ? "overlap_weighted" : "overlap_plain";
   }
 
   // Save or attach to request later
@@ -232,12 +231,15 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
 function toggleJaccardOptions() {
   const distanceMetricSelect = document.getElementById('distance-metric');
   const jaccardOptionsContainer = document.getElementById('jaccard-options-container');
+  const overlapOptionsContainer = document.getElementById('overlap-options-container');
 
-  if (distanceMetricSelect.value === 'jaccard_distance') {
+  if (distanceMetricSelect.value === 'jaccard-distance') {
     // Set a default for the Jaccard type if it becomes visible
     jaccardOptionsContainer.style.display = 'block';
+    overlapOptionsContainer.style.display = 'none';
   } else {
     jaccardOptionsContainer.style.display = 'none';
+    overlapOptionsContainer.style.display = 'block';
   }
 }
 
@@ -267,6 +269,15 @@ function showGeneInputTab(tabId) {
     // Fallback: activate button by matching tabId
     document.querySelectorAll(`.gene-input-tab-button[onclick*="${tabId}"]`).classList.add('active');
   }
+  const displayGenesContainer = document.getElementById("display-genes-container");
+  if (!isSingleTextArea) {
+    // two-textareas mode
+    displayGenesContainer.style.display = "block";
+  } else {
+    // single-textarea mode (ranked list)
+    displayGenesContainer.style.display = "none";
+  }
+
 }
 
 function clearSingleGeneList() {
@@ -347,7 +358,9 @@ function clearInsignificantGenes() {
   document.getElementById("id_insignificant_genes").value = "";
 }
 
-
+document.addEventListener('DOMContentLoaded', () => {
+  toggleJaccardOptions();
+});
 
 function clearLocalStorageExceptSettings() {
   const settingsBackup = localStorage.getItem("settings");
