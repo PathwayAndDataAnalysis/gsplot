@@ -291,7 +291,6 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
                         dist = overlap_coef(set1, set2)
                     else:
                         raise ValueError(f"Unknown distance_type: {distance_type}")
-
                     distance_matrix[i, j] = dist
                     distance_matrix[j, i] = dist
                 if i % 50 == 0:
