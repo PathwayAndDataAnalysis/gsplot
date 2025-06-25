@@ -240,7 +240,7 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
 
     return filtered_gene_sets, p_val, fdr
 
-def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type='jaccard_weighted'):
+def umap_reduction(fileDataOrString, settings, user_weights , distance_type, distances):
     # Check if use weighted option without weights
     if (distance_type in ['jaccard_weighted', 'overlap_weighted']) and user_weights is None:
         raise ValueError("user_weights must be provided when using weighted option.")
@@ -275,31 +275,32 @@ def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type=
 
         print(n)
 
-
         for i in range(n):
             set1 = molecule_sets[i]
             numberOfEnrichedMolecules.append(len(set1))
-            for j in range (i + 1, n):
-                set2 = molecule_sets[j]
+            if (not distances['use']):
+                for j in range(i + 1, n):
+                    set2 = molecule_sets[j]
+                    if distance_type == 'jaccard_weighted' and user_weights:
+                        dist = weighted_jaccard_distance(user_weights, set1, set2)
+                    elif distance_type == "jaccard_plain":
+                        dist = jaccard_distance(set1, set2)
+                    elif distance_type == "overlap_weighted":
+                        dist = weighted_overlap_coef(user_weights, set1, set2)
+                    elif distance_type == "overlap_plain":
+                        dist = overlap_coef(set1, set2)
+                    else:
+                        raise ValueError(f"Unknown distance_type: {distance_type}")
 
-                if distance_type == 'jaccard_weighted' and user_weights:
-                    dist = weighted_jaccard_distance(user_weights, set1, set2)
-                elif distance_type == "jaccard_plain":
-                    dist = jaccard_distance(set1, set2)
-                elif distance_type == "overlap_weighted":
-                    dist = weighted_overlap_coef(user_weights, set1, set2)
-                elif distance_type == "overlap_plain":
-                    dist = overlap_coef(set1, set2)
-                else:
-                    raise ValueError(f"Unknown distance_type: {distance_type}")
+                    distance_matrix[i, j] = dist
+                    distance_matrix[j, i] = dist
+                if i % 50 == 0:
+                    print(f"{i}/{n}")
 
-                distance_matrix[i, j] = dist
-                distance_matrix[j, i] = dist
-
+        if (distances['use']):
+            distance_matrix = np.array(distances["m"])
 
         reducer = get_reducer(settings)
-
-        print(reducer)
         embedding = reducer.fit_transform(distance_matrix)
 
         # Make Data Frame for website display with the embedding results
@@ -316,6 +317,6 @@ def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type=
 
 
         # Save the JSON to a file or pass it to your frontend
-        return embedding_df_json
+        return embedding_df_json, distance_matrix
     except Exception as e:
         raise e

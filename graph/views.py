@@ -73,6 +73,8 @@ def gene_input_view(request):
 
             genes = sig_genes + insig_genes
 
+            print("collecting selected genes w revelnt members")
+
             # Filter selected gene sets
             filtered = get_selected_gene_sets_with_relevant_members(
                 gene_list=genes,
@@ -86,6 +88,7 @@ def gene_input_view(request):
                 return JsonResponse({"error": "No gene sets matched after filtering. Please select other categories or adjust your input."}, status=400)
 
             # Run Fisher's test analysis
+            print("running fishers test")
             fisher_result = run_fishers_test(filtered, p_thr, fdr_thr, sig_genes, insig_genes)
             if fisher_result is None:
                 return JsonResponse({"error": "Fisher's test returned no results. Please enter higher p-value/FDR threshold or change the selections."}, status=400)
@@ -105,10 +108,12 @@ def gene_input_view(request):
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
             print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
+            print("running reduction")
             mapped_result = umap_reduction(result, settings, user_weights, distance_type)
-
+            print("completed reduction")
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
+            print("grphing")
             return JsonResponse({
                 "umap": data,
                 "p_value": pvl,
@@ -129,6 +134,8 @@ def gene_input_view2(request):
             # Parse JSON body
             data = json.loads(request.body)
 
+            print("Clled")
+
             # Get gene inputs
             ranked_genes = data.get('ranked_genes', '')
             selected_gene_sets = data.get("selected_genes_sets", [])
@@ -138,6 +145,7 @@ def gene_input_view2(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
             settings = data.get("settings")
+            distances = data.get("distancesM")
 
             # Split inputs into cleaned gene lists
             ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
@@ -176,7 +184,7 @@ def gene_input_view2(request):
                 gene_sets_data=gene_sets_data,
             )
 
-
+            print("calculating p-values")
             pvals_result = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
 
 
@@ -198,16 +206,20 @@ def gene_input_view2(request):
 
             # Run Ump
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
+            print("building user_weights")
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
-            print("bout to run ump")
-            mapped_result = umap_reduction(result, settings, user_weights, distance_type)
-
+            print("running reduction")
+            mapped_result, distances_m = umap_reduction(result, settings, user_weights, distance_type, distances)
+            print("completed reduction")
             # Return result as JSON
             print("loding result into json")
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("returning teh response")
+            print("grphing")
+            list_response = distances_m.tolist()
             return JsonResponse({
                 "umap": data,
+                "distancesM": list_response,
                 "p_value": pvl,
                 "fdr_value": fdr
             })

@@ -344,7 +344,17 @@
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
             const distanceType = settings["distance_type"];
+            let distancesM = {
+                'use': false,
+                'm': []
+              }
 
+            if (localStorage.getItem("distances-M")) {
+              distancesM = JSON.parse(localStorage.getItem("distances-M"));
+            }
+            localStorage.setItem("distances-M", JSON.stringify(distancesM));
+
+            console.log(distancesM);
             // Get CSRF token as before
             const csrftoken = getCookie("csrftoken");
 
@@ -369,7 +379,8 @@
                 species: species,
                 custom_data: customGeneSets,
                 settings: settings,
-                distance_type: distanceType
+                distance_type: distanceType,
+                distancesM: distancesM
               }),
             })
               .then((response) => {
@@ -388,6 +399,13 @@
                 const pvalDisplay = data.p_value;
                 const fdrDisplay = data.fdr_value;
                 const umapData = data.umap;
+                const distancesRet = data.distancesM;
+                let distancesM = {
+                  'use': true,
+                  'm': distancesRet,
+                }
+                localStorage.setItem("distances-M",JSON.stringify(distancesM));
+                console.log(distancesM)
 
                 window.parent.document.getElementById("text-display-1").textContent = `P-value Threshold: ${pvalDisplay}`;
                 window.parent.document.getElementById("text-display-2").textContent = `Estimated FDR: ${fdrDisplay}`;
@@ -424,14 +442,24 @@
         // Get new graph data from gene input on backend
         function getGeneInputData(settings) {
           return new Promise((resolve, reject) => {
+            console.log("Seen")
             const sigGenes = localStorage.getItem("sigGenes")
             const insigGenes = localStorage.getItem("insigGenes")
             const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
             const minMembers = localStorage.getItem("minMembers")
             const pVal = localStorage.getItem("p-value")
             const fdr = localStorage.getItem("fdr")
-            const species = localStorage.getItem("species")
+            const species = localStorage.getItem("species");
             const distanceType = settings["distance_type"];
+            let distancesM = {
+                'use': false,
+                'm': []
+              }
+
+            if (localStorage.getItem("distances-M")) {
+              distancesM = JSON.parse(localStorage.getItem("distances-M"));
+            }
+            localStorage.setItem("distances-M", JSON.stringify(distancesM))
 
             if (!sigGenes.trim() && !insigGenes.trim()) {
               reject(new Error("Please enter at least one gene in either field."));
@@ -445,6 +473,7 @@
             if (customGeneSets) {
               console.log("Received custom gene sets from parent:", customGeneSets)
             }
+            console.log(distancesM)
 
             // POST gene data to /gene-input/ endpoint
             fetch("/gene-input/", {
@@ -463,7 +492,8 @@
                 species: species,
                 custom_data: customGeneSets,
                 settings: settings,
-                distance_type: distanceType
+                distance_type: distanceType,
+                distancesM: distancesM
               }),
             })
               .then((response) => {
@@ -482,6 +512,9 @@
                 const pvalDisplay = data.p_value;
                 const fdrDisplay = data.fdr_value;
                 const umapData = data.umap;
+                const distancesM = data.distancesM;
+                localStorage.setItem("distances-M",JSON.stringify(distancesM));
+
 
                 window.parent.document.getElementById("text-display-1").textContent = `P-value Threshold: ${pvalDisplay}`;
                 window.parent.document.getElementById("text-display-2").textContent = `Estimated FDR: ${fdrDisplay}`;
