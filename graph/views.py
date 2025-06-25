@@ -34,13 +34,14 @@ def gene_input_view(request):
             # Get gene inputs
             sig_input = data.get('significant_genes', '')
             insig_input = data.get('insignificant_genes', '')
-            selected_gene_sets = data.get("selected_genes_sets", [])
+            selected_gene_sets = data.get("selected_genes_sets")
             min_members = int(data.get("minMembers", 5))
             p_thr = (data.get("p_thr"))
             fdr_thr = (data.get("fdr_thr"))
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
             settings = data.get("settings")
+            distances = data.get("distancesM")
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
@@ -109,13 +110,15 @@ def gene_input_view(request):
             print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
             print("running reduction")
-            mapped_result = umap_reduction(result, settings, user_weights, distance_type)
+            mapped_result,distances_m = umap_reduction(result, settings, user_weights, distance_type, distances)
             print("completed reduction")
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("grphing")
+            list_response = distances_m.tolist()
             return JsonResponse({
                 "umap": data,
+                "distancesM": list_response,
                 "p_value": pvl,
                 "fdr_value": fdr
             })
@@ -149,7 +152,6 @@ def gene_input_view2(request):
 
             # Split inputs into cleaned gene lists
             ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
-
             # Load gene set data
             species = species.lower()
             if species == "custom":
@@ -175,7 +177,8 @@ def gene_input_view2(request):
             if fdr_thr:
                 fdr_thr = float(fdr_thr)
 
-
+            print(len(ranked_genes))
+            print(len(selected_gene_sets))
             # Filter selected gene sets
             filtered = get_selected_gene_sets_with_relevant_members(
                 gene_list=ranked_genes,
