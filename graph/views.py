@@ -40,9 +40,7 @@ def gene_input_view(request):
             fdr_thr = (data.get("fdr_thr"))
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
-            neighbors = data.get('neighbors')
-            seed = data.get('seed')
-            minDistance = data.get('minDistance')
+            settings = data.get("settings")
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
@@ -76,27 +74,23 @@ def gene_input_view(request):
             genes = sig_genes + insig_genes
 
             # Filter selected gene sets
-            print("running filtered")
             filtered = get_selected_gene_sets_with_relevant_members(
                 gene_list=genes,
                 min_members_threshold=min_members,
                 selected_gene_sets=selected_gene_sets,
                 gene_sets_data=gene_sets_data,
             )
-            print("finished running filtered")
 
             # If there is no matching gene set after filtering, return error
             if not filtered:
                 return JsonResponse({"error": "No gene sets matched after filtering. Please select other categories or adjust your input."}, status=400)
 
             # Run Fisher's test analysis
-            print("running fishers")
             fisher_result = run_fishers_test(filtered, p_thr, fdr_thr, sig_genes, insig_genes)
             if fisher_result is None:
                 return JsonResponse({"error": "Fisher's test returned no results. Please enter higher p-value/FDR threshold or change the selections."}, status=400)
             
             result, pvl, fdr = fisher_result
-            print("got fishers result")
 
             try:
                 if len(result) < 4: # if we have less than 4 points
@@ -109,15 +103,11 @@ def gene_input_view(request):
 
             # Run Ump
             distance_type = (data.get('distance_type') or 'weighted').lower()
-            print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
-            print("running Ump")
-            mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
-            print("finished ump")
+            mapped_result = umap_reduction(result, settings, user_weights, distance_type)
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
-            print("returned the JSON")
             return JsonResponse({
                 "umap": data,
                 "p_value": pvl,
@@ -146,9 +136,7 @@ def gene_input_view2(request):
             fdr_thr = (data.get("fdr_thr"))
             species = data.get("species", "human")
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
-            neighbors = data.get('neighbors')
-            seed = data.get('seed')
-            minDistance = data.get('minDistance')
+            settings = data.get("settings")
 
             # Split inputs into cleaned gene lists
             ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
@@ -187,11 +175,9 @@ def gene_input_view2(request):
                 gene_sets_data=gene_sets_data,
             )
 
-            print("bout to get p_vls")
 
             pvals_result = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
 
-            print("got p_v;s")
 
             if pvals_result is None:
                 return JsonResponse({
@@ -199,7 +185,6 @@ def gene_input_view2(request):
                                     status=400)
 
             result, pvl, fdr = pvals_result
-            print("no errors from the pvals_result")
             try:
                 if len(result) < 4:  # if we have less than 4 points
                     # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
@@ -209,13 +194,12 @@ def gene_input_view2(request):
             except ValueError as e:
                 return JsonResponse({'error': str(e)}, status=400)
 
-            print(f"length of result is {result}")
 
             # Run Ump
             distance_type = (data.get('distance_type') or 'weighted').lower()
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
             print("bout to run ump")
-            mapped_result = umap_reduction(result, neighbors, minDistance, seed, user_weights = user_weights, distance_type=distance_type)
+            mapped_result = umap_reduction(result, settings, user_weights, distance_type)
 
             # Return result as JSON
             print("loding result into json")

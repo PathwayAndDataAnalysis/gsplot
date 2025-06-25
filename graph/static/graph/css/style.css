@@ -388,6 +388,19 @@ tbody th {
 .gene-input-column button:hover {
   background-color: #666;
 }
+.param-group {
+    border: 1px solid #ddd;
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 15px;
+}
+.param-group h5 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #0056b3;
+}
+/* You can remove any conflicting styles from the previous full HTML if they exist */
+/* For instance, if you already have .form-group styles, don't duplicate them */
 
 /* loading spinner */
 .spinner-overlay {

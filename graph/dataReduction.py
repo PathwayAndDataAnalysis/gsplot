@@ -9,6 +9,8 @@ from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import norm
 
+from sklearn.manifold import Isomap, TSNE
+
 
 #python manage.py runserver
 #python manage.py migrate
@@ -64,7 +66,7 @@ def build_weights_from_sets(sig_genes, insig_genes):
         gene = gene.strip().upper()
         user_weights.setdefault(gene, 0.0)
 
-    return user_weights  
+    return user_weights
 
 def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
@@ -99,11 +101,47 @@ def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
 
     return filtered_gene_sets,p_val,fdr
 
+def get_reducer(settings):
+    reduction = settings['reduction']
+    algorithm = reduction['mode']
+    if algorithm == 'umap':
+        seed = reduction['seed']
+        reducer = umap.UMAP(
+            metric='precomputed',
+            n_neighbors=int(reduction['n_neighbors']),
+            random_state=int(seed) if seed and int(seed) != 0 else None,
+            min_dist=float(reduction['min_dist']),
+        )
+    elif algorithm == 'isomap':
+        # n_neighbors is used to build the neighborhood graph.
+        reducer = Isomap(
+            n_components=2,
+            n_neighbors=int(reduction['n_neighbors']),
+            metric='precomputed',
+            eigen_solver='auto',
+        )
+    elif algorithm == 'tsne':
+        # t-SNE also accepts precomputed distances
+        reducer = TSNE(
+            n_components=2,
+            metric='precomputed',
+            perplexity=float(reduction['perplexity']),
+            early_exaggeration=float(reduction['early_ex']),
+            learning_rate='auto',
+            max_iter=int(reduction['max_iter']),
+            init='random',
+            random_state=None,
+        )
+    else:
+        reducer = None
+    return reducer
+
+
 # Overlapping coefficient distance 
 def overlap_coef(user_weights, set1, set2):
     if not set1 or not set2:
         raise ValueError("One of the sets is empty in overlap coefficient calc.")
-    
+
     common = set1.intersection(set2)
     sum_common = sum(user_weights.get(gene, 0.0) for gene in common)
     sum1 = sum(user_weights.get(gene, 0.0) for gene in set1)
@@ -111,8 +149,8 @@ def overlap_coef(user_weights, set1, set2):
     min_sum = min(sum1, sum2)
 
     if min_sum == 0:
-        return 1.0 
-    
+        return 1.0
+
     raw_dist = 1 - (sum_common / min_sum)
     dist = max(0.0, min(1.0, raw_dist)) # Clamp to [0, 1]
     return dist
@@ -186,7 +224,9 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
 
     return filtered_gene_sets, p_val, fdr
 
-def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=None, distance_type='weighted'):
+def umap_reduction(fileDataOrString, settings, user_weights=None, distance_type='weighted'):
+    algorithm = "umap"
+    print(settings)
     # Check if use weighted Jaccard  without weights
     if distance_type == 'weighted' and user_weights is None:
         raise ValueError("user_weights must be provided when using weighted Jaccard distance.")
@@ -217,12 +257,16 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
 
         numberOfEnrichedMolecules = []
 
+        molecule_sets = [set(df.loc[i, "Molecules"].split()) for i in range(n)]
+
+        print(n)
+
 
         for i in range(n):
-            set1 = set(df.loc[i, "Molecules"].split())
+            set1 = molecule_sets[i]
             numberOfEnrichedMolecules.append(len(set1))
             for j in range (i + 1, n):
-                set2 = set(df.loc[j, "Molecules"].split())
+                set2 = molecule_sets[j]
 
                 if distance_type == 'weighted' and user_weights:
                     dist = weighted_jaccard_distance(user_weights, set1, set2)
@@ -232,11 +276,14 @@ def umap_reduction(fileDataOrString, neighbors, minDistance, seed, user_weights=
                     dist = overlap_coef(user_weights, set1, set2)
                 else:
                     raise ValueError(f"Unknown distance_type: {distance_type}")
-                
+
                 distance_matrix[i, j] = dist
                 distance_matrix[j, i] = dist
 
-        reducer = umap.UMAP(metric='precomputed', n_neighbors=int(neighbors), random_state=int(seed) if seed and int(seed) != 0 else None, min_dist=float(minDistance))
+
+        reducer = get_reducer(settings)
+
+        print(reducer)
         embedding = reducer.fit_transform(distance_matrix)
 
         # Make Data Frame for website display with the embedding results

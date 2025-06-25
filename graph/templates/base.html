@@ -217,7 +217,73 @@
               </div>
             </div>
           </div>
+          <!-- strting here is the new code -->
+          <div class="form-group">
+                <label for="algorithmSelect">Choose Algorithm:</label>
+                <select class="form-control" id="algorithmSelect" onchange="toggleAlgorithmParams()">
+                    <option value="umap">UMAP</option>
+                    <option value="tsne">t-SNE</option>
+                    <option value="isomap">Isomap</option>
+                </select>
+            </div>
+            <div id="umapParams" class="param-group">
+                <h5>UMAP Settings</h5>
+                <div class="form-group row">
+                    <label for="umapNNeighbors" class="col-sm-4 col-form-label">Number of Neighbors:</label>
+                    <div class="col-sm-8">
+                        <input type="number" class="form-control" id="umapNNeighbors" value="5" min="2">
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="umapMinDist" class="col-sm-4 col-form-label">Minimum Distance:</label>
+                    <div class="col-sm-8">
+                        <input type="number" step="0.01" class="form-control" id="umapMinDist" value="0.1" min="0" max="1">
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="umapRandomState" class="col-sm-4 col-form-label">Random State (seed):</label>
+                    <div class="col-sm-8">
+                        <input type="number" class="form-control" id="umapRandomState" value="0">
+                        <small class="form-text text-muted">Set to 0 or leave empty for random initialization.</small>
+                    </div>
+                </div>
+            </div>
+            <div id="tsneParams" class="param-group" style="display: none;">
+                <h5>t-SNE Settings</h5>
+                <div class="form-group row">
+                    <label for="tsnePerplexity" class="col-sm-4 col-form-label">Perplexity:</label>
+                    <div class="col-sm-8">
+                        <input type="number" step="0.1" class="form-control" id="tsnePerplexity" value="15.0" min="1">
+                        <small class="form-text text-muted">Balance between local and global structure (5-50 typically).</small>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="tsneEarlyExaggeration" class="col-sm-4 col-form-label">Early Exaggeration:</label>
+                    <div class="col-sm-8">
+                        <input type="number" step="0.1" class="form-control" id="tsneEarlyExaggeration" value="12.0" min="1">
+                        <small class="form-text text-muted">Controls space between clusters during optimization.</small>
+                    </div>
+                </div>
+                <div class="form-group row">
+                    <label for="tsneNIters" class="col-sm-4 col-form-label">Max Iterations:</label>
+                    <div class="col-sm-8">
+                        <input type="number" class="form-control" id="tsneNIters" value="1000" min="250">
+                        <small class="form-text text-muted">Maximum optimization steps.</small>
+                    </div>
+                </div>
+            </div>
 
+            <div id="isomapParams" class="param-group" style="display: none;">
+                <h5>Isomap Settings</h5>
+                <div class="form-group row">
+                    <label for="isomapNNeighbors" class="col-sm-4 col-form-label">Number of Neighbors:</label>
+                    <div class="col-sm-8">
+                        <input type="number" class="form-control" id="isomapNNeighbors" value="5" min="1">
+                        <small class="form-text text-muted">Number of neighbors to consider for graph construction.</small>
+                    </div>
+                </div>
+            </div>
+<!--
           <div class="umap-settings-header"><h3>UMAP Settings</h3></div>
           <div class="option">
             <label for="number-of-neighbors">Number of Neighbors:</label>
@@ -231,15 +297,18 @@
             <label for="seed">Seed (0 is random):</label>
             <input type="numeric" id="seed" name="seed" />
           </div>
+-->
+          <!-- >START Additional Settings Section -->
 
-          <!-- START Additional Settings Section -->
           <div class="additional-settings-header"><h3>Additional Settings</h3></div>
           <div class="option">
             <label for="distance-metric">Distance Metric:</label>
             <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
               <option value="overlap_coeff" selected>Overlap Coeff</option>
               <option value="jaccard_distance" selected>Jaccard Distance</option>
-              <!-- Add more options here if needed -->
+
+             <!-- Add more options here if needed -->
+
             </select>
           </div>
 
@@ -254,9 +323,12 @@
                 <label for="weighted-jaccard">Weighted Jaccard Distance:</label>
                 <input type="radio" id="weighted-jaccard" name="jaccard-type" value="weighted" checked />
               </div>
+
               <!-- Add more Jaccard types here if needed -->
+
             </div>
           </div>
+
           <!-- END Additional Settings Section -->
 
           <div class="button-container">

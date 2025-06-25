@@ -8,16 +8,36 @@ const defaultSettings = {
   "dynamic-size": false,
   "fixed-size-input": "6",
   "dynamic-size-scalar": "1",
-  "number-of-neighbors": "15",
-  "minimum-distance": "0.1",
-  "seed": "0"
 };
 
 const inputRefrences = {};
+const defaultUmap = {
+  'mode': "umap",
+  'n_neighbors': 5,
+  'seed': 0,
+  'min_dist': 0.1,
+};
+const defaultTsne = {
+  'mode': "tsne",
+  'perplexity': 15.0,
+  'early_ex': 12.0,
+  'max_iter': 1000,
+}
+
+const defaultIsoMap = {
+  'mode': "isomap",
+  'n_neighbors': 5,
+}
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
 const weightedJ = document.getElementById("weighted-jaccard");
+
+
+const algorithmSelect = document.getElementById('algorithmSelect');
+const umapParams = document.getElementById('umapParams');
+const tsneParams = document.getElementById('tsneParams');
+const isomapParams = document.getElementById('isomapParams');
 
 const fixedInput = document.getElementById("fixed-size-input-reveal");
 const dynamicInput = document.getElementById("dynamic-size-input-reveal");
@@ -41,11 +61,11 @@ function main() {
 
   if (localStorage.getItem("settings") !== null) {
     const currentSettings = JSON.parse(localStorage.getItem("settings"));
-    currentSettings.weighted = true;
+    currentSettings.reduction = defaultUmap;
     localStorage.setItem("settings", JSON.stringify(currentSettings));
     displayValues(currentSettings);
   } else {
-    defaultSettings.weighted = true;
+    defaultSettings.reduction = defaultUmap;
     localStorage.setItem("settings", JSON.stringify(defaultSettings));
     displayValues(defaultSettings);
   }
@@ -68,6 +88,23 @@ function displayValues(settings) {
     document.getElementById("weighted-jaccard").checked = true;
   }
 }
+function getReduction() {
+  const selectedAlgorithm = algorithmSelect.value;
+  setReduction = {}
+  setReduction['mode'] = selectedAlgorithm;
+  if (selectedAlgorithm === 'umap') {
+  setReduction['n_neighbors'] = document.getElementById("umapNNeighbors")?.value;
+  setReduction['seed']= document.getElementById("umapRandomState")?.value;
+  setReduction['min_dist']= document.getElementById("umapMinDist")?.value;
+  } else if (selectedAlgorithm === 'tsne') {
+  setReduction['perplexity']= document.getElementById("tsnePerplexity")?.value;
+  setReduction['early_ex']= document.getElementById("tsneEarlyExaggeration")?.value;
+  setReduction['max_iter']= document.getElementById("tsneNIters")?.value;
+  } else if (selectedAlgorithm === 'isomap') {
+  setReduction['n_neighbors'] = document.getElementById("isomapNNeighbors")?.value;
+  }
+  return setReduction
+}
 
 function updateSettings() {
   let newSettings = {};
@@ -82,6 +119,8 @@ function updateSettings() {
       newSettings[key] = value.value;
     }
   }
+  reduction = getReduction(newSettings);
+  newSettings['reduction'] = reduction;
 
   // Jaccard type
   const distanceMetric = document.getElementById("distance-metric")?.value;
@@ -119,9 +158,32 @@ function isUmapSettingDifferent(setting1, setting2) {
     setting1["number-of-neighbors"] !== setting2["number-of-neighbors"] ||
     setting1["minimum-distance"] !== setting2["minimum-distance"] ||
     setting1["seed"] !== setting2["seed"] ||
-    setting1["distance_type"] !== setting2["distance_type"]
+    setting1["distance_type"] !== setting2["distance_type"] ||
+    setting1['reduction'] !== setting2["reduction"]
   );
 }
+
+ // Add this new function
+function toggleAlgorithmParams() {
+    const selectedAlgorithm = algorithmSelect.value;
+
+    // Hide all parameter sections first
+    umapParams.style.display = 'none';
+    tsneParams.style.display = 'none';
+    isomapParams.style.display = 'none';
+
+    // Then show only the selected one
+    if (selectedAlgorithm === 'umap') {
+        umapParams.style.display = 'block';
+    } else if (selectedAlgorithm === 'tsne') {
+        tsneParams.style.display = 'block';
+    } else if (selectedAlgorithm === 'isomap') {
+        isomapParams.style.display = 'block';
+    }
+}
+
+toggleAlgorithmParams(); // Call once on load to set initial state
+
 
 function addRadioEventListeners() {
   fixedSizeButton.addEventListener("change", () => {
