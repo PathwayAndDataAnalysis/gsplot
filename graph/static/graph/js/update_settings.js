@@ -157,7 +157,7 @@ function updateSettings() {
     newSettings.umapChange = true;
   }
   let distancesM = JSON.parse(localStorage.getItem("distances-M"));
-  distancesM.use = !(newSettings["distance_type"] !== oldSettings["distance_type"]);
+  distancesM = !(newSettings["distance_type"] !== oldSettings["distance_type"]);
   localStorage.setItem("distances-M", JSON.stringify(distancesM));
 
   // Save settings

@@ -76,6 +76,7 @@ function importFile() {
     localStorage.removeItem("camera");
     localStorage.removeItem("data");
     localStorage.removeItem("annotations");
+    localStorage.setItem("reset", JSON.stringify(true));
     // Show upload screen
     hideGraph();
     setTimeout(() => {
