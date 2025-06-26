@@ -6,6 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="b4112fad-1cc0-4f89-a3c8-66ff8f42a414" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph/dataReduction.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph/dataReduction.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph/static/graph/js/update_settings.js" beforeDir="false" afterPath="$PROJECT_DIR$/graph/static/graph/js/update_settings.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph/static/graph/js/upload_file.js" beforeDir="false" afterPath="$PROJECT_DIR$/graph/static/graph/js/upload_file.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/graph/templates/graph.html" beforeDir="false" afterPath="$PROJECT_DIR$/graph/templates/graph.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/graph/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/graph/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/gsplot/.gitignore" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/gsplot/LICENSE" beforeDir="false" />

@@ -25,6 +25,9 @@
           "clusterName"
         ];
 
+        let m = [];
+        let relevantMembers = [];
+
         // Get refrences to graph div and loading spinner
         const myPlot = document.getElementById("plot-container");
         const spinnerOverlay =
@@ -44,11 +47,13 @@
           const sigGenes = localStorage.getItem("sigGenes") || "";
           const insigGenes = localStorage.getItem("insigGenes") || "";
           const rankedGenes = localStorage.getItem("rankedGenes") || "";
+
           let singleList = false; // Default value if not found
           const storedSingleList = localStorage.getItem("single-list");
           if (storedSingleList !== null) {
             singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
           }
+          localStorage.setItem("reset", JSON.stringify(true));
 
           const hasGeneInput = sigGenes.trim() || insigGenes.trim();
 
@@ -341,15 +346,27 @@
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species")
             const distanceType = settings["distance_type"];
-            let distancesM = {
-                'use': false,
-                'm': []
-              }
+            const reset = localStorage.getItem("reset");
+            let distancesV = false;
 
             if (localStorage.getItem("distances-M")) {
-              distancesM = JSON.parse(localStorage.getItem("distances-M"));
+              distancesV = JSON.parse(localStorage.getItem("distances-M"));
             }
-            localStorage.setItem("distances-M", JSON.stringify(distancesM));
+            if (reset) {
+              if (JSON.parse(reset)) {
+                distancesV = false;
+                m = [];
+                relevantMembers = [];
+                setLocalStorage("reset", false);
+              }
+            }
+            localStorage.setItem("distances-M", JSON.stringify(distancesV));
+
+            let distancesM = {
+              'use': distancesV,
+              'm': m
+            }
+
 
             // Get CSRF token as before
             const csrftoken = getCookie("csrftoken");
@@ -376,7 +393,8 @@
                 custom_data: customGeneSets,
                 settings: settings,
                 distance_type: distanceType,
-                distancesM: distancesM
+                distancesM: distancesM,
+                relevant_members: relevantMembers
               }),
             })
               .then((response) => {
@@ -396,11 +414,11 @@
                 const fdrDisplay = data.fdr_value;
                 const umapData = data.umap;
                 const distancesRet = data.distancesM;
-                let distancesM = {
-                  'use': true,
-                  'm': distancesRet,
-                }
-                localStorage.setItem("distances-M",JSON.stringify(distancesM));
+                const relevant_members = data.relevant_members;
+                let distancesV = true;
+                m = distancesRet;
+                relevantMembers = relevant_members;
+                localStorage.setItem("distances-M",JSON.stringify(distancesV));
 
                 window.parent.document.getElementById("text-display-1").textContent = `P-value Threshold: ${pvalDisplay}`;
                 window.parent.document.getElementById("text-display-2").textContent = `Estimated FDR: ${fdrDisplay}`;
@@ -446,15 +464,26 @@
             const fdr = localStorage.getItem("fdr")
             const species = localStorage.getItem("species");
             const distanceType = settings["distance_type"];
-            let distancesM = {
-                'use': false,
-                'm': []
-              }
+            const reset = localStorage.getItem("reset");
+            let distancesV = false;
 
             if (localStorage.getItem("distances-M")) {
-              distancesM = JSON.parse(localStorage.getItem("distances-M"));
+              distancesV = JSON.parse(localStorage.getItem("distances-M"));
             }
-            localStorage.setItem("distances-M", JSON.stringify(distancesM));
+            if (reset) {
+              if (JSON.parse(reset)) {
+                distancesV = false;
+                m = [];
+                relevantMembers = [];
+                setLocalStorage("reset", false);
+              }
+            }
+            localStorage.setItem("distances-M", JSON.stringify(distancesV));
+
+            let distancesM = {
+              'use': distancesV,
+              'm': m
+            }
 
             if (!sigGenes.trim() && !insigGenes.trim()) {
               reject(new Error("Please enter at least one gene in either field."));
@@ -488,7 +517,8 @@
                 custom_data: customGeneSets,
                 settings: settings,
                 distance_type: distanceType,
-                distancesM: distancesM
+                distancesM: distancesM,
+                relevant_members: relevantMembers
               }),
             })
               .then((response) => {
@@ -508,11 +538,13 @@
                 const fdrDisplay = data.fdr_value;
                 const umapData = data.umap;
                 const distancesRet = data.distancesM;
-                let distancesM = {
-                  'use': true,
-                  'm': distancesRet,
-                }
-                localStorage.setItem("distances-M",JSON.stringify(distancesM));
+                const relevant_members = data.relevant_members;
+                let distancesV = true;
+                m = distancesRet;
+                relevantMembers = relevant_members;
+                localStorage.setItem("distances-M",JSON.stringify(distancesV));
+
+
 
                 window.parent.document.getElementById("text-display-1").textContent = `P-value Threshold: ${pvalDisplay}`;
                 window.parent.document.getElementById("text-display-2").textContent = `Estimated FDR: ${fdrDisplay}`;

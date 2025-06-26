@@ -42,51 +42,58 @@ def gene_input_view(request):
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
             settings = data.get("settings")
             distances = data.get("distancesM")
+            relevant_members = (data.get("relevant_members"))
+
+            filtered = []
 
             # Split inputs into cleaned gene lists
             sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
             insig_genes = [gene.strip().upper() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
-            # Load gene set data
-            species = species.lower()
-            if species == "custom":
-                if not custom_data:
-                    return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
-                gene_sets_data = custom_data
+            if (len(relevant_members) > 0):
+                filtered = json.loads(data.get("relevant_members"))
             else:
-                file_map = {
-                    "human": "msigdb.v2025.1.Hs.json",
-                    "mouse": "msigdb.v2025.1.Mm.json"
-                }
-                filename = file_map.get(species)
-                if not filename:
-                    return JsonResponse({"error": "Invalid species"}, status=400)
 
-                file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-                with open(file_path, 'r') as f:
-                    gene_sets_data = json.load(f)
+                # Load gene set data
+                species = species.lower()
+                if species == "custom":
+                    if not custom_data:
+                        return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                    gene_sets_data = custom_data
+                else:
+                    file_map = {
+                        "human": "msigdb.v2025.1.Hs.json",
+                        "mouse": "msigdb.v2025.1.Mm.json"
+                    }
+                    filename = file_map.get(species)
+                    if not filename:
+                        return JsonResponse({"error": "Invalid species"}, status=400)
 
-            # Convert thresholds to float if provided
-            if p_thr:
-                p_thr = float(p_thr)
-            if fdr_thr:
-                fdr_thr = float(fdr_thr)
+                    file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                    with open(file_path, 'r') as f:
+                        gene_sets_data = json.load(f)
 
-            genes = sig_genes + insig_genes
+                genes = sig_genes + insig_genes
 
-            print("collecting selected genes w revelnt members")
+                print("collecting selected genes w revelnt members")
 
-            # Filter selected gene sets
-            filtered = get_selected_gene_sets_with_relevant_members(
-                gene_list=genes,
-                min_members_threshold=min_members,
-                selected_gene_sets=selected_gene_sets,
-                gene_sets_data=gene_sets_data,
-            )
+                # Filter selected gene sets
+                filtered = get_selected_gene_sets_with_relevant_members(
+                    gene_list=genes,
+                    min_members_threshold=min_members,
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
 
             # If there is no matching gene set after filtering, return error
             if not filtered:
                 return JsonResponse({"error": "No gene sets matched after filtering. Please select other categories or adjust your input."}, status=400)
+
+                # Convert thresholds to float if provided
+            if p_thr:
+                p_thr = float(p_thr)
+            if fdr_thr:
+                fdr_thr = float(fdr_thr)
 
             # Run Fisher's test analysis
             print("running fishers test")
@@ -116,8 +123,10 @@ def gene_input_view(request):
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("grphing")
             list_response = distances_m.tolist()
+            list_response2 = json.dumps(filtered)
             return JsonResponse({
                 "umap": data,
+                "relevant_members": list_response2,
                 "distancesM": list_response,
                 "p_value": pvl,
                 "fdr_value": fdr
@@ -149,27 +158,42 @@ def gene_input_view2(request):
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
             settings = data.get("settings")
             distances = data.get("distancesM")
+            relevant_members = (data.get("relevant_members"))
+
+            filtered = []
 
             # Split inputs into cleaned gene lists
             ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
-            # Load gene set data
-            species = species.lower()
-            if species == "custom":
-                if not custom_data:
-                    return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
-                gene_sets_data = custom_data
-            else:
-                file_map = {
-                    "human": "msigdb.v2025.1.Hs.json",
-                    "mouse": "msigdb.v2025.1.Mm.json"
-                }
-                filename = file_map.get(species)
-                if not filename:
-                    return JsonResponse({"error": "Invalid species"}, status=400)
 
-                file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-                with open(file_path, 'r') as f:
-                    gene_sets_data = json.load(f)
+            if (len(relevant_members) > 0):
+                filtered = json.loads(data.get("relevant_members"))
+            else:
+                # Load gene set data
+                species = species.lower()
+                if species == "custom":
+                    if not custom_data:
+                        return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                    gene_sets_data = custom_data
+                else:
+                    file_map = {
+                        "human": "msigdb.v2025.1.Hs.json",
+                        "mouse": "msigdb.v2025.1.Mm.json"
+                    }
+                    filename = file_map.get(species)
+                    if not filename:
+                        return JsonResponse({"error": "Invalid species"}, status=400)
+
+                    file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                    with open(file_path, 'r') as f:
+                        gene_sets_data = json.load(f)
+
+                # Filter selected gene sets
+                filtered = get_selected_gene_sets_with_relevant_members(
+                    gene_list=ranked_genes,
+                    min_members_threshold=min_members,
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
 
             # Convert thresholds to float if provided
             if p_thr:
@@ -177,26 +201,15 @@ def gene_input_view2(request):
             if fdr_thr:
                 fdr_thr = float(fdr_thr)
 
-            print(len(ranked_genes))
-            print(len(selected_gene_sets))
-            # Filter selected gene sets
-            filtered = get_selected_gene_sets_with_relevant_members(
-                gene_list=ranked_genes,
-                min_members_threshold=min_members,
-                selected_gene_sets=selected_gene_sets,
-                gene_sets_data=gene_sets_data,
-            )
-
-            print("calculating p-values")
             pvals_result = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
-
 
             if pvals_result is None:
                 return JsonResponse({
                                         "error": "calculate_pvals returned no results. Please enter higher p-value/FDR threshold or change the selections."},
                                     status=400)
-
+            print("completed p clcultions")
             result, pvl, fdr = pvals_result
+            print(len(result),pvl,fdr)
             try:
                 if len(result) < 4:  # if we have less than 4 points
                     # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
@@ -220,9 +233,11 @@ def gene_input_view2(request):
             print("returning teh response")
             print("grphing")
             list_response = distances_m.tolist()
+            list_response2 = json.dumps(filtered)
             return JsonResponse({
                 "umap": data,
                 "distancesM": list_response,
+                "relevant_members": list_response2,
                 "p_value": pvl,
                 "fdr_value": fdr
             })

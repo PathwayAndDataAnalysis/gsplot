@@ -215,7 +215,6 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
         gene = ranked_genes[i]
         norm_rank = (rank-0.5)/n
         ranks[gene] = norm_rank
-
     total = len(filtered)
     for geneset in filtered:
         gene_set = geneset['matched_genes']
@@ -293,13 +292,14 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
                         raise ValueError(f"Unknown distance_type: {distance_type}")
                     distance_matrix[i, j] = dist
                     distance_matrix[j, i] = dist
-                if i % 50 == 0:
-                    print(f"{i}/{n}")
+            if i % 50 == 0:
+                print(f"{i}/{n}")
 
         if (distances['use']):
             distance_matrix = np.array(distances["m"])
 
         reducer = get_reducer(settings)
+        print("applying reducer...")
         embedding = reducer.fit_transform(distance_matrix)
 
         # Make Data Frame for website display with the embedding results
@@ -311,7 +311,6 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
         # Sort entries by descending order of qValue so if two points overlap, the point with the more significant q value appears on top
         embedding_df = embedding_df.sort_values(by='qValue', ascending=False)
-
         embedding_df_json = embedding_df.to_json(orient='records')
 
 
