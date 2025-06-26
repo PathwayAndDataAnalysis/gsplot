@@ -12,6 +12,7 @@ const thresholdContainer = document.getElementById("threshold-container");
 const valsContainer = document.getElementById("graph-text-info");
 
 let currentActiveGeneInputTabId = '';
+let hasUnsavedSettings = false;
 
 const uploadContainer = document.getElementById("upload-container"); // Container for the upload file button
 const selectedPoints = document.getElementById("selected-section"); // Container for selected points below graph
@@ -63,6 +64,12 @@ async function main() {
   }
 }
 
+document.querySelectorAll(".settings input, .settings select").forEach((el) => {
+  el.addEventListener("change", () => {
+    hasUnsavedSettings = true;
+  });
+});
+
 // Import file button script
 function importFile() {
   // Warn user that if they have data stored, it will be deleted
@@ -102,6 +109,19 @@ function convertToExpectedFormat(arrayOfObjects) {
 }
 
 document.getElementById("submit-gene-button").addEventListener("click", async function () {
+  if (hasUnsavedSettings) {
+    const toast = document.getElementById("toast-message");
+    if (toast) {
+      toast.style.color = "#f39c12";
+      toast.textContent = "You changed settings but didn’t click Apply. The graph will use old settings.";
+      toast.style.display = "block";
+
+      setTimeout(() => {
+        toast.style.display = "none";
+        toast.style.color = "#2ecc71";
+      }, 4000);
+    }
+  }
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
 
@@ -192,18 +212,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     alert("Please select at least one category of gene sets from the tree.");
     return;
   }
-
-  const distanceMetric = document.getElementById("distance-metric")?.value;
-  if (distanceMetric === "jaccard-distance") {
-    distanceType = document.getElementById("weighted-jaccard")?.checked ? "jaccard_weighted" : "jaccard_plain";
-  } else {
-    distanceType = document.getElementById("weighted-overlap")?.checked ? "overlap_weighted" : "overlap_plain";
-  }
-
-  // Save or attach to request later
-  let settings = JSON.parse(localStorage.getItem("settings")) || {};
-  settings.distance_type = distanceType;
-  localStorage.setItem("settings", JSON.stringify(settings));
 
   try {
     loadingSpinner.style.display = "block";

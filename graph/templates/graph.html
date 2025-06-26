@@ -577,40 +577,6 @@
           });
         }
 
-
-        // This listens for a settigns change, when changed apply them
-        window.addEventListener("storage", function (e) {
-          if (e.key === "settings") {
-            let selected = getLocalStorage("selected");
-            let fullGraphData = getLocalStorage("data");
-            let settings = getLocalStorage("settings");
-            let pointNumber;
-
-            if (fullGraphData) {
-              // If umap settings changed, calculate umap again. Otherwise redraw graph
-              if (settings["umapChange"]) {
-                applyUmapChange(settings);
-              } else {
-                if (selected === null) {
-                  selected = [];
-                }
-
-                // Update colors of selected points to new selected point color
-                for (let i = 0; i < selected.length; i++) {
-                  pointNumber = selected[i]["pointNumber"];
-                  fullGraphData["color"][pointNumber] =
-                    settings["selected-color"];
-                }
-
-                // Apply changes to data and redraw graph
-                setLocalStorage("data", fullGraphData);
-                console.log("this is trying to grph too erly");
-                graph();
-              }
-            }
-          }
-        });
-
         // Get umap data once more and draw graph. Selected are cleared as new UMAP data doesn't carry over selected points since they are in new positions
         async function applyUmapChange(settings) {
           let singleList = false; // Default value if not found

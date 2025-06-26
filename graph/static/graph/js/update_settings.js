@@ -56,7 +56,7 @@ function main() {
   addRadioEventListeners();
   addSpinnerOverlay();
 
-  localStorage.setItem("single-list",JSON.stringify(false));
+  localStorage.setItem("single-list", JSON.stringify(false));
 
   if (localStorage.getItem("settings") !== null) {
     const currentSettings = JSON.parse(localStorage.getItem("settings"));
@@ -85,34 +85,34 @@ function getReduction() { // get input based on user input on sidebar
   setReduction = {}
   setReduction['mode'] = selectedAlgorithm;
   if (selectedAlgorithm === 'umap') {
-  setReduction['n_neighbors'] = parseInt(document.getElementById("umapNNeighbors")?.value);
-  setReduction['seed']= parseInt(document.getElementById("umapRandomState")?.value);
-  setReduction['min_dist']= parseFloat(document.getElementById("umapMinDist")?.value);
+    setReduction['n_neighbors'] = parseInt(document.getElementById("umapNNeighbors")?.value);
+    setReduction['seed'] = parseInt(document.getElementById("umapRandomState")?.value);
+    setReduction['min_dist'] = parseFloat(document.getElementById("umapMinDist")?.value);
   } else if (selectedAlgorithm === 'tsne') {
-  setReduction['perplexity']= parseFloat(document.getElementById("tsnePerplexity")?.value);
-  setReduction['early_ex']= parseFloat(document.getElementById("tsneEarlyExaggeration")?.value);
-  setReduction['max_iter']= parseInt(document.getElementById("tsneNIters")?.value);
+    setReduction['perplexity'] = parseFloat(document.getElementById("tsnePerplexity")?.value);
+    setReduction['early_ex'] = parseFloat(document.getElementById("tsneEarlyExaggeration")?.value);
+    setReduction['max_iter'] = parseInt(document.getElementById("tsneNIters")?.value);
   } else if (selectedAlgorithm === 'isomap') {
-  setReduction['n_neighbors'] = parseInt(document.getElementById("isomapNNeighbors")?.value);
+    setReduction['n_neighbors'] = parseInt(document.getElementById("isomapNNeighbors")?.value);
   }
   return setReduction
 }
-function getReductionDiff(setting1,setting2) { // compare to find potential differences to then update the graph
+function getReductionDiff(setting1, setting2) { // compare to find potential differences to then update the graph
   const reduction1 = setting1['reduction']
   const reduction2 = setting2['reduction']
   const selectedAlgorithm = setting1['mode'];
   if (reduction1['mode'] !== reduction2['mode']) return true
   if (selectedAlgorithm === 'umap') {
     return (
-    reduction1['n_neighbors'] !== reduction2['n_neighbors'] ||
-    reduction1['seed'] !== reduction2['seed'] ||
-    reduction1['min_dist'] !== reduction2['min_dist']
+      reduction1['n_neighbors'] !== reduction2['n_neighbors'] ||
+      reduction1['seed'] !== reduction2['seed'] ||
+      reduction1['min_dist'] !== reduction2['min_dist']
     )
   } else if (selectedAlgorithm === 'tsne') {
     return (
-    reduction1['perplexity'] !== reduction2['perplexity'] ||
-    reduction1['early_ex'] !== reduction2['early_ex'] ||
-    reduction1['max_iter'] !== reduction2['max_iter']
+      reduction1['perplexity'] !== reduction2['perplexity'] ||
+      reduction1['early_ex'] !== reduction2['early_ex'] ||
+      reduction1['max_iter'] !== reduction2['max_iter']
     )
   } else if (selectedAlgorithm === 'isomap') {
     return (reduction1['n_neighbors'] !== reduction2['n_neighbors'])
@@ -163,14 +163,17 @@ function updateSettings() {
   // Save settings
   localStorage.setItem("settings", JSON.stringify(newSettings));
 
-  // Check data before rendering
-  const data = localStorage.getItem("data");
-  if (data) {
-    // Send signal for iframe to render
-    window.graph?.contentWindow?.graph?.();
-  } else {
-    alert("Settings saved! No graph to redraw yet (no data).");
+  const toast = document.getElementById("toast-message");
+  if (toast) {
+    toast.style.display = "block";
+    toast.style.color = "#2ecc71";           
+    toast.textContent = "Settings saved! Click Submit to update the graph.";
+
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 3000);
   }
+  hasUnsavedSettings = false;
 }
 
 function isUmapSettingDifferent(setting1, setting2) {
@@ -179,27 +182,27 @@ function isUmapSettingDifferent(setting1, setting2) {
     setting1["minimum-distance"] !== setting2["minimum-distance"] ||
     setting1["seed"] !== setting2["seed"] ||
     setting1["distance_type"] !== setting2["distance_type"] ||
-    getReductionDiff(setting1,setting2)
+    getReductionDiff(setting1, setting2)
   );
 }
 
- // Add this new function
+// Add this new function
 function toggleAlgorithmParams() {
-    const selectedAlgorithm = algorithmSelect.value;
+  const selectedAlgorithm = algorithmSelect.value;
 
-    // Hide all parameter sections first
-    umapParams.style.display = 'none';
-    tsneParams.style.display = 'none';
-    isomapParams.style.display = 'none';
+  // Hide all parameter sections first
+  umapParams.style.display = 'none';
+  tsneParams.style.display = 'none';
+  isomapParams.style.display = 'none';
 
-    // Then show only the selected one
-    if (selectedAlgorithm === 'umap') {
-        umapParams.style.display = 'block';
-    } else if (selectedAlgorithm === 'tsne') {
-        tsneParams.style.display = 'block';
-    } else if (selectedAlgorithm === 'isomap') {
-        isomapParams.style.display = 'block';
-    }
+  // Then show only the selected one
+  if (selectedAlgorithm === 'umap') {
+    umapParams.style.display = 'block';
+  } else if (selectedAlgorithm === 'tsne') {
+    tsneParams.style.display = 'block';
+  } else if (selectedAlgorithm === 'isomap') {
+    isomapParams.style.display = 'block';
+  }
 }
 
 toggleAlgorithmParams(); // Call once on load to set initial state
