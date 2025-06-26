@@ -165,6 +165,7 @@ def gene_input_view2(request):
             # Split inputs into cleaned gene lists
             ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
 
+
             if (len(relevant_members) > 0):
                 filtered = json.loads(data.get("relevant_members"))
             else:
@@ -194,6 +195,7 @@ def gene_input_view2(request):
                     selected_gene_sets=selected_gene_sets,
                     gene_sets_data=gene_sets_data,
                 )
+                print(len(gene_sets_data))
 
             # Convert thresholds to float if provided
             if p_thr:
