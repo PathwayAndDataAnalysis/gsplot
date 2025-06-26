@@ -358,6 +358,7 @@
                 m = [];
                 relevantMembers = [];
                 setLocalStorage("reset", false);
+                setLocalStorage("selected", []);
               }
             }
             localStorage.setItem("distances-M", JSON.stringify(distancesV));
@@ -766,6 +767,7 @@
 
           // Save selected and data points in local storage
           setLocalStorage("data", fullGraphData);
+          console.log("bout to set the selected dt")
           setLocalStorage("selected", selected);
           // Restyle graph
           Plotly.restyle(myPlot, update, [curveNumber]);

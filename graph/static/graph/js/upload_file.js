@@ -13,6 +13,7 @@ const valsContainer = document.getElementById("graph-text-info");
 
 let currentActiveGeneInputTabId = '';
 let hasUnsavedSettings = false;
+let allTablesContainer2 = document.getElementById("selected-points-container");
 
 const uploadContainer = document.getElementById("upload-container"); // Container for the upload file button
 const selectedPoints = document.getElementById("selected-section"); // Container for selected points below graph
@@ -84,6 +85,7 @@ function importFile() {
     localStorage.removeItem("data");
     localStorage.removeItem("annotations");
     localStorage.setItem("reset", JSON.stringify(true));
+    clearPoints()
     // Show upload screen
     hideGraph();
     setTimeout(() => {
@@ -365,4 +367,11 @@ function clearLocalStorageExceptSettings() {
   }
   localStorage.setItem("selected", "[]");
 
+}
+
+function clearPoints() {
+  allTablesContainer2.innerHTML = "";
+  const placeholder = document.createElement("p");
+  placeholder.textContent = "Please select a point above by clicking it.";
+  allTablesContainer2.appendChild(placeholder);
 }
