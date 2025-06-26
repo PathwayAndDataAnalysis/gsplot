@@ -1,17 +1,17 @@
 // Get needed refrences to document objects
 const settingsButton = document.querySelector(".settings-button"); // Gear icon in top right
 const settingsContainer = document.querySelector(".settings-container"); // Container for settings area
+const speciesSelector = document.getElementById("species-selector");
+const geneContainer = document.getElementById("manual-gene-input"); // Container for the gene input box
 const graphAndSettingsContainer = document.getElementById(
   "graph-settings-container"
 ); // Container for Graph and Settings area
 const loadingSpinner = document.getElementById("loading-spinner"); // Spinner element
-const treeContainer = document.getElementById("tree-container");
-const InputContainer = document.getElementById("threshold-container");
+const treeContainer = document.getElementById("tree-container");  // Container for collection tree
+const thresholdContainer = document.getElementById("threshold-container");
 const valsContainer = document.getElementById("graph-text-info");
 
-let currentActiveGeneInputTabId = ''
-
-const submitContainer = document.getElementById("manual-gene-input"); // Container for the submit text button
+let currentActiveGeneInputTabId = '';
 
 const uploadContainer = document.getElementById("upload-container"); // Container for the upload file button
 const selectedPoints = document.getElementById("selected-section"); // Container for selected points below graph
@@ -54,14 +54,10 @@ async function main() {
     // Hide upload and show graph
     hideUpload();
     hideInput();
-    hideSubmit();
-    hideGenes();
     showGraph();
   } else {
     // Show upload screen
     showUpload();
-    showSubmit();
-    showGenes();
     showInput();
     hideGraph();
   }
@@ -84,10 +80,7 @@ function importFile() {
     hideGraph();
     setTimeout(() => {
       showUpload();
-      showGenes();
-      showSubmit();
       showInput();
-      //showSubmit
     }, transitionDuration);
   }
 }
@@ -218,8 +211,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
 
     // Hide input and show graph only when there is no error
     hideUpload();
-    hideGenes();
-    hideSubmit();
     hideInput();
     setTimeout(() => showGraph(), transitionDuration);
 
@@ -243,7 +234,7 @@ function toggleJaccardOptions() {
   }
 }
 
-function showGeneInputTab(tabId) {
+function showGeneInputTab(tabId, event = null) {
   // Assign the tabId to the global variable
   currentActiveGeneInputTabId = tabId;
 
@@ -331,24 +322,17 @@ function hideUpload() {
   }, transitionDuration);
 }
 
-function showGenes() {
-  treeContainer.style.display = "block";
-}
-
-function hideGenes() {
-  treeContainer.style.display = "none";
-}
-function showSubmit() {
-  submitContainer.style.display = "block";
-}
-function hideSubmit() {
-  submitContainer.style.display = "none";
-}
 function showInput() {
-  InputContainer.style.display = "flex";
+  treeContainer.style.display = "block";
+  thresholdContainer.style.display = "flex";
+  speciesSelector.style.display = "block";
+  geneContainer.style.display = "block";
 }
 function hideInput() {
-  InputContainer.style.display = "none";
+  treeContainer.style.display = "none";
+  thresholdContainer.style.display = "none";
+  speciesSelector.style.display = "none";
+  geneContainer.style.display = "none";
 }
 function clearSignificantGenes() {
   document.getElementById("id_significant_genes").value = "";

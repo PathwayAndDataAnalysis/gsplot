@@ -24,7 +24,7 @@
       </div>
     </div>
     <div class="nav-links">
-      <span class="nav-button" id="nav-import" onclick="importFile()">Import Data</span>
+      <span class="nav-button" id="nav-import" onclick="importFile()">Input</span>
       <a class="nav-button" href="/help">Help</a>
       <a class="nav-button" href="/about">About Us</a>
       <div class="settings-button">
@@ -64,7 +64,7 @@
     <h2>Manual Gene Input</h2>
 
     <div class="gene-input-tabs">
-      <span class="gene-input-tab-button active" onclick="showGeneInputTab('two-textareas')">Thresholded Input</span>
+      <span class="gene-input-tab-button active" onclick="showGeneInputTab('two-textareas', event)">Thresholded Input</span>
       <span class="gene-input-tab-button" onclick="showGeneInputTab('single-textarea')">Single List Input</span>
     </div>
 
@@ -129,7 +129,7 @@
 
 
   <!-- Text displays -->
-  <div id="graph-text-info" style="display: flex; gap: 20px; margin-bottom: 10px;">
+  <div id="graph-text-info" style="display: flex; gap: 20px; margin-top: 30px; margin-bottom: 10px;">
     <div id="text-display-1" style="font-size: 14px; color: #444;">Info 1: Loading...</div>
     <div id="text-display-2" style="font-size: 14px; color: #444;">Info 2: Loading...</div>
   </div>
