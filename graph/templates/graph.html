@@ -422,7 +422,7 @@
                 localStorage.setItem("distances-M",JSON.stringify(distancesV));
 
                 window.parent.document.getElementById("text-display-1").textContent = `P-value Threshold: ${pvalDisplay}`;
-                window.parent.document.getElementById("text-display-2").textContent = `Estimated FDR: ${fdrDisplay}`;
+                window.parent.document.getElementById("text-display-2").textContent = `FDR Threshold: ${fdrDisplay}`;
 
                 // Convert returned data into the localStorage.data structure
                 let dataStorage = {};
@@ -548,7 +548,7 @@
 
 
                 window.parent.document.getElementById("text-display-1").textContent = `P-value Threshold: ${pvalDisplay}`;
-                window.parent.document.getElementById("text-display-2").textContent = `Estimated FDR: ${fdrDisplay}`;
+                window.parent.document.getElementById("text-display-2").textContent = `FDR Threshold: ${fdrDisplay}`;
 
                 // Convert returned data into the localStorage.data structure
                 let dataStorage = {};

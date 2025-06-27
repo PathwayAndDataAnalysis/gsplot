@@ -124,27 +124,34 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       }, 4000);
     }
   }
+
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
-
   const rankedGenes = document.getElementById("id_single_gene_list").value;
-
   const species = document.getElementById("species-select").value;
-
   const pvThr = document.getElementById("pvalue-input").value;
   const fdrThr = document.getElementById("fdr-input").value;
-
   const selectedGeneSets = window?.GSP?.selectedGeneSets || [];
 
-  let singleList = false; // Default value if not found
+  let singleList = false;
   const storedSingleList = localStorage.getItem("single-list");
   if (storedSingleList !== null) {
-    singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
+    singleList = JSON.parse(storedSingleList);
   }
 
   const minInput = document.getElementById("min-member-input");
-  let minMembers = 5; // default
+  let minMembers = 5;
+  if (minInput) {
+    const raw = minInput.value.trim();
+    if (raw !== "" && !isNaN(raw)) {
+      const val = Number(raw);
+      if (val >= 5) {
+        minMembers = val;
+      }
+    }
+  }
 
+  // ==== Validate input ====
   if (pvThr === "" && fdrThr === "") {
     alert("Please enter either a p-value or an FDR threshold.");
     return;
@@ -161,45 +168,46 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       return;
     }
   }
-  if (!sigGenes.trim() && !insigGenes.trim() && (singleList == false)) {
-    alert("Please enter at least one gene in either field.");
+
+  if (!sigGenes.trim() && !insigGenes.trim() && !rankedGenes.trim()) {
+    alert("Please enter at least one gene.");
     return;
   }
 
-  clearLocalStorageExceptSettings()
+  if (selectedGeneSets.length === 0) {
+    alert("Please select at least one category of gene sets from the tree.");
+    return;
+  }
+
+  const newSettings = JSON.parse(localStorage.getItem("settings"));
+  const oldSettings = JSON.parse(localStorage.getItem("rendered-settings")) || {};
+  const shouldRerun = isUmapSettingDifferent(newSettings, oldSettings);
+  const hasData = localStorage.getItem("data") !== null;
+
+  // === Only clear data if rerun is required and previous data exists ===
+  if (shouldRerun && hasData) {
+    clearLocalStorageExceptSettings();
+  }
+
+  // Save inputs
   if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
   if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
+  localStorage.setItem("minMembers", minMembers);
+  localStorage.setItem("species", species);
 
-
-  // Save values to localStorage so the iframe can access them
-  if (singleList == true) {
+  if (singleList) {
     if (rankedGenes !== "") {
       localStorage.setItem("rankedGenes", rankedGenes);
-      const sigGenes = "";
-      const insigGenes = "";
       clearInsignificantGenes();
       clearSignificantGenes();
     } else {
       alert("Please enter genes");
+      return;
     }
   } else {
     localStorage.setItem("sigGenes", sigGenes.trim());
     localStorage.setItem("insigGenes", insigGenes.trim());
   }
-  localStorage.setItem("species", species);
-
-
-  if (minInput) {
-    const raw = minInput.value.trim();
-    if (raw !== "" && !isNaN(raw)) {
-      const val = Number(raw);
-      if (val >= 5) {
-        minMembers = val;
-      }
-    }
-  }
-
-  localStorage.setItem("minMembers", minMembers);
 
   if (species === "custom") {
     const customData = window?.GSP?.customGeneSets?.data || window?.GSP?.customGeneSets;
@@ -210,17 +218,19 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     window.GSP.customGeneSets = customData;
   }
 
-  if (selectedGeneSets.length === 0) {
-    alert("Please select at least one category of gene sets from the tree.");
-    return;
-  }
+  localStorage.setItem("rendered-settings", JSON.stringify(newSettings));
 
   try {
     loadingSpinner.style.display = "block";
-    await frame.main();
-    loadingSpinner.style.display = "none";
 
-    // Hide input and show graph only when there is no error
+    // Run backend if needed, or if it's the first time (no data exists)
+    if (shouldRerun || !hasData) {
+      await frame.main();
+    } else {
+      frame.graph();
+    }
+
+    loadingSpinner.style.display = "none";
     hideUpload();
     hideInput();
     setTimeout(() => showGraph(), transitionDuration);
@@ -230,6 +240,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     alert("Error submitting genes: " + error.message);
   }
 });
+
 function toggleJaccardOptions() {
   const distanceMetricSelect = document.getElementById('distance-metric');
   const jaccardOptionsContainer = document.getElementById('jaccard-options-container');

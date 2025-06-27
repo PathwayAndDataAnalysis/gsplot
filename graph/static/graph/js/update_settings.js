@@ -134,6 +134,7 @@ function updateSettings() {
   }
   reduction = getReduction(newSettings);
   newSettings['reduction'] = reduction;
+  newSettings['mode'] = reduction['mode'];
 
   // Jaccard type
   const distanceMetric = document.getElementById("distance-metric")?.value;
@@ -178,9 +179,6 @@ function updateSettings() {
 
 function isUmapSettingDifferent(setting1, setting2) {
   return (
-    setting1["number-of-neighbors"] !== setting2["number-of-neighbors"] ||
-    setting1["minimum-distance"] !== setting2["minimum-distance"] ||
-    setting1["seed"] !== setting2["seed"] ||
     setting1["distance_type"] !== setting2["distance_type"] ||
     getReductionDiff(setting1, setting2)
   );
