@@ -68,6 +68,7 @@
 
               // Clear selected + table after importing data
               localStorage.setItem("selected", JSON.stringify([]));
+              window.parent.clearPoints();
 
             } catch (error) {
               hideSpinner();

@@ -47,6 +47,9 @@ async function main() {
     // Show loading spinner
     loadingSpinner.style.display = "block";
 
+    // Clear selected points on reload
+    clearPoints();
+
     await frame.main();
 
     // Hide spinner after graph is ready
@@ -187,6 +190,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   // === Only clear data if rerun is required and previous data exists ===
   if (shouldRerun && hasData) {
     clearLocalStorageExceptSettings();
+    clearPoints();
   }
 
   // Save inputs
@@ -261,7 +265,7 @@ function showGeneInputTab(tabId, event = null) {
   currentActiveGeneInputTabId = tabId;
 
   let isSingleTextArea = (currentActiveGeneInputTabId == "single-textarea");
-  localStorage.setItem("single-list", JSON.stringify(isSingleTextArea)); // <<< FIX HERE: Stringify the boolean
+  localStorage.setItem("single-list", JSON.stringify(isSingleTextArea));
 
   // Hide sall content divs
   document.getElementById('two-textareas-content').style.display = 'none';
@@ -386,3 +390,4 @@ function clearPoints() {
   placeholder.textContent = "Please select a point above by clicking it.";
   allTablesContainer2.appendChild(placeholder);
 }
+window.clearPoints = clearPoints;
