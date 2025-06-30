@@ -82,7 +82,7 @@ function displayValues(settings) {
 }
 function getReduction() { // get input based on user input on sidebar
   const selectedAlgorithm = algorithmSelect.value;
-  setReduction = {}
+  let setReduction = {}
   setReduction['mode'] = selectedAlgorithm;
   if (selectedAlgorithm === 'umap') {
     setReduction['n_neighbors'] = parseInt(document.getElementById("umapNNeighbors")?.value);
@@ -119,7 +119,7 @@ function getReductionDiff(setting1, setting2) { // compare to find potential dif
   }
 }
 
-function updateSettings() {
+function updateSettings(suppressToast = false) {
   let newSettings = {};
   newSettings.umapChange = false;
 
@@ -132,7 +132,7 @@ function updateSettings() {
       newSettings[key] = value.value;
     }
   }
-  reduction = getReduction(newSettings);
+  const reduction = getReduction(newSettings);
   newSettings['reduction'] = reduction;
   newSettings['mode'] = reduction['mode'];
 
@@ -165,16 +165,56 @@ function updateSettings() {
   localStorage.setItem("settings", JSON.stringify(newSettings));
 
   const toast = document.getElementById("toast-message");
-  if (toast) {
+  if (toast && !suppressToast) {
     toast.style.display = "block";
     toast.style.color = "#2ecc71";           
-    toast.textContent = "Settings saved! Click Submit to update the graph.";
+    
+    // Check if graph has been rendered before
+    const hasRendered = localStorage.getItem("data") !== null;
+    
+    if (hasRendered) {
+      // If graph exists, Apply will trigger a re-render
+      toast.textContent = "Settings applied! Graph will update...";
+      // Trigger the graph update
+      applySettingsAndRender();
+    } else {
+      // If no graph yet, just save settings
+      toast.textContent = "Settings saved! Click Submit to generate the graph.";
+    }
 
     setTimeout(() => {
       toast.style.display = "none";
-    }, 3000);
+    }, 2000);
   }
   hasUnsavedSettings = false;
+}
+
+async function applySettingsAndRender() {
+  try {
+    const loadingSpinner = document.getElementById("loading-spinner");
+    loadingSpinner.style.display = "block";
+    
+    const settings = JSON.parse(localStorage.getItem("settings"));
+    const singleList = JSON.parse(localStorage.getItem("single-list"));
+    
+    if (singleList) {
+      await frame.getGeneData(settings);
+    } else {
+      await frame.getGeneInputData(settings);
+    }
+    
+    // Clear selected points
+    localStorage.setItem("selected", "[]");
+    clearPoints();
+    
+    // Render the graph
+    frame.graph();
+    
+    loadingSpinner.style.display = "none";
+  } catch (error) {
+    loadingSpinner.style.display = "none";
+    alert("Error applying settings: " + error.message);
+  }
 }
 
 function isUmapSettingDifferent(setting1, setting2) {
@@ -246,3 +286,41 @@ function addSpinnerOverlay() {
     true
   );
 }
+
+// Expose necessary functions to window and iframe
+window.update_settings = {
+  isUmapSettingDifferent: isUmapSettingDifferent,
+  collectCurrentSettings: function() {
+    let newSettings = {};
+    for (const [key, value] of Object.entries(inputRefrences)) {
+      if (value === null) continue;
+      if (key === "fixed-size" || key === "dynamic-size") {
+        newSettings[key] = value.checked;
+      } else {
+        newSettings[key] = value.value;
+      }
+    }
+    
+    const reduction = getReduction();
+    newSettings['reduction'] = reduction;
+    newSettings['mode'] = reduction['mode'];
+    
+    const distanceMetric = document.getElementById("distance-metric")?.value;
+    if (distanceMetric === "jaccard-distance") {
+      if (document.getElementById("plain-jaccard")?.checked) {
+        newSettings["distance_type"] = "jaccard_plain";
+      } else if (document.getElementById("weighted-jaccard")?.checked) {
+        newSettings["distance_type"] = "jaccard_weighted";
+      }
+    } else {
+      if (document.getElementById("plain-overlap")?.checked) {
+        newSettings["distance_type"] = "overlap_plain";
+      } else if (document.getElementById("weighted-overlap")?.checked) {
+        newSettings["distance_type"] = "overlap_weighted";
+      }
+    }
+    
+    return newSettings;
+  },
+  updateSettings: updateSettings // Expose the updateSettings function
+};

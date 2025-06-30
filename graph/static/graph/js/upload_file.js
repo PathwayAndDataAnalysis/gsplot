@@ -3,6 +3,7 @@ const settingsButton = document.querySelector(".settings-button"); // Gear icon 
 const settingsContainer = document.querySelector(".settings-container"); // Container for settings area
 const speciesSelector = document.getElementById("species-selector");
 const geneContainer = document.getElementById("manual-gene-input"); // Container for the gene input box
+const submitContainer = document.getElementById("submit-section-wrapper");
 const graphAndSettingsContainer = document.getElementById(
   "graph-settings-container"
 ); // Container for Graph and Settings area
@@ -13,6 +14,7 @@ const valsContainer = document.getElementById("graph-text-info");
 
 let currentActiveGeneInputTabId = '';
 let hasUnsavedSettings = false;
+let settingsNeedApply = false;
 let allTablesContainer2 = document.getElementById("selected-points-container");
 
 const uploadContainer = document.getElementById("upload-container"); // Container for the upload file button
@@ -22,6 +24,16 @@ const importNavButton = document.getElementById("nav-import"); // nav button in 
 const fileInput = document.getElementById("initial-file-input"); // Select file button
 
 const transitionDuration = 300;
+
+// Add this function to check settings
+function checkSettingsNeedApply() {
+  try {
+    return frame.checkSettingsNeedApply();
+  } catch (e) {
+    console.error("Couldn't check settings:", e);
+    return false;
+  }
+}
 
 // To cler storge for testing purposes
 clearLocalStorageExceptSettings()
@@ -71,6 +83,7 @@ async function main() {
 document.querySelectorAll(".settings input, .settings select").forEach((el) => {
   el.addEventListener("change", () => {
     hasUnsavedSettings = true;
+    settingsNeedApply = true;
   });
 });
 
@@ -113,18 +126,27 @@ function convertToExpectedFormat(arrayOfObjects) {
   return result;
 }
 
-document.getElementById("submit-gene-button").addEventListener("click", async function () {
-  if (hasUnsavedSettings) {
-    const toast = document.getElementById("toast-message");
-    if (toast) {
-      toast.style.color = "#f39c12";
-      toast.textContent = "You changed settings but didn’t click Apply. The graph will use old settings.";
-      toast.style.display = "block";
-
-      setTimeout(() => {
-        toast.style.display = "none";
+document.getElementById("submit-gene-button").addEventListener("click", async function (e) {
+  // Check if settings need applying
+  if (hasUnsavedSettings || checkSettingsNeedApply()) {
+    // Auto-apply changes before submission
+    try {
+      const toast = document.getElementById("toast-message");
+      if (toast) {
         toast.style.color = "#2ecc71";
-      }, 4000);
+        toast.textContent = "New settings automatically applied.";
+        toast.style.display = "block";
+        setTimeout(() => {
+          toast.style.display = "none";
+        }, 3000);
+      }
+
+      // Call the updateSettings function from the parent window
+      window.update_settings.updateSettings(true);
+      hasUnsavedSettings = false;
+    } catch (error) {
+      console.error("Error auto-applying settings:", error);
+      // Continue with submission even if auto-apply fails
     }
   }
 
@@ -182,17 +204,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     return;
   }
 
-  const newSettings = JSON.parse(localStorage.getItem("settings"));
-  const oldSettings = JSON.parse(localStorage.getItem("rendered-settings")) || {};
-  const shouldRerun = isUmapSettingDifferent(newSettings, oldSettings);
-  const hasData = localStorage.getItem("data") !== null;
-
-  // === Only clear data if rerun is required and previous data exists ===
-  if (shouldRerun && hasData) {
-    clearLocalStorageExceptSettings();
-    clearPoints();
-  }
-
   // Save inputs
   if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
   if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
@@ -222,22 +233,27 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     window.GSP.customGeneSets = customData;
   }
 
-  localStorage.setItem("rendered-settings", JSON.stringify(newSettings));
-
   try {
     loadingSpinner.style.display = "block";
 
-    // Run backend if needed, or if it's the first time (no data exists)
-    if (shouldRerun || !hasData) {
+    // Check if we have existing data
+    const hasData = localStorage.getItem("data") !== null;
+
+    if (!hasData) {
+      // First time submission - need to generate the graph
       await frame.main();
+      hideUpload();
+      hideInput();
+      setTimeout(() => showGraph(), transitionDuration);
+
+      // Hide the submit button after first render
+      document.getElementById("submit-section-wrapper").style.display = "none";
     } else {
-      frame.graph();
+      // Subsequent submissions - just update the graph
+      await frame.applySettingsAndRender();
     }
 
     loadingSpinner.style.display = "none";
-    hideUpload();
-    hideInput();
-    setTimeout(() => showGraph(), transitionDuration);
 
   } catch (error) {
     loadingSpinner.style.display = "none";
@@ -284,7 +300,10 @@ function showGeneInputTab(tabId, event = null) {
     event.currentTarget.classList.add('active');
   } else {
     // Fallback: activate button by matching tabId
-    document.querySelectorAll(`.gene-input-tab-button[onclick*="${tabId}"]`).classList.add('active');
+    const buttons = document.querySelectorAll(`.gene-input-tab-button[onclick*="${tabId}"]`);
+    if (buttons && buttons.length > 0) {
+      buttons[0].classList.add('active');
+    }
   }
   const displayGenesContainer = document.getElementById("display-genes-container");
   if (!isSingleTextArea) {
@@ -312,6 +331,11 @@ function showGraph() {
   graphAndSettingsContainer.style.display = "flex";
   selectedPoints.style.display = "block";
   valsContainer.style.display = "flex";
+
+  // Reset settings flags
+  hasUnsavedSettings = false;
+  settingsNeedApply = false;
+
   setTimeout(() => {
     selectedPoints.style.opacity = "1";
     graphAndSettingsContainer.style.opacity = "1";
@@ -353,12 +377,14 @@ function showInput() {
   thresholdContainer.style.display = "flex";
   speciesSelector.style.display = "block";
   geneContainer.style.display = "block";
+  submitContainer.style.display = "block";
 }
 function hideInput() {
   treeContainer.style.display = "none";
   thresholdContainer.style.display = "none";
   speciesSelector.style.display = "none";
   geneContainer.style.display = "none";
+  submitContainer.style.display = "none";
 }
 function clearSignificantGenes() {
   document.getElementById("id_significant_genes").value = "";

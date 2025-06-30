@@ -979,6 +979,25 @@
           return JSON.parse(localStorage.getItem(key));
         }
 
+        // Add this function to the iframe's window
+        function checkSettingsNeedApply() {
+          try {
+            const currentSettings = getLocalStorage("settings");
+            if (!currentSettings) return false;
+    
+            const parentSettings = window.parent.update_settings?.collectCurrentSettings();
+            if (!parentSettings) return false;
+    
+            return window.parent.update_settings?.isUmapSettingDifferent?.(parentSettings, currentSettings) || false;
+          } catch (e) {
+            console.error("Error checking settings:", e);
+            return false;
+          }
+        }
+
+        // Make it accessible to parent window
+        window.checkSettingsNeedApply = checkSettingsNeedApply;
+
         function setLocalStorage(key, value) {
           localStorage.setItem(key, JSON.stringify(value));
         }
