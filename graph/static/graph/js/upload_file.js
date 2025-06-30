@@ -89,26 +89,20 @@ document.querySelectorAll(".settings input, .settings select").forEach((el) => {
 
 // Import file button script
 function importFile() {
-  // Warn user that if they have data stored, it will be deleted
-  if (
-    localStorage.getItem("data") === null ||
-    confirm("Do you want to import new data?\nThis erases current saved data.")
-  ) {
-    // Clear selected points and remove local storage
-    localStorage.setItem("selected", "[]");
-    localStorage.removeItem("rawFile");
-    localStorage.removeItem("camera");
-    localStorage.removeItem("data");
-    localStorage.removeItem("annotations");
-    localStorage.setItem("reset", JSON.stringify(true));
-    clearPoints()
-    // Show upload screen
-    hideGraph();
-    setTimeout(() => {
-      showUpload();
-      showInput();
-    }, transitionDuration);
-  }
+  // Clear selected points and remove local storage
+  localStorage.setItem("selected", "[]");
+  localStorage.removeItem("rawFile");
+  localStorage.removeItem("camera");
+  localStorage.removeItem("data");
+  localStorage.removeItem("annotations");
+  localStorage.setItem("reset", JSON.stringify(true));
+  clearPoints()
+  // Show upload screen
+  hideGraph();
+  setTimeout(() => {
+    showUpload();
+    showInput();
+  }, transitionDuration);
 }
 
 // When the user clicks the settings button, add classes to trigger css animation
