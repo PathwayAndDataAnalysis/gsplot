@@ -57,7 +57,7 @@ async function main() {
     localStorage.getItem("rawFile") !== null
   ) {
     // Show loading spinner
-    loadingSpinner.style.display = "block";
+    loadingSpinner.style.display = "flex";
 
     // Clear selected points on reload
     clearPoints();
@@ -228,7 +228,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   }
 
   try {
-    loadingSpinner.style.display = "block";
+    loadingSpinner.style.display = "flex";
 
     // Check if we have existing data
     const hasData = localStorage.getItem("data") !== null;

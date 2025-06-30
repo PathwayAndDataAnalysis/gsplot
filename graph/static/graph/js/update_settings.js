@@ -192,7 +192,7 @@ function updateSettings(suppressToast = false) {
 async function applySettingsAndRender() {
   try {
     const loadingSpinner = document.getElementById("loading-spinner");
-    loadingSpinner.style.display = "block";
+    loadingSpinner.style.display = "flex";
     
     const settings = JSON.parse(localStorage.getItem("settings"));
     const singleList = JSON.parse(localStorage.getItem("single-list"));
