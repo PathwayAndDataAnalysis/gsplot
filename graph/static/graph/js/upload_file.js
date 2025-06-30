@@ -9,7 +9,6 @@ const graphAndSettingsContainer = document.getElementById(
 ); // Container for Graph and Settings area
 const loadingSpinner = document.getElementById("loading-spinner"); // Spinner element
 const treeContainer = document.getElementById("tree-container");  // Container for collection tree
-const thresholdContainer = document.getElementById("threshold-container");
 const valsContainer = document.getElementById("graph-text-info");
 
 let currentActiveGeneInputTabId = '';
@@ -172,7 +171,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
 
   // ==== Validate input ====
   if (pvThr === "" && fdrThr === "") {
-    alert("Please enter either a p-value or an FDR threshold.");
+    alert("Please enter either a p-value or an FDR threshold in settings.");
     return;
   }
 
@@ -368,14 +367,12 @@ function hideUpload() {
 
 function showInput() {
   treeContainer.style.display = "block";
-  thresholdContainer.style.display = "flex";
   speciesSelector.style.display = "block";
   geneContainer.style.display = "block";
   submitContainer.style.display = "block";
 }
 function hideInput() {
   treeContainer.style.display = "none";
-  thresholdContainer.style.display = "none";
   speciesSelector.style.display = "none";
   geneContainer.style.display = "none";
   submitContainer.style.display = "none";
