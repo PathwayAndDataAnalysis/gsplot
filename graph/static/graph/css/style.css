@@ -179,7 +179,7 @@ html {
 }
 
 .settings-container h4 {
-  margin: 0.5em;
+  margin: 15px 0 5px 0;
 }
 
 .graph-settings-header,
@@ -192,6 +192,7 @@ html {
   display: flex;
   justify-content: space-between;
   padding-top: 5px;
+  margin-top: 25px;
 }
 
 .option {
