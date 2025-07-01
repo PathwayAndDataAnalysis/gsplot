@@ -47,8 +47,8 @@ def gene_input_view(request):
             filtered = []
 
             # Split inputs into cleaned gene lists
-            sig_genes = [gene.strip().upper() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
-            insig_genes = [gene.strip().upper() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
+            sig_genes = [gene.strip() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
+            insig_genes = [gene.strip() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
             if (len(relevant_members) > 0):
                 filtered = json.loads(data.get("relevant_members"))
@@ -163,7 +163,7 @@ def gene_input_view2(request):
             filtered = []
 
             # Split inputs into cleaned gene lists
-            ranked_genes = [gene.strip().upper() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
+            ranked_genes = [gene.strip() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
 
 
             if (len(relevant_members) > 0):

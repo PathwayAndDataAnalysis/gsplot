@@ -45,7 +45,7 @@ def build_weights_from_ranked_list(ranked_genes):
     user_weights = {}
     for i, gene in enumerate(ranked_genes):
         norm_rank = (i + 1 - 0.5) / n
-        user_weights[gene.strip().upper()] = norm_rank
+        user_weights[gene.strip()] = norm_rank
     return user_weights
 
 def build_weights_from_sets(sig_genes, insig_genes):
@@ -60,10 +60,10 @@ def build_weights_from_sets(sig_genes, insig_genes):
     # Assign normalized rank to sig_genes
     for i, gene in enumerate(sig_genes):
         norm_rank = (i + 1 - 0.5) / n
-        user_weights[gene.strip().upper()] = norm_rank
+        user_weights[gene.strip()] = norm_rank
     # Assign 0 to insig genes if not already in sig
     for gene in insig_genes:
-        gene = gene.strip().upper()
+        gene = gene.strip()
         user_weights.setdefault(gene, 0.0)
 
     return user_weights
