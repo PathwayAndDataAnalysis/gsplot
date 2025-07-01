@@ -272,12 +272,19 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
         molecule_sets = [set(df.loc[i, "Molecules"].split()) for i in range(n)]
 
+        # Always compute number of enriched molecules, regardless of distances['use']
+        numberOfEnrichedMolecules = [len(mol_set) for mol_set in molecule_sets]
+
         print(n)
 
-        for i in range(n):
-            set1 = molecule_sets[i]
-            numberOfEnrichedMolecules.append(len(set1))
-            if (not distances['use']):
+        if distances['use'] and len(distances["m"]) == n:
+            print("Using cached distances.")
+            distance_matrix = np.array(distances["m"])
+        else:
+            print("Computing new distance matrix.")
+            distance_matrix = np.zeros((n, n))
+            for i in range(n):
+                set1 = molecule_sets[i]
                 for j in range(i + 1, n):
                     set2 = molecule_sets[j]
                     if distance_type == 'jaccard_weighted' and user_weights:

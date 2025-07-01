@@ -161,17 +161,22 @@ function updateSettings(suppressToast = false) {
   distancesM = !(newSettings["distance_type"] !== oldSettings["distance_type"]);
   localStorage.setItem("distances-M", JSON.stringify(distancesM));
 
+  const pvThr = document.getElementById("pvalue-input")?.value;
+  const fdrThr = document.getElementById("fdr-input")?.value;
+  if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
+  if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
+
   // Save settings
   localStorage.setItem("settings", JSON.stringify(newSettings));
 
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
     toast.style.display = "block";
-    toast.style.color = "#2ecc71";           
-    
+    toast.style.color = "#2ecc71";
+
     // Check if graph has been rendered before
     const hasRendered = localStorage.getItem("data") !== null;
-    
+
     if (hasRendered) {
       // If graph exists, Apply will trigger a re-render
       toast.textContent = "Settings applied! Graph will update...";
@@ -189,27 +194,70 @@ function updateSettings(suppressToast = false) {
   hasUnsavedSettings = false;
 }
 
+function detectFrontendOnlyChanges() {
+  const current = {
+    sigColor: document.getElementById("significant-color")?.value,
+    insigColor: document.getElementById("insignificant-color")?.value,
+    selectedColor: document.getElementById("selected-color")?.value,
+    qMin: document.getElementById("q-value-minimum")?.value,
+    qMax: document.getElementById("q-value-maximum")?.value,
+    fixed: document.getElementById("fixed-size")?.checked,
+    dynamic: document.getElementById("dynamic-size")?.checked,
+    fixedSizeVal: document.getElementById("fixed-size-input")?.value,
+    dynamicScalar: document.getElementById("dynamic-size-scalar")?.value,
+    showSigOnly: document.getElementById("show-sig-only")?.checked,
+  };
+
+  const previous = JSON.parse(localStorage.getItem("previous_styling") || "{}");
+
+  localStorage.setItem("previous_styling", JSON.stringify(current));
+
+  for (const key in current) {
+    if (current[key] !== previous[key]) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 async function applySettingsAndRender() {
   try {
     const loadingSpinner = document.getElementById("loading-spinner");
     loadingSpinner.style.display = "flex";
-    
+
+    // Check if changes are styling-only
+    const stylingOnly = detectFrontendOnlyChanges();
+
+    if (stylingOnly) {
+      console.log("Styling-only change → updating graph visuals.");
+      frame.updateGraphStyling(); // inside iframe
+      loadingSpinner.style.display = "none";
+      return;
+    }
+
+    localStorage.removeItem("data");
+    localStorage.removeItem("camera");
+    localStorage.removeItem("annotations");
+    localStorage.setItem("selected", "[]");
+    localStorage.setItem("reset", JSON.stringify(true));
+
     const settings = JSON.parse(localStorage.getItem("settings"));
     const singleList = JSON.parse(localStorage.getItem("single-list"));
-    
+
     if (singleList) {
       await frame.getGeneData(settings);
     } else {
       await frame.getGeneInputData(settings);
     }
-    
+
     // Clear selected points
     localStorage.setItem("selected", "[]");
     clearPoints();
-    
+
     // Render the graph
     frame.graph();
-    
+
     loadingSpinner.style.display = "none";
   } catch (error) {
     loadingSpinner.style.display = "none";
@@ -290,7 +338,7 @@ function addSpinnerOverlay() {
 // Expose necessary functions to window and iframe
 window.update_settings = {
   isUmapSettingDifferent: isUmapSettingDifferent,
-  collectCurrentSettings: function() {
+  collectCurrentSettings: function () {
     let newSettings = {};
     for (const [key, value] of Object.entries(inputRefrences)) {
       if (value === null) continue;
@@ -300,11 +348,11 @@ window.update_settings = {
         newSettings[key] = value.value;
       }
     }
-    
+
     const reduction = getReduction();
     newSettings['reduction'] = reduction;
     newSettings['mode'] = reduction['mode'];
-    
+
     const distanceMetric = document.getElementById("distance-metric")?.value;
     if (distanceMetric === "jaccard-distance") {
       if (document.getElementById("plain-jaccard")?.checked) {
@@ -319,7 +367,7 @@ window.update_settings = {
         newSettings["distance_type"] = "overlap_weighted";
       }
     }
-    
+
     return newSettings;
   },
   updateSettings: updateSettings // Expose the updateSettings function
