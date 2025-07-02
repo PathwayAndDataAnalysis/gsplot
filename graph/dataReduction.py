@@ -268,8 +268,6 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
         distance_matrix = np.zeros((n, n))
 
-        numberOfEnrichedMolecules = []
-
         molecule_sets = [set(df.loc[i, "Molecules"].split()) for i in range(n)]
 
         # Always compute number of enriched molecules, regardless of distances['use']
