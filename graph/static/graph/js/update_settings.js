@@ -168,6 +168,10 @@ function updateSettings(suppressToast = false) {
 
   // Save settings
   localStorage.setItem("settings", JSON.stringify(newSettings));
+  localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+
+  const stylingOnly = detectFrontendOnlyChanges();
+  localStorage.setItem("justStyling", stylingOnly ? "true" : "false");
 
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
@@ -208,17 +212,13 @@ function detectFrontendOnlyChanges() {
     showSigOnly: document.getElementById("show-sig-only")?.checked,
   };
 
-  const previous = JSON.parse(localStorage.getItem("previous_styling") || "{}");
+  const previousRaw = localStorage.getItem("previous_styling");
+  const previous = previousRaw ? JSON.parse(previousRaw) : current;
+
+  const changed = Object.keys(current).some((key) => current[key] !== previous[key]);
 
   localStorage.setItem("previous_styling", JSON.stringify(current));
-
-  for (const key in current) {
-    if (current[key] !== previous[key]) {
-      return true;
-    }
-  }
-
-  return false;
+  return changed;
 }
 
 async function applySettingsAndRender() {
@@ -226,38 +226,42 @@ async function applySettingsAndRender() {
     const loadingSpinner = document.getElementById("loading-spinner");
     loadingSpinner.style.display = "flex";
 
-    // Check if changes are styling-only
-    const stylingOnly = detectFrontendOnlyChanges();
+    const newSettings = JSON.parse(localStorage.getItem("settings"));
+    const oldSettings = JSON.parse(localStorage.getItem("previous_settings") || "{}");
 
-    if (stylingOnly) {
+    const stylingOnly = localStorage.getItem("justStyling") === "true";
+    localStorage.removeItem("justStyling"); // consume once
+
+    const settingsChanged = JSON.stringify(newSettings) !== JSON.stringify(oldSettings);
+
+    const hasRendered = localStorage.getItem("data") !== null;
+
+    if (stylingOnly && !settingsChanged && hasRendered) {
       console.log("Styling-only change → updating graph visuals.");
-      frame.updateGraphStyling(); // inside iframe
+      frame.updateGraphStyling();
       loadingSpinner.style.display = "none";
       return;
     }
 
+    // Clear local states
     localStorage.removeItem("data");
     localStorage.removeItem("camera");
     localStorage.removeItem("annotations");
     localStorage.setItem("selected", "[]");
     localStorage.setItem("reset", JSON.stringify(true));
 
-    const settings = JSON.parse(localStorage.getItem("settings"));
     const singleList = JSON.parse(localStorage.getItem("single-list"));
 
     if (singleList) {
-      await frame.getGeneData(settings);
+      await frame.getGeneData(newSettings);
     } else {
-      await frame.getGeneInputData(settings);
+      await frame.getGeneInputData(newSettings);
     }
 
-    // Clear selected points
     localStorage.setItem("selected", "[]");
     clearPoints();
 
-    // Render the graph
     frame.graph();
-
     loadingSpinner.style.display = "none";
   } catch (error) {
     loadingSpinner.style.display = "none";
