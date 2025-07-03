@@ -163,15 +163,33 @@ function updateSettings(suppressToast = false) {
 
   const pvThr = document.getElementById("pvalue-input")?.value;
   const fdrThr = document.getElementById("fdr-input")?.value;
-  if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
-  if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
+
+  if (pvThr !== "") {
+    newSettings["p_value_threshold"] = parseFloat(pvThr);
+    delete newSettings["fdr_threshold"];
+    localStorage.setItem("p-value", newSettings["p_value_threshold"]);
+    localStorage.removeItem("fdr");
+  } else if (fdrThr !== "") {
+    newSettings["fdr_threshold"] = parseFloat(fdrThr);
+    delete newSettings["p_value_threshold"];
+    localStorage.setItem("fdr", newSettings["fdr_threshold"]);
+    localStorage.removeItem("p-value");
+  } else {
+    delete newSettings["p_value_threshold"];
+    delete newSettings["fdr_threshold"];
+    localStorage.removeItem("p-value");
+    localStorage.removeItem("fdr");
+  }
 
   // Save settings
   localStorage.setItem("settings", JSON.stringify(newSettings));
   localStorage.setItem("previous_settings", JSON.stringify(newSettings));
 
   const stylingOnly = detectFrontendOnlyChanges();
-  localStorage.setItem("justStyling", stylingOnly ? "true" : "false");
+  const isDataChange = isUmapSettingDifferent(newSettings, oldSettings);
+  const thresholdChange = isThresholdChanged(newSettings, oldSettings);
+
+  localStorage.setItem("justStyling", stylingOnly && !isDataChange && !thresholdChange ? "true" : "false");
 
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
@@ -273,6 +291,13 @@ function isUmapSettingDifferent(setting1, setting2) {
   return (
     setting1["distance_type"] !== setting2["distance_type"] ||
     getReductionDiff(setting1, setting2)
+  );
+}
+
+function isThresholdChanged(newSettings, oldSettings) {
+  return (
+    newSettings["p_value_threshold"] !== oldSettings["p_value_threshold"] ||
+    newSettings["fdr_threshold"] !== oldSettings["fdr_threshold"]
   );
 }
 

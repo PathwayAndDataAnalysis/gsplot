@@ -276,17 +276,14 @@
         try {
           const settings = getLocalStorage("settings");
           const fullGraphData = getLocalStorage("data");
-          const camera = getLocalStorage("camera");
 
-          settings["q-value-maximum"] = parseFloat(settings["q-value-maximum"]);
-          settings["q-value-minimum"] = parseFloat(settings["q-value-minimum"]);
-          settings["dynamic-size-scalar"] = parseFloat(settings["dynamic-size-scalar"]);
-          if (settings["fixed-size"]) {
-            settings["fixed-size-input"] = parseFloat(settings["fixed-size-input"]);
+          if (!myPlot || !myPlot.data || !myPlot.data[0] || !fullGraphData) {
+            console.error("Missing required data for graph styling update");
+            return;
           }
 
-          // Refilter points based on q-value threshold
-          let displayedGraphData = {};
+          // Filter data based on current settings
+          const displayedGraphData = {};
           dataKeys.forEach((key) => {
             displayedGraphData[key] = [];
           });
@@ -304,46 +301,34 @@
             }
           }
 
-          const trace = makeTrace(displayedGraphData, settings);
+          // Get updated sizes
+          const newSize = getSize(displayedGraphData["setSize"], settings);
 
-          const layout = {
-            title: "Double Click To Edit",
-            hovermode: "closest",
-            xaxis: camera?.xaxis || { title: "UMAP-1", zeroline: false },
-            yaxis: camera?.yaxis || { title: "UMAP-2", zeroline: false },
-            height: Math.max(window.innerHeight - 50, 300),
-            width: Math.max(window.innerWidth - 50, 300),
+          // Get outline width based on color (selected vs not)
+          const newOutlineWidths = displayedGraphData["color"].map((color) =>
+            color === "white" ? 1 : 2
+          );
+
+          const update = {
+            'marker.size': [newSize],
+            'marker.line.color': [displayedGraphData["color"]],
+            'marker.line.width': [newOutlineWidths],
+            // Keep these fixed
+            'marker.opacity': [1.0],
+            'marker.color': [displayedGraphData["qValue"]],
+            'marker.cmin': [settings["q-value-minimum"]],
+            'marker.cmax': [settings["q-value-maximum"]],
+            'marker.colorscale': [[
+              [0.0, settings["significant-color"]],
+              [1.0, settings["insignificant-color"]]
+            ]]
           };
 
-          const config = {
-            edits: {
-              annotationTail: true,
-              annotationText: true,
-              titleText: true,
-              colorbarTitleText: true,
-            },
-            doubleClick: false,
-            modeBarButtonsToRemove: [
-              "toggleSpikelines",
-              "hoverClosestCartesian",
-              "hoverCompareCartesian",
-            ],
-          };
+          return Plotly.restyle(myPlot, update, [0]);
 
-          Plotly.newPlot(myPlot, [trace], layout, config);
-
-          // Reapply labels if needed
-          const savedAnnotations = getLocalStorage("annotations");
-          if (
-            savedAnnotations !== null &&
-            Object.keys(savedAnnotations).length > 0
-          ) {
-            toggleLabels();
-          }
-
-          console.log("Updated graph styling only — no rerun.");
         } catch (e) {
-          alert("Error updating styling: " + e.message);
+          console.error("Error in updateGraphStyling:", e);
+          graph();  // fallback
         }
       }
       window.updateGraphStyling = updateGraphStyling;
