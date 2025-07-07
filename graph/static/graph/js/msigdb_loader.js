@@ -432,9 +432,66 @@ function handleSpeciesChange() {
   const species = document.getElementById("species-select").value;
   const uploadSection = document.getElementById("custom-upload-section");
 
+  // CLEAR SELECTION before loading new tree
+  window.selectedItems = new Set();
+  window.GSP = window.GSP || {};
+  window.GSP.selectedGeneSets = [];
+  localStorage.setItem("selected", "[]");
+
+  // Remove label under tree
+  const label = document.getElementById("selected-group-label");
+  if (label) label.remove();
+
   if (species === "custom") {
     uploadSection.style.display = "block";
     d3.select("#tree-container").select("svg").remove();
+
+    // Force re-process if a file was already selected before
+    const fileInput = document.getElementById("custom-json-input");
+    if (fileInput && fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append("file", file);
+
+      fetch("/api/upload_custom_gene_sets/", {
+        method: "POST",
+        body: formData
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.treeType === "msigdb") {
+            window.selectedItems = new Set();
+            window.GSP = window.GSP || {};
+            window.GSP.selectedGeneSets = [];
+            localStorage.setItem("selected", "[]");
+            const label = document.getElementById("selected-group-label");
+            if (label) label.remove();
+
+            const treeData = buildSimpleTree(data.data);
+            drawD3Tree(treeData);
+
+            window.GSP.customGeneSets = {
+              data: data.data
+            };
+          } else if (data.treeType === "flat") {
+            d3.select("#tree-container").select("svg").remove();
+            alert(`Successfully loaded ${data.count} gene sets. All will be used.`);
+            window.selectedItems = new Set();
+            window.GSP = window.GSP || {};
+            window.GSP.selectedGeneSets = [];
+            localStorage.setItem("selected", "[]");
+            const label = document.getElementById("selected-group-label");
+            if (label) label.remove();
+
+            window.GSP.customGeneSets = data;
+            localStorage.setItem("customGeneSetsData", JSON.stringify(data.data));
+          }
+        })
+        .catch(error => {
+          console.error("Error reloading custom gene sets:", error);
+          alert("Failed to re-load custom gene sets.");
+        });
+    }
     return;
   } else {
     uploadSection.style.display = "none";
@@ -494,7 +551,16 @@ document.addEventListener("DOMContentLoaded", () => {
   if (fileInput) {
     fileInput.addEventListener("change", () => {
       const file = fileInput.files[0];
-      if (!file) return;
+      if (!file) {
+        // User cancelled file picker
+        if (window.lastUploadedFile) {
+          fileInput.files = createFileList(window.lastUploadedFile);
+        }
+        return;
+      }
+
+      // Save the file in memory for cancel-recovery
+      window.lastUploadedFile = file;
 
       const formData = new FormData();
       formData.append("file", file);
@@ -506,17 +572,37 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(res => res.json())
         .then(data => {
           if (data.treeType === "msigdb") {
+            // Reset selection state before drawing new tree
+            window.selectedItems = new Set();
+            window.GSP = window.GSP || {};
+            window.GSP.selectedGeneSets = [];
+            localStorage.setItem("selected", "[]");
+            const label = document.getElementById("selected-group-label");
+            if (label) label.remove();
+
             const treeData = buildSimpleTree(data.data);
             drawD3Tree(treeData);
-            window.GSP = window.GSP || {};
+
+            // Save custom gene sets
             window.GSP.customGeneSets = {
               data: data.data
             };
+
           } else if (data.treeType === "flat") {
+            // Flat = not a tree, still should clear old tree
             d3.select("#tree-container").select("svg").remove();
-            alert(`Successfully loaded ${data.count} gene sets. All will be used.`);
-            // Store for later filtering step
+
+            // Reset selection state
+            window.selectedItems = new Set();
             window.GSP = window.GSP || {};
+            window.GSP.selectedGeneSets = [];
+            localStorage.setItem("selected", "[]");
+            const label = document.getElementById("selected-group-label");
+            if (label) label.remove();
+
+            alert(`Successfully loaded ${data.count} gene sets. All will be used.`);
+
+            // Store for later filtering step
             window.GSP.customGeneSets = data;
             localStorage.setItem("customGeneSetsData", JSON.stringify(data.data));
           } else {
@@ -530,3 +616,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+function createFileList(file) {
+  const dataTransfer = new DataTransfer();
+  dataTransfer.items.add(file);
+  return dataTransfer.files;
+}

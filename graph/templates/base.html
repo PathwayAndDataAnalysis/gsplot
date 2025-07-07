@@ -111,12 +111,6 @@
     <div id="submit-status" style="margin-top: 10px; font-weight: bold; color: green;"></div>
   </div>
 
-  <!-- Text displays
-  <div id="graph-text-info" style="display: flex; gap: 20px; margin-top: 30px; margin-bottom: 10px;">
-    <div id="text-display-1" style="font-size: 14px; color: #444;">Info 1: Loading...</div>
-    <div id="text-display-2" style="font-size: 14px; color: #444;">Info 2: Loading...</div>
-  </div> -->
-
   <!-- Graph + Settings -->
   <div id="graph-settings-container">
     <iframe id="graph" src="{% url 'read_graph' %}" frameborder="0"></iframe>
@@ -183,7 +177,17 @@
       </div>
 
       <div id="display-genes-container">
-        <h4>Display Genes</h4>
+        <h4 style="display: flex; align-items: center; gap: 8px;">
+          Display Genes
+          <span class="tooltip-container">
+            <i class="tooltip-icon">i</i>
+            <span class="tooltip-text">
+              This option filters the selected point(s) to show only significant genes.<br>
+              Only available when you use thresholded input.
+            </span>
+          </span>
+        </h4>
+
         <div class="option" style="align-items: center;">
           <label for="show-sig-only" style="margin-right: 10px;">Show significant genes only</label>
           <label class="toggle-switch">
@@ -302,7 +306,7 @@
 
       <div style="margin-top: 10px;">
         <label style="font-weight: bold;">
-          Select Threshold Type:
+          Select Threshold Type
           <span class="tooltip-container">
             <i class="tooltip-icon">i</i>
             <span class="tooltip-text">Please enter a value only for the selected threshold type. The other field is
