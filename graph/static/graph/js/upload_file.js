@@ -9,7 +9,7 @@ const graphAndSettingsContainer = document.getElementById(
 ); // Container for Graph and Settings area
 const loadingSpinner = document.getElementById("loading-spinner"); // Spinner element
 const treeContainer = document.getElementById("tree-container");  // Container for collection tree
-const valsContainer = document.getElementById("graph-text-info");
+//const valsContainer = document.getElementById("graph-text-info");
 
 let currentActiveGeneInputTabId = '';
 let hasUnsavedSettings = false;
@@ -198,8 +198,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   }
 
   // Save inputs
-  if (pvThr !== "") localStorage.setItem("p-value", parseFloat(pvThr));
-  if (fdrThr !== "") localStorage.setItem("fdr", parseFloat(fdrThr));
   localStorage.setItem("minMembers", minMembers);
   localStorage.setItem("species", species);
 
@@ -224,6 +222,17 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       return;
     }
     window.GSP.customGeneSets = customData;
+  }
+
+  // Decide which threshold to keep based on selected type
+  const thresholdType = localStorage.getItem("threshold-type");
+
+  if (thresholdType === "pvalue") {
+    localStorage.setItem("p-value", parseFloat(pvThr));
+    localStorage.removeItem("fdr");
+  } else if (thresholdType === "fdr") {
+    localStorage.setItem("fdr", parseFloat(fdrThr));
+    localStorage.removeItem("p-value");
   }
 
   try {
@@ -323,7 +332,7 @@ function showGraph() {
   graphAndSettingsContainer.classList.add("no-click");
   graphAndSettingsContainer.style.display = "flex";
   selectedPoints.style.display = "block";
-  valsContainer.style.display = "flex";
+  //valsContainer.style.display = "flex";
 
   // Reset settings flags
   hasUnsavedSettings = false;
@@ -342,7 +351,7 @@ function hideGraph() {
   graphAndSettingsContainer.style.opacity = "0";
   setTimeout(() => {
     graphAndSettingsContainer.style.display = "none";
-    valsContainer.style.display = "none";
+    //valsContainer.style.display = "none";
     selectedPoints.style.display = "none";
     graphAndSettingsContainer.classList.remove("no-click");
   }, transitionDuration);

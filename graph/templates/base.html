@@ -111,11 +111,11 @@
     <div id="submit-status" style="margin-top: 10px; font-weight: bold; color: green;"></div>
   </div>
 
-  <!-- Text displays -->
+  <!-- Text displays
   <div id="graph-text-info" style="display: flex; gap: 20px; margin-top: 30px; margin-bottom: 10px;">
     <div id="text-display-1" style="font-size: 14px; color: #444;">Info 1: Loading...</div>
     <div id="text-display-2" style="font-size: 14px; color: #444;">Info 2: Loading...</div>
-  </div>
+  </div> -->
 
   <!-- Graph + Settings -->
   <div id="graph-settings-container">
@@ -300,18 +300,30 @@
       </div>
       <!-- END Additional Settings Section -->
 
-      <div>
-        <h4 style="margin-bottom: 10px;">Threshold</h4>
-        <div id="threshold-container" style="display: flex; gap: 10px; justify-content: space-between;">
-          <div style="display: flex; flex-direction: column;">
-            <label for="pvalue-input" style="font-weight: bold; font-size: 14px;">P-Value</label>
-            <input type="number" id="pvalue-input" step="0.0001" placeholder="e.g. 0.05" style="width: 100px;">
-          </div>
-          <div style="display: flex; align-items: center; font-size: 14px; font-weight: normal;">or</div>
-          <div style="display: flex; flex-direction: column;">
-            <label for="fdr-input" style="font-weight: bold; font-size: 14px;">FDR</label>
-            <input type="number" id="fdr-input" step="0.0001" placeholder="e.g. 0.25" style="width: 100px;">
-          </div>
+      <div style="margin-top: 10px;">
+        <label style="font-weight: bold;">
+          Select Threshold Type:
+          <span class="tooltip-container">
+            <i class="tooltip-icon">i</i>
+            <span class="tooltip-text">Please enter a value only for the selected threshold type. The other field is
+              auto-filled.</span>
+          </span>
+        </label>
+        <div style="display: flex; gap: 20px; margin-top: 5px;">
+          <label><input type="radio" name="threshold-type" value="pvalue" checked> Use P-Value</label>
+          <label><input type="radio" name="threshold-type" value="fdr"> Use FDR</label>
+        </div>
+      </div>
+
+      <div id="threshold-container" style="display: flex; gap: 10px; justify-content: space-between; margin-top: 10px;">
+        <div id="pvalue-wrapper" style="display: flex; flex-direction: column;">
+          <label for="pvalue-input" style="font-weight: bold; font-size: 14px;">P-Value</label>
+          <input type="number" id="pvalue-input" step="0.0001" placeholder="e.g. 0.05" style="width: 100px;">
+        </div>
+        <div style="display: flex; align-items: center; font-size: 14px; font-weight: normal;">or</div>
+        <div id="fdr-wrapper" style="display: flex; flex-direction: column;">
+          <label for="fdr-input" style="font-weight: bold; font-size: 14px;">FDR</label>
+          <input type="number" id="fdr-input" step="0.0001" placeholder="e.g. 0.25" style="width: 100px;">
         </div>
       </div>
 

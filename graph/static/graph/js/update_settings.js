@@ -69,6 +69,11 @@ function main() {
     displayValues(defaultSettings);
   }
   toggleSizeVisibility();
+
+  document.querySelectorAll('input[name="threshold-type"]').forEach((radio) => {
+    radio.addEventListener("change", updateThresholdInputs);
+  });
+  updateThresholdInputs(); // Call on load
 }
 
 function displayValues(settings) {
@@ -164,21 +169,17 @@ function updateSettings(suppressToast = false) {
   const pvThr = document.getElementById("pvalue-input")?.value;
   const fdrThr = document.getElementById("fdr-input")?.value;
 
-  if (pvThr !== "") {
+  const selectedType = document.querySelector('input[name="threshold-type"]:checked')?.value;
+  if (selectedType === "pvalue") {
     newSettings["p_value_threshold"] = parseFloat(pvThr);
     delete newSettings["fdr_threshold"];
     localStorage.setItem("p-value", newSettings["p_value_threshold"]);
     localStorage.removeItem("fdr");
-  } else if (fdrThr !== "") {
+  } else if (selectedType === "fdr") {
     newSettings["fdr_threshold"] = parseFloat(fdrThr);
     delete newSettings["p_value_threshold"];
     localStorage.setItem("fdr", newSettings["fdr_threshold"]);
     localStorage.removeItem("p-value");
-  } else {
-    delete newSettings["p_value_threshold"];
-    delete newSettings["fdr_threshold"];
-    localStorage.removeItem("p-value");
-    localStorage.removeItem("fdr");
   }
 
   // Save settings
@@ -401,3 +402,27 @@ window.update_settings = {
   },
   updateSettings: updateSettings // Expose the updateSettings function
 };
+
+function updateThresholdInputs() {
+  const selectedType = document.querySelector('input[name="threshold-type"]:checked')?.value;
+  const pInput = document.getElementById("pvalue-input");
+  const fdrInput = document.getElementById("fdr-input");
+  const pWrapper = document.getElementById("pvalue-wrapper");
+  const fWrapper = document.getElementById("fdr-wrapper");
+
+  if (selectedType === "pvalue") {
+    pInput.removeAttribute("readonly");
+    fdrInput.setAttribute("readonly", true);
+
+    pWrapper.classList.remove("grayed-out");
+    fWrapper.classList.add("grayed-out");
+  } else {
+    fdrInput.removeAttribute("readonly");
+    pInput.setAttribute("readonly", true);
+
+    fWrapper.classList.remove("grayed-out");
+    pWrapper.classList.add("grayed-out");
+  }
+
+  localStorage.setItem("threshold-type", selectedType);
+}

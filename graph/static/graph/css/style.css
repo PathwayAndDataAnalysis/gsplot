@@ -192,7 +192,7 @@ html {
   display: flex;
   justify-content: space-between;
   padding-top: 5px;
-  margin-top: 25px;
+  margin-top: 20px;
 }
 
 .option {
@@ -476,4 +476,47 @@ tbody th {
 
 .toggle-switch input:checked + .toggle-slider:before {
   transform: translateX(26px);
+}
+
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+  margin-left: 6px;
+}
+
+.tooltip-icon {
+  background-color: #ccc;
+  color: #000;
+  border-radius: 50%;
+  padding: 0 5px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.tooltip-text {
+  visibility: hidden;
+  width: 240px;
+  background-color: #333;
+  color: #fff;
+  text-align: left;
+  border-radius: 5px;
+  padding: 8px;
+  position: absolute;
+  z-index: 10;
+  top: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 0.3s;
+  font-size: 0.85em;
+}
+
+.tooltip-container:hover .tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+.grayed-out {
+  opacity: 0.5;
+  pointer-events: none;
 }

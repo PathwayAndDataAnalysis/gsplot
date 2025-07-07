@@ -250,6 +250,40 @@ def gene_input_view2(request):
     # Method not allowed
     return JsonResponse({'error': 'Method not allowed'}, status=405)
 
+@csrf_exempt
+def preview_threshold(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    try:
+        data = json.loads(request.body)
+
+        p_val = data.get("p_val")
+        fdr = data.get("fdr")
+        ranked_genes = data.get("ranked_genes", [])
+        sig_genes = data.get("sig_genes", [])
+        insig_genes = data.get("insig_genes", [])
+
+        if ranked_genes:
+            filtered = [{"matched_genes": [g], "gene_set_name": f"Gene {i}"} for i, g in enumerate(ranked_genes)]
+            _, computed_p, computed_fdr = calculate_pvals(filtered, p_val, fdr, ranked_genes)
+        elif sig_genes or insig_genes:
+            filtered = [{
+                "matched_genes": list(set(sig_genes + insig_genes)),
+                "gene_set_name": "combined"
+            }]
+            _, computed_p, computed_fdr = run_fishers_test(filtered, p_val, fdr, sig_genes, insig_genes)
+        else:
+            return JsonResponse({"error": "Missing gene input"}, status=400)
+
+        return JsonResponse({
+            "p_val": computed_p,
+            "fdr": computed_fdr
+        })
+
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
 def read_output(request):
     if request.method == 'POST':
         try:
