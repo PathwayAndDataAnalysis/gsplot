@@ -105,9 +105,9 @@ def gene_input_view(request):
 
             try:
                 if len(result) < 4: # if we have less than 4 points
-                    # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
+                    # Raise ValueError because umap, tsne can't work with fewer than 3-4 points
                     raise ValueError(
-                        "Please choose a higher FDR/p_val, this choice leads to less than 4 points which cannot be graphed.")
+                        "Not enough gene sets passed the threshold to render a graph. Please increase your FDR or p-value.")
 
             except ValueError as e:
                 return JsonResponse({'error': str(e)}, status=400)
