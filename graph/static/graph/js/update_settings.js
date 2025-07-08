@@ -28,6 +28,8 @@ const defaultIsoMap = {
   'mode': "isomap",
   'n_neighbors': 5,
 }
+let lastPValue = document.getElementById("pvalue-input")?.value || "0.05";
+let lastFDR = document.getElementById("fdr-input")?.value || "0.05";
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
@@ -427,13 +429,25 @@ function updateThresholdInputs() {
   const fWrapper = document.getElementById("fdr-wrapper");
 
   if (selectedType === "pvalue") {
+    // Restore p-value
+    if (lastPValue !== "") pInput.value = lastPValue;
     pInput.removeAttribute("readonly");
+
+    // Save current fdr, then clear display
+    lastFDR = fdrInput.value;
+    fdrInput.value = "";
     fdrInput.setAttribute("readonly", true);
 
     pWrapper.classList.remove("grayed-out");
     fWrapper.classList.add("grayed-out");
   } else {
+    // Restore fdr
+    if (lastFDR !== "") fdrInput.value = lastFDR;
     fdrInput.removeAttribute("readonly");
+
+    // Save current p-value, then clear display
+    lastPValue = pInput.value;
+    pInput.value = "";
     pInput.setAttribute("readonly", true);
 
     fWrapper.classList.remove("grayed-out");

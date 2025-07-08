@@ -106,7 +106,10 @@
       <label for="min-member-input" style="font-weight: normal; margin-right: 10px;">
         Enter the minimum relevant members for each gene set:
       </label>
-      <input type="number" id="min-member-input" placeholder="e.g. 5 (default)" style="margin-right: 10px;">
+      <input type="number" id="min-member-input" value="5" min="5" style="margin-right: 10px;">
+      <p id="min-member-note" style="color: gray; font-size: 13px; margin-top: 4px;">
+        We recommend at least 5 members per gene set. Anything less might lead to unreliable results.
+      </p>
     </div>
     <div id="submit-status" style="margin-top: 10px; font-weight: bold; color: green;"></div>
   </div>
@@ -271,8 +274,8 @@
       <div class="option">
         <label for="distance-metric">Distance Metric:</label>
         <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
-          <option value="overlap-coeff">Overlap Coeff</option>
           <option value="jaccard-distance" selected>Jaccard Distance</option>
+          <option value="overlap-coeff">Overlap Coeff</option>
           <!-- Add more options here if needed -->
         </select>
       </div>
@@ -280,12 +283,12 @@
       <div id="jaccard-options-container" class="option" style="display: block;">
         <div class="radio-container">
           <div class="option">
-            <label for="plain-jaccard">Plain:</label>
-            <input type="radio" id="plain-jaccard" name="jaccard-type" value="jaccard_plain" />
-          </div>
-          <div class="option">
             <label for="weighted-jaccard">Weighted:</label>
             <input type="radio" id="weighted-jaccard" name="jaccard-type" value="jaccard_weighted" checked />
+          </div>
+          <div class="option">
+            <label for="plain-jaccard">Plain:</label>
+            <input type="radio" id="plain-jaccard" name="jaccard-type" value="jaccard_plain" />
           </div>
         </div>
       </div>
@@ -293,12 +296,12 @@
       <div id="overlap-options-container" class="option" style="display: none;">
         <div class="radio-container">
           <div class="option">
-            <label for="plain-overlap">Plain:</label>
-            <input type="radio" id="plain-overlap" name="overlap-type" value="overlap_plain" />
-          </div>
-          <div class="option">
             <label for="weighted-overlap">Weighted:</label>
             <input type="radio" id="weighted-overlap" name="overlap-type" value="overlap_weighted" checked />
+          </div>
+          <div class="option">
+            <label for="plain-overlap">Plain:</label>
+            <input type="radio" id="plain-overlap" name="overlap-type" value="overlap_plain" />
           </div>
         </div>
       </div>
@@ -314,20 +317,20 @@
           </span>
         </label>
         <div style="display: flex; gap: 20px; margin-top: 5px;">
-          <label><input type="radio" name="threshold-type" value="pvalue" checked> Use P-Value</label>
-          <label><input type="radio" name="threshold-type" value="fdr"> Use FDR</label>
+          <label><input type="radio" name="threshold-type" value="fdr" checked> Use FDR</label>
+          <label><input type="radio" name="threshold-type" value="pvalue"> Use P-Value</label>
         </div>
       </div>
 
       <div id="threshold-container" style="display: flex; gap: 10px; justify-content: space-between; margin-top: 10px;">
-        <div id="pvalue-wrapper" style="display: flex; flex-direction: column;">
-          <label for="pvalue-input" style="font-weight: bold; font-size: 14px;">P-Value</label>
-          <input type="number" id="pvalue-input" step="0.0001" placeholder="e.g. 0.05" style="width: 100px;">
-        </div>
-        <div style="display: flex; align-items: center; font-size: 14px; font-weight: normal;">or</div>
         <div id="fdr-wrapper" style="display: flex; flex-direction: column;">
           <label for="fdr-input" style="font-weight: bold; font-size: 14px;">FDR</label>
-          <input type="number" id="fdr-input" step="0.0001" placeholder="e.g. 0.25" style="width: 100px;">
+          <input type="number" id="fdr-input" step="0.0001" value="0.05" min="0" max="1" style="width: 100px;">
+        </div>
+        <div style="display: flex; align-items: center; font-size: 14px; font-weight: normal;">or</div>
+        <div id="pvalue-wrapper" style="display: flex; flex-direction: column;">
+          <label for="pvalue-input" style="font-weight: bold; font-size: 14px;">P-Value</label>
+          <input type="number" id="pvalue-input" step="0.0001" value="0.05" min="0" max="1" style="width: 100px;">
         </div>
       </div>
 
