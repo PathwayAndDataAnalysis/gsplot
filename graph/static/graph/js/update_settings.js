@@ -192,6 +192,22 @@ function updateSettings(suppressToast = false) {
 
   localStorage.setItem("justStyling", stylingOnly && !isDataChange && !thresholdChange ? "true" : "false");
 
+  if (!stylingOnly && !isDataChange && !thresholdChange) {
+    if (!suppressToast) {
+      const toast = document.getElementById("toast-message");
+      if (toast) {
+        toast.style.display = "block";
+        toast.style.color = "#2ecc71";
+        toast.textContent = "No changes detected.";
+        setTimeout(() => {
+          toast.style.display = "none";
+        }, 2000);
+      }
+    }
+    hasUnsavedSettings = false;
+    return;
+  }
+
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
     toast.style.display = "block";
