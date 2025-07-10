@@ -290,19 +290,20 @@
             color === "white" ? 1 : 2
           );
 
+          const pVals = displayedGraphData["qValue"];
+          const logPvals = pVals.map(p => -Math.log10(p));
+          const minLogP = Math.min(...logPvals);
+          const maxLogP = Math.max(...logPvals);
+
           const update = {
             'marker.size': [newSize],
-            'marker.line.color': [displayedGraphData["color"]],
-            'marker.line.width': [newOutlineWidths],
-            // Keep these fixed
-            'marker.opacity': [1.0],
-            'marker.color': [displayedGraphData["qValue"]],
-            'marker.cmin': [settings["q-value-minimum"]],
-            'marker.cmax': [settings["q-value-maximum"]],
+            'marker.color': [logPvals],
+            'marker.cmin': [minLogP],
+            'marker.cmax': [maxLogP],
             'marker.colorscale': [[
-              [0.0, settings["significant-color"]],
-              [1.0, settings["insignificant-color"]]
-            ]]
+              [0.0, settings["insignificant-color"]],
+              [1.0, settings["significant-color"]]
+            ]],
           };
 
           return Plotly.restyle(myPlot, update, [0]);
@@ -689,6 +690,11 @@
       function makeTrace(data, settings) {
         let size = getSize(data["setSize"], settings); // Get sizes of each point based on settings - user can edit this
 
+        let pVals = data["qValue"];
+        let logPvals = pVals.map(p => -Math.log10(p));
+        let minLogP = Math.min(...logPvals);
+        let maxLogP = Math.max(...logPvals);
+
         // If point is unselected it should have  thing outline, selected is thicker for clarity
         let outlineWidth = data["color"].map((color) => {
           if (color === "white") {
@@ -712,10 +718,12 @@
           hovertemplate:
             "Name: %{text}<br>P-Value: %{customdata[0]}<extra></extra>", // Format hover text, <extra> is needed to not display unwanted data
           marker: {
-            color: data["qValue"],
+            color: logPvals,
+            cmin: minLogP,
+            cmax: maxLogP,
             colorscale: [
-              [0.0, settings["significant-color"]],
-              [1.0, settings["insignificant-color"]],
+              [0.0, settings["insignificant-color"]],
+              [1.0, settings["significant-color"]],
             ],
             colorbar: {
               title: {
@@ -724,8 +732,6 @@
               },
             },
             // Color scale is based off of the range of points currently displayed
-            cmax: settings["q-value-maximum"],
-            cmin: settings["q-value-minimum"],
             size: size,
             opacity: 1.0,
             line: {
@@ -759,7 +765,10 @@
 
         // The following are arrays of information of each displayed point needed for plotly.restyle
         let borderColor = firstPoint.data.marker.line.color.slice();
-        let pointColors = firstPoint.data.marker.color.slice();
+        const pVals = firstPoint.data.customdata.map(d => d[0]);
+        const logColors = pVals.map(p => -Math.log10(p));
+        const minLogP = Math.min(...logColors);
+        const maxLogP = Math.max(...logColors);
         let outlineWidths = firstPoint.data.marker.line.width.slice();
         let sizes = firstPoint.data.marker.size.slice();
 
@@ -823,14 +832,14 @@
         // All marker settings need to be specified here or else plotly resets them to default, which is why unchanged settings are redeclared like sizes and colorscale
         let update = {
           marker: {
-            color: pointColors,
+            color: logColors,
             colorscale: [
-              [0.0, settings["significant-color"]],
-              [1.0, settings["insignificant-color"]],
+              [0.0, settings["insignificant-color"]],
+              [1.0, settings["significant-color"]],
             ],
             colorbar: firstPoint.data.marker.colorbar,
-            cmax: settings["q-value-maximum"],
-            cmin: settings["q-value-minimum"],
+            cmin: minLogP,
+            cmax: maxLogP,
             size: sizes,
             opacity: 1.0,
             line: {
