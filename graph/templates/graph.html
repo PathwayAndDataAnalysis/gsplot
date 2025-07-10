@@ -120,15 +120,9 @@
 
         // Loop through full graph data, ignoring anything below cuttoff and adding the rest
         for (let i = 0; i < numberOfPoints; i++) {
-          let belowMaximum =
-            fullGraphData["qValue"][i] <= settings["q-value-maximum"];
-          let aboveMinimum =
-            fullGraphData["qValue"][i] >= settings["q-value-minimum"];
-          if (belowMaximum && aboveMinimum) {
-            dataKeys.forEach((key) => {
-              displayedGraphData[key].push(fullGraphData[key][i]);
-            });
-          }
+          dataKeys.forEach((key) => {
+            displayedGraphData[key].push(fullGraphData[key][i]);
+          });
         }
 
         // Create a plotly trace, this contians all data for each point on graph based on displayedGraphData
@@ -285,21 +279,8 @@
           // Filter data based on current settings
           const displayedGraphData = {};
           dataKeys.forEach((key) => {
-            displayedGraphData[key] = [];
+            displayedGraphData[key] = [...fullGraphData[key]];
           });
-
-          const numPoints = fullGraphData["X"].length;
-          for (let i = 0; i < numPoints; i++) {
-            const q = fullGraphData["qValue"][i];
-            if (
-              q <= settings["q-value-maximum"] &&
-              q >= settings["q-value-minimum"]
-            ) {
-              dataKeys.forEach((key) => {
-                displayedGraphData[key].push(fullGraphData[key][i]);
-              });
-            }
-          }
 
           // Get updated sizes
           const newSize = getSize(displayedGraphData["setSize"], settings);

@@ -2,7 +2,7 @@ const defaultSettings = {
   "insignificant-color": "#CDCDCD",
   "significant-color": "#000000",
   "selected-color": "#6bfc03",
-  "q-value-maximum": "0.45",
+  "q-value-maximum": "1.0",
   "q-value-minimum": "0.0",
   "fixed-size": true,
   "dynamic-size": false,

@@ -120,27 +120,29 @@ function convertToExpectedFormat(arrayOfObjects) {
 }
 
 document.getElementById("submit-gene-button").addEventListener("click", async function (e) {
-  // Check if settings need applying
-  if (hasUnsavedSettings || checkSettingsNeedApply()) {
-    // Auto-apply changes before submission
-    try {
-      const toast = document.getElementById("toast-message");
-      if (toast) {
-        toast.style.color = "#2ecc71";
-        toast.textContent = "New settings automatically applied.";
-        toast.style.display = "block";
-        setTimeout(() => {
-          toast.style.display = "none";
-        }, 3000);
-      }
-
-      // Call the updateSettings function from the parent window
+  const shouldToast = hasUnsavedSettings || checkSettingsNeedApply();
+  try {
+    if (window.update_settings?.updateSettings) {
       window.update_settings.updateSettings(true);
       hasUnsavedSettings = false;
-    } catch (error) {
-      console.error("Error auto-applying settings:", error);
-      // Continue with submission even if auto-apply fails
+      settingsNeedApply = false;
+
+      if (shouldToast) {
+        const toast = document.getElementById("toast-message");
+        if (toast) {
+          toast.style.color = "#2ecc71";
+          toast.textContent = "New settings automatically applied.";
+          toast.style.display = "block";
+          setTimeout(() => {
+            toast.style.display = "none";
+          }, 3000);
+        }
+      }
+    } else {
+      console.warn("updateSettings not available yet");
     }
+  } catch (error) {
+    console.error("Error auto-applying settings:", error);
   }
 
   const sigGenes = document.getElementById("id_significant_genes").value;
