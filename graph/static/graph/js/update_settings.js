@@ -418,7 +418,8 @@ window.update_settings = {
 
     return newSettings;
   },
-  updateSettings: updateSettings // Expose the updateSettings function
+  updateSettings: updateSettings, // Expose the updateSettings function
+  displayValues: displayValues
 };
 
 function updateThresholdInputs() {

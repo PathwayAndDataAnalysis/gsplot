@@ -487,6 +487,22 @@
                 });
               }
 
+              // Extract qValue array
+              const qVals = umapData.map(point => point.qValue);
+
+              // Get min/max qValue
+              const minQ = Math.min(...qVals);
+              const maxQ = Math.max(...qVals);
+
+              // Update settings
+              let currentSettings = getLocalStorage("settings") || {};
+              currentSettings["q-value-minimum"] = minQ;
+              currentSettings["q-value-maximum"] = maxQ;
+              setLocalStorage("settings", currentSettings);
+
+              // After q-value min/max is updated:
+              window.parent.update_settings?.displayValues(currentSettings);
+
               // Save data
               setLocalStorage("data", dataStorage);
               resolve();
@@ -610,6 +626,22 @@
                   }
                 });
               }
+
+              // Extract qValue array
+              const qVals = umapData.map(point => point.qValue);
+
+              // Get min/max qValue
+              const minQ = Math.min(...qVals);
+              const maxQ = Math.max(...qVals);
+
+              // Update settings
+              let currentSettings = getLocalStorage("settings") || {};
+              currentSettings["q-value-minimum"] = minQ;
+              currentSettings["q-value-maximum"] = maxQ;
+              setLocalStorage("settings", currentSettings);
+
+              // After q-value min/max is updated:
+              window.parent.update_settings?.displayValues(currentSettings);
 
               // Save data
               setLocalStorage("data", dataStorage);
