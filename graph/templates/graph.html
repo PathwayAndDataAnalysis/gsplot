@@ -8,6 +8,9 @@
 </head>
 
 <body>
+  <div style="text-align: center; margin-top: 20px; margin-bottom: 30px;">
+    <button onclick="downloadAnalysisResults()">Download Analysis Results</button>
+  </div>
   <div id="plot-container">
     <script>
       // This file handles the rendering of the interactive graph on the main page.
@@ -18,6 +21,7 @@
       const dataKeys = [
         "X",
         "Y",
+        "pValue",
         "qValue",
         "setName",
         "setSize",
@@ -1109,6 +1113,58 @@
           }
         }
         return cookieValue;
+      }
+
+      function downloadAnalysisResults() {
+        const fullGraphData = getLocalStorage("data");
+        if (!fullGraphData) {
+          alert("No analysis data available.");
+          return;
+        }
+
+        const pad = (text, width) => String(text).padEnd(width, " ");
+
+        let header = pad("Gene Set Name", 25) + "\t" +
+          pad("P-Value", 15) + "\t" +
+          pad("Q-Value", 15) + "\t" +
+          pad("Set Size", 15) + "\t" +
+          "Matched Genes\n";
+
+        let content = "";
+
+        const rows = [];
+        const total = fullGraphData["setName"].length;
+
+        for (let i = 0; i < total; i++) {
+          rows.push({
+            name: fullGraphData["setName"][i] ?? "N/A",
+            p: fullGraphData["pValue"]?.[i] ?? Infinity,
+            q: fullGraphData["qValue"]?.[i] ?? Infinity,
+            size: fullGraphData["setSize"]?.[i] ?? "N/A",
+            genes: fullGraphData["molecules"]?.[i]?.split(" ").join(",") ?? ""
+          });
+        }
+
+        // Sort ascending by p-value
+        rows.sort((a, b) => a.p - b.p);
+
+        for (const row of rows) {
+          content += pad(row.name, 25) + "\t" +
+            pad(row.p.toExponential(2), 15) + "\t" +
+            pad(row.q.toExponential(2), 15) + "\t" +
+            pad(row.size, 15) + "\t" +
+            row.genes + "\n"; // no padding for genes, allow overflow
+        }
+
+        const blob = new Blob([header + content], { type: "text/tab-separated-values" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "analysis_results.tsv";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       }
     </script>
   </div>

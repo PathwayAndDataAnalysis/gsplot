@@ -93,11 +93,11 @@ def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
 
         # find threshold_index
         threshold_index = max((i for i, (_, val) in enumerate(sorted_items) if val[1] <= p_val), default=-1)
-    filtered_gene_sets = dict(list(sorted_items)[:threshold_index + 1])
-
-    # round the variables to 3rd decimal point
-    p_val = round(p_val, 5)
-    fdr = round(fdr, 5)
+    filtered_gene_sets = {}
+    for i in range(threshold_index + 1):
+        set_name, (gene_string, p_raw) = sorted_items[i]
+        q_val = q_values[i]
+        filtered_gene_sets[set_name] = (gene_string, p_raw, float(q_val))
 
     return filtered_gene_sets,p_val,fdr
 
@@ -257,10 +257,11 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
         else:
             # --- RAW STRING MODE ---
             all_rows = []
-            for set_name, (gene_string, score) in fileDataOrString.items():
+            for set_name, (gene_string, p_raw, q_val) in fileDataOrString.items():
                 all_rows.append({
                     "Name": set_name,
-                    "Value": score,
+                    "pValue": p_raw,
+                    "qValue": q_val,
                     "Molecules": gene_string.strip()
                 })
 
@@ -312,7 +313,8 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
         # Make Data Frame for website display with the embedding results
         embedding_df = pd.DataFrame(embedding, columns=['X', 'Y'])
-        embedding_df['qValue'] = df['Value'].values
+        embedding_df['qValue'] = df['qValue'].values
+        embedding_df['pValue'] = df['pValue'].values
         embedding_df['setName'] = df['Name'].values
         embedding_df['setSize'] = numberOfEnrichedMolecules
         embedding_df['molecules'] = df['Molecules'].values
