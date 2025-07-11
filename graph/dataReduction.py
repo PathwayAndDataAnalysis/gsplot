@@ -68,38 +68,34 @@ def build_weights_from_sets(sig_genes, insig_genes):
 
     return user_weights
 
-def get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr):
+def get_vals(gene_sets_for_umap, reject_count, total, p_val, fdr):
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
     p_vals = np.array([item[1][1] for item in sorted_items])  # Get just the p-values
-    if (fdr): # Get Estimate of P-Value
-        reject, q_values, _, _ = multipletests(p_vals, method='fdr_bh', alpha=fdr)
-        if not (reject.any()):
+
+    reject, q_values, _, _ = multipletests(p_vals, method='fdr_bh', alpha=(fdr if fdr else 1.0))
+
+    if fdr:
+        if not reject.any():
             print("No p-values passed the FDR threshold.")
-            gene_sets_for_umap = {}  # Or keep as is
-            return
+            return {}, p_val, fdr
         threshold_index = np.where(reject)[0].max()
         p_val = p_vals[threshold_index]
-
         print(f"pval_threshold @ {threshold_index} w val {p_val}")
-
     else:
-        # Get Estimate of FDR
-        if reject_count <= 0:  # number of p values under threshold
+        if reject_count <= 0:
             print("no values are under the threshold")
-            return
-
+            return {}, p_val, fdr
         fdr = (p_val * total) / reject_count
         print(f"Estimated FDR at threshold {p_val}: {fdr:.4f}")
-
-        # find threshold_index
         threshold_index = max((i for i, (_, val) in enumerate(sorted_items) if val[1] <= p_val), default=-1)
+
     filtered_gene_sets = {}
     for i in range(threshold_index + 1):
         set_name, (gene_string, p_raw) = sorted_items[i]
-        q_val = q_values[i]
-        filtered_gene_sets[set_name] = (gene_string, p_raw, float(q_val))
+        q_val = float(q_values[i])
+        filtered_gene_sets[set_name] = (gene_string, p_raw, q_val)
 
-    return filtered_gene_sets,p_val,fdr
+    return filtered_gene_sets, p_val, fdr
 
 def get_reducer(settings):
     reduction = settings['reduction']
