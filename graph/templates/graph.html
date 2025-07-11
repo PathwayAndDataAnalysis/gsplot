@@ -291,7 +291,7 @@
           );
 
           const pVals = displayedGraphData["qValue"];
-          const logPvals = pVals.map(p => -Math.log10(p));
+          const logPvals = pVals.map(p => -Math.log10(Math.max(p, 1e-10)));
           const minLogP = Math.min(...logPvals);
           const maxLogP = Math.max(...logPvals);
 
@@ -691,7 +691,7 @@
         let size = getSize(data["setSize"], settings); // Get sizes of each point based on settings - user can edit this
 
         let pVals = data["qValue"];
-        let logPvals = pVals.map(p => -Math.log10(p));
+        let logPvals = pVals.map(p => -Math.log10(Math.max(p, 1e-10)));
         let minLogP = Math.min(...logPvals);
         let maxLogP = Math.max(...logPvals);
 
@@ -766,7 +766,7 @@
         // The following are arrays of information of each displayed point needed for plotly.restyle
         let borderColor = firstPoint.data.marker.line.color.slice();
         const pVals = firstPoint.data.customdata.map(d => d[0]);
-        const logColors = pVals.map(p => -Math.log10(p));
+        const logColors = pVals.map(p => -Math.log10(Math.max(p, 1e-10)));
         const minLogP = Math.min(...logColors);
         const maxLogP = Math.max(...logColors);
         let outlineWidths = firstPoint.data.marker.line.width.slice();
