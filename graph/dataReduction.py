@@ -235,7 +235,10 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
             reject_count += 1
 
     print(reject_count)
-    filtered_gene_sets, p_val, fdr = get_vals(gene_sets_for_umap, reject_count, total, p_thr, fdr_thr)
+    vals = get_vals(gene_sets_for_umap, reject_count, total, p_thr, fdr_thr)
+    if vals is None:
+        return None
+    filtered_gene_sets, p_val, fdr = vals
 
     return filtered_gene_sets, p_val, fdr
 
