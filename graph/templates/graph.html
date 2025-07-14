@@ -1079,7 +1079,7 @@
           const parentSettings = window.parent.update_settings?.collectCurrentSettings();
           if (!parentSettings) return false;
 
-          return window.parent.update_settings?.isUmapSettingDifferent?.(parentSettings, currentSettings) || false;
+          return window.parent.update_settings?.isEmbeddingChanged?.(parentSettings, currentSettings) || false;
         } catch (e) {
           console.error("Error checking settings:", e);
           return false;

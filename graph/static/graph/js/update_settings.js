@@ -159,7 +159,7 @@ function updateSettings(suppressToast = false) {
 
   // Compare UMAP settings
   let oldSettings = JSON.parse(localStorage.getItem("settings"));
-  if (isUmapSettingDifferent(newSettings, oldSettings)) {
+  if (isEmbeddingChanged(newSettings, oldSettings)) {
     newSettings.umapChange = true;
   }
   let distancesM = JSON.parse(localStorage.getItem("distances-M"));
@@ -187,7 +187,7 @@ function updateSettings(suppressToast = false) {
   localStorage.setItem("previous_settings", JSON.stringify(newSettings));
 
   const stylingOnly = detectFrontendOnlyChanges();
-  const isDataChange = isUmapSettingDifferent(newSettings, oldSettings);
+  const isDataChange = isEmbeddingChanged(newSettings, oldSettings);
   const thresholdChange = isThresholdChanged(newSettings, oldSettings);
 
   localStorage.setItem("justStyling", stylingOnly && !isDataChange && !thresholdChange ? "true" : "false");
@@ -255,18 +255,19 @@ function detectFrontendOnlyChanges() {
 }
 
 async function applySettingsAndRender() {
-  try {
-    const loadingSpinner = document.getElementById("loading-spinner");
-    loadingSpinner.style.display = "flex";
+  const loadingSpinner = document.getElementById("loading-spinner");
+  loadingSpinner.style.display = "flex";
 
+  const backupData = localStorage.getItem("data");
+
+  try {
     const newSettings = JSON.parse(localStorage.getItem("settings"));
     const oldSettings = JSON.parse(localStorage.getItem("previous_settings") || "{}");
 
     const stylingOnly = localStorage.getItem("justStyling") === "true";
-    localStorage.removeItem("justStyling"); // consume once
+    localStorage.removeItem("justStyling");
 
     const settingsChanged = JSON.stringify(newSettings) !== JSON.stringify(oldSettings);
-
     const hasRendered = localStorage.getItem("data") !== null;
 
     if (stylingOnly && !settingsChanged && hasRendered) {
@@ -276,13 +277,6 @@ async function applySettingsAndRender() {
       return;
     }
 
-    // Clear local states
-    localStorage.removeItem("data");
-    localStorage.removeItem("camera");
-    localStorage.removeItem("annotations");
-    localStorage.setItem("selected", "[]");
-    localStorage.setItem("reset", JSON.stringify(true));
-
     const singleList = JSON.parse(localStorage.getItem("single-list"));
 
     if (singleList) {
@@ -291,18 +285,53 @@ async function applySettingsAndRender() {
       await frame.getGeneInputData(newSettings);
     }
 
+    const fullData = JSON.parse(localStorage.getItem("data") || "null");
+
+    if (
+      !fullData ||
+      !Array.isArray(fullData["X"]) ||
+      fullData["X"].length < 4 ||
+      fullData["X"].includes(null)
+    ) {
+      throw new Error("Not enough valid data points returned. Try lowering your threshold or neighbors.");
+    }
+
+    localStorage.removeItem("camera");
+    localStorage.removeItem("annotations");
     localStorage.setItem("selected", "[]");
+    localStorage.setItem("reset", JSON.stringify(true));
+
     clearPoints();
 
     frame.graph();
+
     loadingSpinner.style.display = "none";
+
   } catch (error) {
+    const parsedBackup = JSON.parse(backupData || "null");
+    if (
+      parsedBackup &&
+      Array.isArray(parsedBackup["X"]) &&
+      parsedBackup["X"].length >= 4
+    ) {
+      localStorage.setItem("data", backupData);
+      const oldSettings = JSON.parse(localStorage.getItem("previous_settings"));
+      localStorage.setItem("settings", JSON.stringify(oldSettings));
+
+      localStorage.removeItem("camera");
+      localStorage.removeItem("annotations");
+      localStorage.setItem("selected", "[]");
+      localStorage.setItem("reset", JSON.stringify(true));
+      clearPoints();
+      frame.graph();
+    }
+
     loadingSpinner.style.display = "none";
     alert("Error applying settings: " + error.message);
   }
 }
 
-function isUmapSettingDifferent(setting1, setting2) {
+function isEmbeddingChanged(setting1, setting2) {
   return (
     setting1["distance_type"] !== setting2["distance_type"] ||
     getReductionDiff(setting1, setting2)
@@ -381,7 +410,7 @@ function addSpinnerOverlay() {
 
 // Expose necessary functions to window and iframe
 window.update_settings = {
-  isUmapSettingDifferent: isUmapSettingDifferent,
+  isEmbeddingChanged: isEmbeddingChanged,
   collectCurrentSettings: function () {
     let newSettings = {};
     for (const [key, value] of Object.entries(inputRefrences)) {

@@ -305,7 +305,15 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
         reducer = get_reducer(settings)
         print("applying reducer...")
-        embedding = reducer.fit_transform(distance_matrix)
+
+        # Safe reducer
+        try:
+            embedding = reducer.fit_transform(distance_matrix)
+        except Exception as e:
+            raise ValueError(f"Dimensionality reduction failed: {str(e)}")
+
+        if embedding is None or len(embedding) < 4:
+            raise ValueError("Reducer returned too few points. Please check your settings.")
 
         # Make Data Frame for website display with the embedding results
         embedding_df = pd.DataFrame(embedding, columns=['X', 'Y'])
@@ -315,12 +323,9 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
         embedding_df['setSize'] = numberOfEnrichedMolecules
         embedding_df['molecules'] = df['Molecules'].values
 
-        # Sort entries by descending order of qValue so if two points overlap, the point with the more significant q value appears on top
         embedding_df = embedding_df.sort_values(by='qValue', ascending=False)
         embedding_df_json = embedding_df.to_json(orient='records')
-
-
-        # Save the JSON to a file or pass it to your frontend
         return embedding_df_json, distance_matrix
+
     except Exception as e:
         raise e
