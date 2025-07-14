@@ -473,6 +473,8 @@
 
               window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
               window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
+              window.parent.localStorage.setItem("computed-p-value", parseFloat(pvalDisplay).toFixed(4));
+              window.parent.localStorage.setItem("computed-fdr", parseFloat(fdrDisplay).toFixed(4));
 
               // Convert returned data into the localStorage.data structure
               let dataStorage = {};
@@ -613,6 +615,8 @@
 
               window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
               window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
+              window.parent.localStorage.setItem("computed-p-value", parseFloat(pvalDisplay).toFixed(4));
+              window.parent.localStorage.setItem("computed-fdr", parseFloat(fdrDisplay).toFixed(4));
 
               // Convert returned data into the localStorage.data structure
               let dataStorage = {};

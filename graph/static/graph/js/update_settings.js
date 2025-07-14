@@ -426,25 +426,35 @@ function updateThresholdInputs() {
   const fWrapper = document.getElementById("fdr-wrapper");
 
   if (selectedType === "pvalue") {
-    // Restore p-value
-    if (lastPValue !== "") pInput.value = lastPValue;
+    // Restore p-value from computed if available
+    const storedComputedP = localStorage.getItem("computed-p-value");
+    if (storedComputedP !== null) {
+      pInput.value = storedComputedP;
+    } else if (lastPValue !== "") {
+      pInput.value = lastPValue;
+    }
+
     pInput.removeAttribute("readonly");
 
     // Save current fdr, then clear display
     lastFDR = fdrInput.value;
-    fdrInput.value = "";
     fdrInput.setAttribute("readonly", true);
 
     pWrapper.classList.remove("grayed-out");
     fWrapper.classList.add("grayed-out");
   } else {
-    // Restore fdr
-    if (lastFDR !== "") fdrInput.value = lastFDR;
+    // Restore fdr from computed if available
+    const storedComputedFDR = localStorage.getItem("computed-fdr");
+    if (storedComputedFDR !== null) {
+      fdrInput.value = storedComputedFDR;
+    } else if (lastFDR !== "") {
+      fdrInput.value = lastFDR;
+    }
+
     fdrInput.removeAttribute("readonly");
 
     // Save current p-value, then clear display
     lastPValue = pInput.value;
-    pInput.value = "";
     pInput.setAttribute("readonly", true);
 
     fWrapper.classList.remove("grayed-out");
