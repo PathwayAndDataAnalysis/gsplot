@@ -345,6 +345,14 @@ function showGraph() {
     graphAndSettingsContainer.style.opacity = "1";
     graphAndSettingsContainer.classList.remove("no-click");
   }, 100);
+
+  // Show download button in iframe
+  try {
+    const iframeDownloadBtn = graph.contentWindow.document.getElementById("download-button-wrapper");
+    if (iframeDownloadBtn) iframeDownloadBtn.style.display = "block";
+  } catch (e) {
+    console.warn("Couldn't show download button:", e);
+  }
 }
 
 function hideGraph() {
@@ -357,6 +365,14 @@ function hideGraph() {
     selectedPoints.style.display = "none";
     graphAndSettingsContainer.classList.remove("no-click");
   }, transitionDuration);
+
+  // Hide download button in iframe
+  try {
+    const iframeDownloadBtn = graph.contentWindow.document.getElementById("download-button-wrapper");
+    if (iframeDownloadBtn) iframeDownloadBtn.style.display = "none";
+  } catch (e) {
+    console.warn("Couldn't hide download button:", e);
+  }
 }
 
 function showUpload() {
