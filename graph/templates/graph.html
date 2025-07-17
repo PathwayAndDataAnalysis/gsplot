@@ -171,6 +171,7 @@
         let layout = {
           title: "Double Click To Edit",
           hovermode: "closest",
+          dragmode: "select",
           xaxis: {
             title: "UMAP-1",
             zeroline: false, // This makes sure that the x and y axis aren't highlighted at 0
@@ -187,6 +188,7 @@
         // Disable default double click event as it conflicts with custom camera settings.
         // Disable some deafult plotly buttons that aren't helpful in a UMAP context
         let config = {
+          scrollZoom: false,
           edits: {
             annotationTail: true,
             annotationText: true,
@@ -243,6 +245,16 @@
           layout.yaxis = camera.yaxis;
           Plotly.newPlot(myPlot, [trace], layout, config);
         }
+        let currentConfig = { ...config };
+
+        myPlot.on("plotly_relayout", function (event) {
+          if ("dragmode" in event) {
+            const isPan = event.dragmode === "pan";
+            currentConfig.scrollZoom = isPan;
+
+            Plotly.react(myPlot, myPlot.data, myPlot.layout, currentConfig);
+          }
+        });
 
         // If there were annotations present before call to graph, apply them again
         if (enableAnnotaions) {
