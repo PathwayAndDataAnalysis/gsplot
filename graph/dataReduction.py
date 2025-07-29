@@ -12,8 +12,8 @@ from scipy.stats import norm
 from sklearn.manifold import Isomap, TSNE
 
 
-#python manage.py runserver
-#python manage.py migrate
+# python manage.py runserver
+# python manage.py migrate
 
 
 # calculate how different two sets are
@@ -22,6 +22,7 @@ from sklearn.manifold import Isomap, TSNE
 # It's used to calculate the distance between gene sets based on the molecules they contain.
 def jaccard_distance(set1, set2):
     return 1 - (len(set1.intersection(set2)) / len(set1.union(set2)))
+
 
 def weighted_jaccard_distance(user_weights, gene_seta, gene_setb):
     numerator = 0.0
@@ -36,6 +37,7 @@ def weighted_jaccard_distance(user_weights, gene_seta, gene_setb):
 
     return 1 - (numerator / denominator) if denominator else 1.0    # distance = 1 - similarity
 
+
 def build_weights_from_ranked_list(ranked_genes):
     """
     ranked_genes: list of gene names in order from highest to lowest rank
@@ -45,8 +47,9 @@ def build_weights_from_ranked_list(ranked_genes):
     user_weights = {}
     for i, gene in enumerate(ranked_genes):
         norm_rank = (i + 1 - 0.5) / n
-        user_weights[gene.strip()] = norm_rank
+        user_weights[gene.strip()] = 1 - norm_rank
     return user_weights
+
 
 def build_weights_from_sets(sig_genes, insig_genes):
     """
@@ -55,18 +58,19 @@ def build_weights_from_sets(sig_genes, insig_genes):
     Returns: dict {gene: normalized_rank}
     """
     user_weights = {}
-    n = len(sig_genes)
+    k = len(sig_genes)
 
     # Assign normalized rank to sig_genes
     for i, gene in enumerate(sig_genes):
-        norm_rank = (i + 1 - 0.5) / n
-        user_weights[gene.strip()] = norm_rank
+        user_weights[gene.strip()] = 1 / k
+
     # Assign 0 to insig genes if not already in sig
     for gene in insig_genes:
         gene = gene.strip()
-        user_weights.setdefault(gene, 0.0)
+        user_weights[gene] = 0.0
 
     return user_weights
+
 
 def get_vals(gene_sets_for_umap, reject_count, total, p_val, fdr):
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])
@@ -96,6 +100,7 @@ def get_vals(gene_sets_for_umap, reject_count, total, p_val, fdr):
         filtered_gene_sets[set_name] = (gene_string, p_raw, q_val)
 
     return filtered_gene_sets, p_val, fdr
+
 
 def get_reducer(settings):
     reduction = settings['reduction']
@@ -142,12 +147,13 @@ def overlap_coef(set1, set2):
     common = set1.intersection(set2)
     min_size = min(len(set1), len(set2))
 
-    if min_size == 0:
+    if min_size == 0:  # this should never happen. check and delete if not needed.
         return 1.0
 
-    raw_dist = 1 - (len(common) / min_size)
-    dist = max(0.0, min(1.0, raw_dist))  # Clamp to [0,1]
+    dist = 1 - (len(common) / min_size)
+    dist = max(0.0, min(1.0, dist))  # Clamp to [0,1]
     return dist
+
 
 # Weighted overlapping coefficient distance 
 def weighted_overlap_coef(user_weights, set1, set2):
@@ -155,19 +161,20 @@ def weighted_overlap_coef(user_weights, set1, set2):
         raise ValueError("One of the sets is empty in overlap coefficient calc.")
 
     common = set1.intersection(set2)
-    sum_common = sum(user_weights.get(gene, 0.0) for gene in common)
-    sum1 = sum(user_weights.get(gene, 0.0) for gene in set1)
-    sum2 = sum(user_weights.get(gene, 0.0) for gene in set2)
+    sum_common = sum(user_weights.get(gene) for gene in common)
+    sum1 = sum(user_weights.get(gene) for gene in set1)
+    sum2 = sum(user_weights.get(gene) for gene in set2)
     min_sum = min(sum1, sum2)
 
-    if min_sum == 0:
+    if min_sum == 0:  # this can happen if all the member genes of a set are insignificant
         return 1.0
 
-    raw_dist = 1 - (sum_common / min_sum)
-    dist = max(0.0, min(1.0, raw_dist)) # Clamp to [0, 1]
+    dist = 1 - (sum_common / min_sum)
+    dist = max(0.0, min(1.0, dist))  # Clamp to [0,1]
     return dist
 
-def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
+
+def run_fishers_test(filtered_genes, sig_genes, insig_genes):
     sig_set = set(sig_genes)
     insig_set = set(insig_genes)
 
@@ -175,8 +182,6 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
     total = len(filtered_genes)
 
     gene_sets_for_umap = {}
-
-
 
     for geneset in filtered_genes:
         gene_set = geneset['matched_genes']
@@ -194,24 +199,46 @@ def run_fishers_test(filtered_genes,p_val,fdr,sig_genes, insig_genes):
 
         gene_string = ' '.join(str(gene) for gene in gene_set)
         gene_sets_for_umap[set_name] = (gene_string, p_value)
-        if not fdr and p_value <= p_val:
-            reject_count += 1
 
-    filtered_gene_sets,p_val,fdr = get_vals(gene_sets_for_umap,reject_count,total,p_val,fdr)
+    return add_q_values(gene_sets_for_umap)
 
-    return filtered_gene_sets,p_val,fdr
 
-def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
+def add_q_values(gene_sets_with_p):
+    sorted_items = sorted(gene_sets_with_p.items(), key=lambda item: item[1][1])
+    p_vals = np.array([item[1][1] for item in sorted_items])  # Get just the p-values
+    _, q_values, _, _ = multipletests(p_vals, method='fdr_bh')
+
+    gene_sets_with_p_and_q = {}
+    for i in range(len(sorted_items)):
+        set_name, (gene_string, p_raw) = sorted_items[i]
+        q_val = float(q_values[i])
+        gene_sets_with_p_and_q[set_name] = (gene_string, p_raw, q_val)
+    return gene_sets_with_p_and_q
+
+
+def filter_gene_sets_by_significance(gene_sets_with_p, pval_thr, fdr_thr):
+    filtered_gene_sets = {}
+    if pval_thr:
+        filtered_gene_sets = {key: value for key, value in gene_sets_with_p.items() if value[1] <= pval_thr}
+        fdr_thr = (pval_thr * len(gene_sets_with_p)) / len(filtered_gene_sets)
+    elif fdr_thr:
+        filtered_gene_sets = {key: value for key, value in gene_sets_with_p.items() if value[2] <= fdr_thr}
+        pval_thr = max(value[1] for value in filtered_gene_sets.values())
+
+    return filtered_gene_sets, pval_thr, fdr_thr
+
+
+def calculate_pvals(filtered, ranked_genes):
     n = len(ranked_genes)
     ranks = dict()
-    gene_sets_for_umap = {}
-    reject_count = 0
+    gene_sets_with_p = {}
+
     for i in range(n):
         rank = i + 1
         gene = ranked_genes[i]
         norm_rank = (rank-0.5)/n
         ranks[gene] = norm_rank
-    total = len(filtered)
+
     for geneset in filtered:
         gene_set = geneset['matched_genes']
         set_name = geneset['gene_set_name']
@@ -226,19 +253,12 @@ def calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes):
         p_value = norm.cdf(geneset_mw, loc=0.5, scale=sd)
 
         gene_string = ' '.join(str(gene) for gene in gene_set)
-        gene_sets_for_umap[set_name] = (gene_string, p_value)
-        if not fdr_thr and p_value <= p_thr:
-            reject_count += 1
+        gene_sets_with_p[set_name] = (gene_string, p_value)
 
-    print(reject_count)
-    vals = get_vals(gene_sets_for_umap, reject_count, total, p_thr, fdr_thr)
-    if vals is None:
-        return None
-    filtered_gene_sets, p_val, fdr = vals
+    return add_q_values(gene_sets_with_p)
 
-    return filtered_gene_sets, p_val, fdr
 
-def umap_reduction(fileDataOrString, settings, user_weights , distance_type, distances):
+def umap_reduction(fileDataOrString, settings, user_weights, distance_type, distance_matrix):
     # Check if use weighted option without weights
     if (distance_type in ['jaccard_weighted', 'overlap_weighted']) and user_weights is None:
         raise ValueError("user_weights must be provided when using weighted option.")
@@ -263,10 +283,7 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
             df = pd.DataFrame(all_rows)
 
-
         n = df.shape[0]
-
-        distance_matrix = np.zeros((n, n))
 
         molecule_sets = [set(df.loc[i, "Molecules"].split()) for i in range(n)]
 
@@ -275,10 +292,7 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
         print(n)
 
-        if distances['use'] and len(distances["m"]) == n:
-            print("Using cached distances.")
-            distance_matrix = np.array(distances["m"])
-        else:
+        if distance_matrix is None:
             print("Computing new distance matrix.")
             distance_matrix = np.zeros((n, n))
             for i in range(n):
@@ -299,9 +313,6 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
                     distance_matrix[j, i] = dist
             if i % 50 == 0:
                 print(f"{i}/{n}")
-
-        if (distances['use']):
-            distance_matrix = np.array(distances["m"])
 
         reducer = get_reducer(settings)
         print("applying reducer...")
@@ -329,3 +340,33 @@ def umap_reduction(fileDataOrString, settings, user_weights , distance_type, dis
 
     except Exception as e:
         raise e
+
+
+def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights):
+    n = len(sigif_gene_sets)
+
+    molecule_sets = [set(gene_string.split()) for _, (gene_string, _, _) in sigif_gene_sets.items()]
+
+    print("Computing new distance matrix.")
+    distance_matrix = np.zeros((n, n))
+    for i in range(n):
+        set1 = molecule_sets[i]
+        for j in range(i + 1, n):
+            set2 = molecule_sets[j]
+            if distance_type == 'jaccard_weighted' and user_weights:
+                dist = weighted_jaccard_distance(user_weights, set1, set2)
+            elif distance_type == "jaccard_plain":
+                dist = jaccard_distance(set1, set2)
+            elif distance_type == "overlap_weighted":
+                dist = weighted_overlap_coef(user_weights, set1, set2)
+            elif distance_type == "overlap_plain":
+                dist = overlap_coef(set1, set2)
+            else:
+                raise ValueError(f"Unknown distance_type: {distance_type}")
+            distance_matrix[i, j] = dist
+            distance_matrix[j, i] = dist
+
+    if i % 50 == 0:
+        print(f"{i}/{n}")
+
+    return distance_matrix

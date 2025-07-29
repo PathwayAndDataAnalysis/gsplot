@@ -1,15 +1,19 @@
 from django.shortcuts import render, HttpResponse
 import os
 import json
+import hashlib
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
+from django.core.cache import cache
 from .dataReduction import umap_reduction, build_weights_from_ranked_list, build_weights_from_sets
 from .dataReduction import calculate_pvals
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
 from .dataReduction import run_fishers_test
+from .dataReduction import filter_gene_sets_by_significance
+from .dataReduction import calculate_distance_matrix
 
 # Create your views here.
 # When someone goes to the website root (/), it shows the homepage (base.html).
@@ -31,6 +35,8 @@ def gene_input_view(request):
             # Parse JSON body
             data = json.loads(request.body)
 
+            cache_timeout = 1000
+
             # Get gene inputs
             sig_input = data.get('significant_genes', '')
             insig_input = data.get('insignificant_genes', '')
@@ -41,70 +47,108 @@ def gene_input_view(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
             settings = data.get("settings")
-            distances = data.get("distancesM")
             relevant_members = (data.get("relevant_members"))
 
+            cache_key_data = {
+                "sig_genes": sig_input,
+                "insig_genes": insig_input,
+                "sel_gene_sets": selected_gene_sets,
+                "min_members": min_members,
+                "species": species,
+                "custom_data": custom_data
+            }
+            serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
+            key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
+
+            gene_sets_with_p = cache.get(key_hash)
+            sig_genes = []
+            insig_genes = []
             filtered = []
 
-            # Split inputs into cleaned gene lists
-            sig_genes = [gene.strip() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
-            insig_genes = [gene.strip() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
+            if gene_sets_with_p is None:
+                cache.clear()
 
-            if (len(relevant_members) > 0):
-                filtered = json.loads(data.get("relevant_members"))
-            else:
+                # Split inputs into cleaned gene lists
+                sig_genes = [gene.strip() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
+                insig_genes = [gene.strip() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
-                # Load gene set data
-                species = species.lower()
-                if species == "custom":
-                    if not custom_data:
-                        return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
-                    gene_sets_data = custom_data
+                if (len(relevant_members) > 0):
+                    filtered = json.loads(data.get("relevant_members"))
                 else:
-                    file_map = {
-                        "human": "msigdb.v2025.1.Hs.json",
-                        "mouse": "msigdb.v2025.1.Mm.json"
-                    }
-                    filename = file_map.get(species)
-                    if not filename:
-                        return JsonResponse({"error": "Invalid species"}, status=400)
 
-                    file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-                    with open(file_path, 'r') as f:
-                        gene_sets_data = json.load(f)
+                    # Load gene set data
+                    species = species.lower()
+                    if species == "custom":
+                        if not custom_data:
+                            return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                        gene_sets_data = custom_data
+                    else:
+                        file_map = {
+                            "human": "msigdb.v2025.1.Hs.json",
+                            "mouse": "msigdb.v2025.1.Mm.json"
+                        }
+                        filename = file_map.get(species)
+                        if not filename:
+                            return JsonResponse({"error": "Invalid species"}, status=400)
 
-                genes = sig_genes + insig_genes
+                        file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                        with open(file_path, 'r') as f:
+                            gene_sets_data = json.load(f)
 
-                print("collecting selected genes w revelnt members")
+                    genes = sig_genes + insig_genes
 
-                # Filter selected gene sets
-                filtered = get_selected_gene_sets_with_relevant_members(
-                    gene_list=genes,
-                    min_members_threshold=min_members,
-                    selected_gene_sets=selected_gene_sets,
-                    gene_sets_data=gene_sets_data,
-                )
+                    print("collecting selected genes w revelnt members")
 
-            # If there is no matching gene set after filtering, return error
-            if not filtered:
-                return JsonResponse({"error": "No gene sets matched after filtering. Please select other categories or adjust your input."}, status=400)
+                    # Filter selected gene sets
+                    filtered = get_selected_gene_sets_with_relevant_members(
+                        gene_list=genes,
+                        min_members_threshold=min_members,
+                        selected_gene_sets=selected_gene_sets,
+                        gene_sets_data=gene_sets_data,
+                    )
 
-                # Convert thresholds to float if provided
+                # If there is no matching gene set after filtering, return error
+                if not filtered:
+                    return JsonResponse({"error": "No gene sets matched after filtering. Please select other categories or adjust your input."}, status=400)
+
+                # Run Fisher's test analysis
+                print("running fishers test")
+                gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes)
+                print("fisher test done")
+                cache.set(key_hash, gene_sets_with_p, timeout=cache_timeout - 50)
+                cache.set("sig_genes", sig_genes, timeout=cache_timeout)
+                cache.set("insig_genes", insig_genes, timeout=cache_timeout)
+                cache.set("filtered_sets", filtered, timeout=cache_timeout)
+            else:
+                sig_genes = cache.get("sig_genes")
+                insig_genes = cache.get("insig_genes")
+                filtered = cache.get("filtered_sets")
+
+            # Convert thresholds to float if provided
+            thr_key = ''
             if p_thr:
                 p_thr = float(p_thr)
+                thr_key = f'p-thresholded-{p_thr}'
             if fdr_thr:
                 fdr_thr = float(fdr_thr)
+                thr_key = f'fdr-thresholded-{fdr_thr}'
 
-            # Run Fisher's test analysis
-            print("running fishers test")
-            fisher_result = run_fishers_test(filtered, p_thr, fdr_thr, sig_genes, insig_genes)
-            if fisher_result is None:
+            print("thr_key = " + thr_key)
+
+            fisher_result_filtered = cache.get(thr_key)
+            if fisher_result_filtered is None:
+                print("filtering gene sets")
+                fisher_result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_thr, fdr_thr)
+                print("filtering gene sets done")
+                cache.set(thr_key, fisher_result_filtered, timeout=cache_timeout)
+
+            if fisher_result_filtered is None:
                 return JsonResponse({"error": "Fisher's test returned no results. Please enter higher p-value/FDR threshold or change the selections."}, status=400)
             
-            result, pvl, fdr = fisher_result
+            signif_gene_sets, pvl, fdr = fisher_result_filtered
 
             try:
-                if len(result) < 4: # if we have less than 4 points
+                if len(signif_gene_sets) < 4: # if we have less than 4 points
                     # Raise ValueError because umap, tsne can't work with fewer than 3-4 points
                     raise ValueError(
                         "Not enough gene sets passed the threshold to render a graph. Please increase your FDR or p-value.")
@@ -116,18 +160,28 @@ def gene_input_view(request):
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
             print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
-            print("running reduction")
-            mapped_result,distances_m = umap_reduction(result, settings, user_weights, distance_type, distances)
-            print("completed reduction")
+            print("building weights done")
+
+            dist_key = thr_key + " - " + distance_type
+            distance_matrix = cache.get(dist_key)
+            if distance_matrix is None:
+                print("generating distance matrix")
+                distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
+                print("distance matrix generated")
+                cache.set(dist_key, distance_matrix, timeout=cache_timeout)
+
+            print("running umap")
+            mapped_result, _ = umap_reduction(signif_gene_sets, settings, user_weights, distance_type, distance_matrix)
+            print("completed umap")
+
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
+
             print("grphing")
-            list_response = distances_m.tolist()
-            list_response2 = json.dumps(filtered)
             return JsonResponse({
                 "umap": data,
-                "relevant_members": list_response2,
-                "distancesM": list_response,
+                "relevant_members": json.dumps(filtered),
+                "distancesM": [],
                 "p_value": pvl,
                 "fdr_value": fdr
             })
@@ -147,9 +201,10 @@ def gene_input_view2(request):
             data = json.loads(request.body)
 
             print("Clled")
+            cache_timeout = 1000
 
             # Get gene inputs
-            ranked_genes = data.get('ranked_genes', '')
+            genes_input = data.get('ranked_genes', '')
             selected_gene_sets = data.get("selected_genes_sets", [])
             min_members = int(data.get("minMembers", 5))
             p_thr = (data.get("p_thr"))
@@ -157,63 +212,95 @@ def gene_input_view2(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
             settings = data.get("settings")
-            distances = data.get("distancesM")
             relevant_members = (data.get("relevant_members"))
 
+            cache_key_data = {
+                "ranked_genes": genes_input,
+                "sel_gene_sets": selected_gene_sets,
+                "min_members": min_members,
+                "species": species,
+                "custom_data": custom_data
+            }
+            serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
+            key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
+
+            gene_sets_with_p = cache.get(key_hash)
+            ranked_genes = []
             filtered = []
 
-            # Split inputs into cleaned gene lists
-            ranked_genes = [gene.strip() for gene in ranked_genes.replace(',', '\n').splitlines() if gene.strip()]
+            if gene_sets_with_p is None:
+                cache.clear()
 
+                # Split inputs into cleaned gene lists
+                ranked_genes = [gene.strip() for gene in genes_input.replace(',', '\n').splitlines() if gene.strip()]
 
-            if (len(relevant_members) > 0):
-                filtered = json.loads(data.get("relevant_members"))
-            else:
-                # Load gene set data
-                species = species.lower()
-                if species == "custom":
-                    if not custom_data:
-                        return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
-                    gene_sets_data = custom_data
+                if (len(relevant_members) > 0):
+                    filtered = json.loads(data.get("relevant_members"))
                 else:
-                    file_map = {
-                        "human": "msigdb.v2025.1.Hs.json",
-                        "mouse": "msigdb.v2025.1.Mm.json"
-                    }
-                    filename = file_map.get(species)
-                    if not filename:
-                        return JsonResponse({"error": "Invalid species"}, status=400)
+                    # Load gene set data
+                    species = species.lower()
+                    if species == "custom":
+                        if not custom_data:
+                            return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                        gene_sets_data = custom_data
+                    else:
+                        file_map = {
+                            "human": "msigdb.v2025.1.Hs.json",
+                            "mouse": "msigdb.v2025.1.Mm.json"
+                        }
+                        filename = file_map.get(species)
+                        if not filename:
+                            return JsonResponse({"error": "Invalid species"}, status=400)
 
-                    file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-                    with open(file_path, 'r') as f:
-                        gene_sets_data = json.load(f)
+                        file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                        with open(file_path, 'r') as f:
+                            gene_sets_data = json.load(f)
 
-                # Filter selected gene sets
-                filtered = get_selected_gene_sets_with_relevant_members(
-                    gene_list=ranked_genes,
-                    min_members_threshold=min_members,
-                    selected_gene_sets=selected_gene_sets,
-                    gene_sets_data=gene_sets_data,
-                )
-                print(len(gene_sets_data))
+                    # Filter selected gene sets
+                    filtered = get_selected_gene_sets_with_relevant_members(
+                        gene_list=ranked_genes,
+                        min_members_threshold=min_members,
+                        selected_gene_sets=selected_gene_sets,
+                        gene_sets_data=gene_sets_data,
+                    )
+                    print(len(gene_sets_data))
+
+                gene_sets_with_p = calculate_pvals(filtered, ranked_genes)
+                cache.set(key_hash, gene_sets_with_p, timeout=cache_timeout - 50)
+                cache.set("ranked_genes", ranked_genes, timeout=cache_timeout)
+                cache.set("filtered_sets", filtered, timeout=cache_timeout)
+            else:
+                ranked_genes = cache.get("ranked_genes")
+                filtered = cache.get("filtered_sets")
 
             # Convert thresholds to float if provided
+            thr_key = ''
             if p_thr:
                 p_thr = float(p_thr)
+                thr_key = f'p-thresholded-{p_thr}'
             if fdr_thr:
                 fdr_thr = float(fdr_thr)
+                thr_key = f'fdr-thresholded-{fdr_thr}'
 
-            pvals_result = calculate_pvals(filtered,p_thr,fdr_thr,ranked_genes)
+            print("thr_key = " + thr_key)
 
-            if pvals_result is None:
+            result_filtered = cache.get(thr_key)
+            if result_filtered is None:
+                print("filtering gene sets")
+                result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_thr, fdr_thr)
+                print("filtering gene sets done")
+                cache.set(thr_key, result_filtered, timeout=cache_timeout)
+
+            if result_filtered is None:
                 return JsonResponse({
-                                        "error": "calculate_pvals returned no results. Please enter higher p-value/FDR threshold or change the selections."},
-                                    status=400)
+                    "error": "calculate_pvals returned no results. "
+                    "Please enter higher p-value/FDR threshold or change the selections."}, status=400)
+
             print("completed p clcultions")
-            result, pvl, fdr = pvals_result
-            print(len(result),pvl,fdr)
+            signif_gene_sets, pvl, fdr = result_filtered
+            print(len(signif_gene_sets), pvl, fdr)
             try:
-                if len(result) < 4:  # if we have less than 4 points
+                if len(signif_gene_sets) < 4:  # if we have less than 4 points
                     # You raise ValueError, it's caught, and HttpResponseBadRequest is returned
                     raise ValueError(
                         "Not enough gene sets passed the threshold to render a graph. Please increase your FDR or p-value.")
@@ -226,20 +313,30 @@ def gene_input_view2(request):
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
             print("building user_weights")
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
+            print("weights built")
+
+            dist_key = thr_key + " - " + distance_type
+            distance_matrix = cache.get(dist_key)
+            if distance_matrix is None:
+                print("generating distance matrix")
+                distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
+                print("distance matrix generated")
+                cache.set(dist_key, distance_matrix, timeout=cache_timeout)
+
             print("running reduction")
-            mapped_result, distances_m = umap_reduction(result, settings, user_weights, distance_type, distances)
+            mapped_result, _ = umap_reduction(signif_gene_sets, settings, user_weights, distance_type, distance_matrix)
             print("completed reduction")
+
             # Return result as JSON
             print("loding result into json")
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("returning teh response")
+
             print("grphing")
-            list_response = distances_m.tolist()
-            list_response2 = json.dumps(filtered)
             return JsonResponse({
                 "umap": data,
-                "distancesM": list_response,
-                "relevant_members": list_response2,
+                "distancesM": [],
+                "relevant_members": json.dumps(filtered),
                 "p_value": pvl,
                 "fdr_value": fdr
             })

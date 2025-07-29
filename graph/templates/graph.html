@@ -964,6 +964,25 @@
           return;
         }
 
+        let maxX = data["x"][0];
+        let minX = maxX;
+        let maxY = data["y"][0];
+        let minY = maxY;
+        for (let i = 0; i < data["y"].length; i++) {
+            let x = data["x"][i];
+            if (x > maxX) maxX = x;
+            if (x < minX) minX = x;
+            let y = data["y"][i];
+            if (y > maxY) maxY = y;
+            if (y < minY) minY = y;
+        }
+        let yRange = maxY - minY;
+        let xRange = maxX - minX;
+        let labelHeight = yRange / 15;
+
+        let overlapXRange = xRange / 20;
+        let overlapYRange = yRange / 100;
+
         // Loop through each displayed point
         for (let i = 0; i < data["x"].length; i++) {
           let pointNumber = data["customdata"][i][1]; // Get its point number through customdata
@@ -984,7 +1003,7 @@
             arrowhead: 0, // There are different arrowhead options, 0 is the clearest for this case
             // (ax, ay) determines the tail of annotation, this is the text/name of gene set
             ax: data["x"][i],
-            ay: data["y"][i] + 1,
+            ay: data["y"][i] + labelHeight,
             // axref and ayref make the tail relative to the x/y axis instead of the point its attached to.
             // This is needed to calculate where these points are in the cartesian plane.
             axref: "x",
@@ -997,11 +1016,12 @@
           };
 
           // The idea for overlap prevention is to check several angles at a given radius, see if there is overlap, then increase radius if nothing could be placed.
-          let radius = 1;
+          let radius = labelHeight;
+          let radiusIncrement = radius * 0.05;
           let attemptsWithCurrentRadius = 0;
 
           // While annotation is overlapping with another point in annotations, try new angle to place
-          while (overlapping(annotation, annotations)) {
+          while (overlapping(annotation, annotations, overlapXRange, overlapYRange)) {
             // ay and ax are rotated clockwise by pi/7 radians at each attempt.
             // Take the coordiante of the base point, and add radius multiplied by the angle desired
             annotation.ay =
@@ -1020,7 +1040,7 @@
             // Increase attempts, and if we have done a full circle around the point, increase the radius and reset count
             attemptsWithCurrentRadius += 1;
             if (attemptsWithCurrentRadius >= 13) {
-              radius += 0.2;
+              radius += radiusIncrement;
               attemptsWithCurrentRadius = 0;
             }
           }
@@ -1037,11 +1057,11 @@
       }
 
       // Determines if an annotation is overlapping with another annotation or point
-      function overlapping(annotation, annotations) {
+      function overlapping(annotation, annotations, xRange, yRange) {
         // Set the collision ranges for x and y axis.
         // This means that if a point is within 0.3 on the y axis and 2 on the x axis, the annotation is considered overlapping
-        let yRange = 0.3;
-        let xRange = 1.5;
+        //let yRange = 0.3;
+        //let xRange = 1.5;
 
         // Initilaize values to false
         // AY/AX variables are checking if there is overlap with another annotation

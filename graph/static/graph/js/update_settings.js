@@ -11,7 +11,7 @@ const defaultSettings = {
 const inputRefrences = {};
 const defaultUmap = {
   'mode': "umap",
-  'n_neighbors': 5,
+  'n_neighbors': 15,
   'seed': 0,
   'min_dist': 0.1,
 };
