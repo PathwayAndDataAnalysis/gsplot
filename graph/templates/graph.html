@@ -321,46 +321,39 @@
           const settings = getLocalStorage("settings");
           const fullGraphData = getLocalStorage("data");
 
-          if (!myPlot || !myPlot.data || !myPlot.data[0] || !fullGraphData) {
+          if (!settings || !fullGraphData || !myPlot || !myPlot.data || !myPlot.data[0]) {
             console.error("Missing required data for graph styling update");
             return;
           }
 
-          // Filter data based on current settings
+          // Determine which points are currently displayed using customdata[1] (full index)
+          const displayedCustom = myPlot.data[0].customdata || [];
+          const displayedIndices = displayedCustom.map((cd) => cd[1]);
+
           const displayedGraphData = {};
           dataKeys.forEach((key) => {
-            displayedGraphData[key] = [...fullGraphData[key]];
+            displayedGraphData[key] = displayedIndices.map((i) => fullGraphData[key][i]);
           });
 
-          // Get updated sizes
-          const newSize = getSize(displayedGraphData["setSize"], settings);
-
-          // Get outline width based on color (selected vs not)
-          const newOutlineWidths = displayedGraphData["color"].map((color) =>
-            color === "white" ? 1 : 2
-          );
-
-          const pVals = displayedGraphData["qValue"];
-          const logPvals = pVals.map(p => -Math.log10(Math.max(p, 1e-10)));
-          const minLogP = Math.min(...logPvals);
-          const maxLogP = Math.max(...logPvals);
+          const trace = makeTrace(displayedGraphData, settings);
 
           const update = {
-            'marker.size': [newSize],
-            'marker.color': [logPvals],
-            'marker.cmin': [minLogP],
-            'marker.cmax': [maxLogP],
-            'marker.colorscale': [[
-              [0.0, settings["insignificant-color"]],
-              [1.0, settings["significant-color"]]
-            ]],
+            "marker.size": [trace.marker.size],
+            "marker.opacity": [trace.marker.opacity],
+            "marker.line.width": [trace.marker.line.width],
+            "marker.line.color": [trace.marker.line.color],
+            "marker.color": [trace.marker.color],
+            "marker.showscale": [trace.marker.showscale === true],
           };
 
-          return Plotly.restyle(myPlot, update, [0]);
+          if (trace.marker.colorscale) update["marker.colorscale"] = [trace.marker.colorscale];
+          if (trace.marker.cmin !== undefined) update["marker.cmin"] = [trace.marker.cmin];
+          if (trace.marker.cmax !== undefined) update["marker.cmax"] = [trace.marker.cmax];
+          if (trace.marker.colorbar) update["marker.colorbar"] = [trace.marker.colorbar];
 
-        } catch (e) {
-          console.error("Error in updateGraphStyling:", e);
-          graph();  // fallback
+          Plotly.restyle(myPlot, update, [0]);
+        } catch (error) {
+          console.error("Error updating graph styling:", error);
         }
       }
       window.updateGraphStyling = updateGraphStyling;
@@ -740,38 +733,80 @@
         Plotly.relayout(myPlot, update);
       };
 
+      // --- Cluster coloring helpers ---
+      const CLUSTER_OPACITY = 0.55; // Slightly transparent so overlapped points are still visible
+      const NOISE_COLOR = "#CDCDCD";
+
+      function getClusterPalette() {
+        return [
+          "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd",
+          "#8c564b", "#e377c2", "#bcbd22", "#17becf",
+          "#393b79", "#637939", "#8c6d31", "#843c39", "#7b4173",
+          "#3182bd", "#31a354", "#756bb1", "#e6550d",
+        ];
+      }
+
+      function buildClusterColorMap(clusterNames) {
+        const palette = getClusterPalette();
+
+        // Keep only real clusters (exclude noise: -1 / null / undefined)
+        const clusters = Array.from(new Set(clusterNames))
+          .filter((c) => c !== null && c !== undefined && c !== -1 && c !== "-1")
+          .map((c) => (typeof c === "string" ? parseInt(c, 10) : c))
+          .filter((c) => !Number.isNaN(c))
+          .sort((a, b) => a - b);
+
+        const map = {};
+        clusters.forEach((cid, idx) => {
+          map[cid] = palette[idx % palette.length];
+        });
+        return map;
+      }
+
+      function getClusterFillColors(clusterNames) {
+        const map = buildClusterColorMap(clusterNames);
+        return clusterNames.map((c) => {
+          if (c === null || c === undefined || c === -1 || c === "-1") return NOISE_COLOR;
+          const cid = typeof c === "string" ? parseInt(c, 10) : c;
+          return map[cid] ?? NOISE_COLOR;
+        });
+      }
+
       // Generates the data for each point based on settings
       function makeTrace(data, settings) {
-        let size = getSize(data["setSize"], settings); // Get sizes of each point based on settings - user can edit this
+        // Sizes & outline logic stays the same
+        const size = getSize(data["setSize"], settings);
+        const outlineWidth = data["color"].map((color) => (color === "white" ? 1 : 2));
 
-        let pVals = data["qValue"];
-        let logPvals = pVals.map(p => -Math.log10(Math.max(p, 1e-10)));
-        let minLogP = Math.min(...logPvals);
-        let maxLogP = Math.max(...logPvals);
+        const clusterMode = !!settings["cluster-mode"];
 
-        // If point is unselected it should have  thing outline, selected is thicker for clarity
-        let outlineWidth = data["color"].map((color) => {
-          if (color === "white") {
-            return 1;
-          } else {
-            return 2;
-          }
-        });
+        // Default (non-cluster) mode uses -log10(qValue) continuous scale
+        const qVals = data["qValue"];
+        const logPvals = qVals.map((p) => -Math.log10(Math.max(p, 1e-10)));
+        const minLogP = Math.min(...logPvals);
+        const maxLogP = Math.max(...logPvals);
 
-        let trace = {
-          x: data["X"],
-          y: data["Y"],
-          mode: "markers",
-          type: "scatter",
-          text: data["setName"],
-          // Custom data at each point contains its qvalue and point number. Having this universal ID allows each point to be refrenced much easier once some points aren't displayed
-          customdata: data["qValue"].map((qValue, index) => [
-            qValue,
-            data["pointNumber"][index],
-          ]),
-          hovertemplate:
-            "Name: %{text}<br>P-Value: %{customdata[0]}<extra></extra>", // Format hover text, <extra> is needed to not display unwanted data
-          marker: {
+        const markerBase = {
+          size: size,
+          line: {
+            width: outlineWidth,
+            color: data["color"], // border color (selection logic uses this)
+          },
+        };
+
+        let marker = null;
+
+        if (clusterMode) {
+          const fillColors = getClusterFillColors(data["clusterName"] || []);
+          marker = {
+            ...markerBase,
+            color: fillColors,      // discrete colors per cluster
+            opacity: CLUSTER_OPACITY,
+            showscale: false,       // hide continuous colorbar
+          };
+        } else {
+          marker = {
+            ...markerBase,
             color: logPvals,
             cmin: minLogP,
             cmax: maxLogP,
@@ -780,21 +815,24 @@
               [1.0, settings["significant-color"]],
             ],
             colorbar: {
-              title: {
-                text: "Double Click To Edit",
-                side: "right",
-              },
+              title: { text: "Double Click To Edit", side: "right" },
             },
-            // Color scale is based off of the range of points currently displayed
-            size: size,
             opacity: 1.0,
-            line: {
-              //This refers to outline of each point
-              width: outlineWidth,
-              color: data["color"],
-            },
-          },
+            showscale: true,
+          };
+        }
+
+        const trace = {
+          x: data["X"],
+          y: data["Y"],
+          mode: "markers",
+          type: "scatter",
+          text: data["setName"],
+          customdata: data["qValue"].map((qValue, index) => [qValue, data["pointNumber"][index]]),
+          hovertemplate: "Name: %{text}<br>P-Value: %{customdata[0]}<extra></extra>",
+          marker: marker,
         };
+
         return trace;
       }
 
@@ -969,12 +1007,12 @@
         let maxY = data["y"][0];
         let minY = maxY;
         for (let i = 0; i < data["y"].length; i++) {
-            let x = data["x"][i];
-            if (x > maxX) maxX = x;
-            if (x < minX) minX = x;
-            let y = data["y"][i];
-            if (y > maxY) maxY = y;
-            if (y < minY) minY = y;
+          let x = data["x"][i];
+          if (x > maxX) maxX = x;
+          if (x < minX) minX = x;
+          let y = data["y"][i];
+          if (y > maxY) maxY = y;
+          if (y < minY) minY = y;
         }
         let yRange = maxY - minY;
         let xRange = maxX - minX;

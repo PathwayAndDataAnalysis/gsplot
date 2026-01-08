@@ -2,6 +2,11 @@ from django.shortcuts import render, HttpResponse
 import os
 import json
 import hashlib
+import numpy as np
+try:
+    import hdbscan
+except ImportError:
+    hdbscan = None
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
 from django.views.decorators.http import require_GET
@@ -27,6 +32,33 @@ def home(request):
 # Calls umap_reduction() with that data.
 # Sends back JSON data (the reduced coordinates + info) to the frontend.
 
+def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=None):
+    """
+    points: list[dict] each dict contains "X", "Y"
+    Adds: point["clusterName"] = int label (noise = -1)
+    """
+    if hdbscan is None:
+        raise RuntimeError("hdbscan is not installed on the server. Please add it to requirements and install.")
+
+    if not points or len(points) < 4:
+        for p in points:
+            p["clusterName"] = -1
+        return points
+
+    X = np.array([[float(p["X"]), float(p["Y"])] for p in points], dtype=float)
+
+    # If min_samples is not provided, HDBSCAN uses min_cluster_size by default behavior
+    clusterer = hdbscan.HDBSCAN(
+        min_cluster_size=int(min_cluster_size),
+        min_samples=(int(min_samples) if min_samples is not None else None),
+        metric="euclidean"
+    )
+
+    labels = clusterer.fit_predict(X)  # noise = -1
+    for i, lbl in enumerate(labels):
+        points[i]["clusterName"] = int(lbl)
+
+    return points
 
 @csrf_exempt
 def gene_input_view(request):
@@ -176,6 +208,8 @@ def gene_input_view(request):
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
+            # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
+            data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
 
             print("grphing")
             return JsonResponse({
@@ -331,6 +365,8 @@ def gene_input_view2(request):
             print("loding result into json")
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("returning teh response")
+            # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
+            data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
 
             print("grphing")
             return JsonResponse({

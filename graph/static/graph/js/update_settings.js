@@ -6,6 +6,7 @@ const defaultSettings = {
   "dynamic-size": false,
   "fixed-size-input": "6",
   "dynamic-size-scalar": "1",
+  "cluster-mode": false,
 };
 
 const inputRefrences = {};
@@ -59,8 +60,13 @@ function main() {
   localStorage.setItem("single-list", JSON.stringify(false));
 
   if (localStorage.getItem("settings") !== null) {
-    const currentSettings = JSON.parse(localStorage.getItem("settings"));
-    currentSettings.reduction = defaultUmap;
+    const raw = JSON.parse(localStorage.getItem("settings"));
+
+    // MERGE defaults so new keys (like cluster-mode) always exist
+    const currentSettings = { ...defaultSettings, ...raw };
+
+    currentSettings.reduction = raw.reduction ?? defaultUmap;
+
     localStorage.setItem("settings", JSON.stringify(currentSettings));
     displayValues(currentSettings);
   } else {
@@ -74,12 +80,31 @@ function main() {
     radio.addEventListener("change", updateThresholdInputs);
   });
   updateThresholdInputs(); // Call on load
+  // --- Instant Cluster Mode toggle (no Apply needed) ---
+  const clusterEl = document.getElementById("cluster-mode");
+  if (clusterEl) {
+    clusterEl.addEventListener("change", () => {
+      const raw = JSON.parse(localStorage.getItem("settings") || "{}");
+      raw["cluster-mode"] = !!clusterEl.checked;
+
+      localStorage.setItem("settings", JSON.stringify(raw));
+
+      // mark as styling-only
+      localStorage.setItem("justStyling", "true");
+
+      // if graph already exists, update visuals instantly
+      const hasRendered = localStorage.getItem("data") !== null;
+      if (hasRendered && typeof frame !== "undefined" && frame?.updateGraphStyling) {
+        frame.updateGraphStyling();
+      }
+    });
+  }
 }
 
 function displayValues(settings) {
   for (const [key, value] of Object.entries(inputRefrences)) {
-    if (key === "fixed-size" || key === "dynamic-size") {
-      value.checked = settings[key];
+    if (key === "fixed-size" || key === "dynamic-size" || key === "cluster-mode") {
+      value.checked = !!settings[key];
     } else {
       value.value = settings[key];
     }
@@ -130,8 +155,8 @@ function updateSettings(suppressToast = false) {
 
   // Collect input
   for (const [key, value] of Object.entries(inputRefrences)) {
-    if (value === null) continue;  // Skip input not found
-    if (key === "fixed-size" || key === "dynamic-size") {
+    if (value === null) continue;
+    if (key === "fixed-size" || key === "dynamic-size" || key === "cluster-mode") {
       newSettings[key] = value.checked;
     } else {
       newSettings[key] = value.value;
@@ -243,6 +268,7 @@ function detectFrontendOnlyChanges() {
     fixedSizeVal: document.getElementById("fixed-size-input")?.value,
     dynamicScalar: document.getElementById("dynamic-size-scalar")?.value,
     showSigOnly: document.getElementById("show-sig-only")?.checked,
+    clusterMode: document.getElementById("cluster-mode")?.checked,
   };
 
   const previousRaw = localStorage.getItem("previous_styling");
@@ -415,7 +441,7 @@ window.update_settings = {
     let newSettings = {};
     for (const [key, value] of Object.entries(inputRefrences)) {
       if (value === null) continue;
-      if (key === "fixed-size" || key === "dynamic-size") {
+      if (key === "fixed-size" || key === "dynamic-size" || key === "cluster-mode") {
         newSettings[key] = value.checked;
       } else {
         newSettings[key] = value.value;
