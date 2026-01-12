@@ -292,6 +292,11 @@ def umap_reduction(fileDataOrString, settings, user_weights, distance_type, dist
 
         print(n)
 
+        if distance_matrix is not None and getattr(distance_matrix, "shape", None) is not None:
+            if distance_matrix.shape[0] != n or distance_matrix.shape[1] != n:
+                print(f"Cached distance_matrix mismatch: {distance_matrix.shape} vs expected ({n},{n}). Recomputing.")
+                distance_matrix = None
+
         if distance_matrix is None:
             print("Computing new distance matrix.")
             distance_matrix = np.zeros((n, n))

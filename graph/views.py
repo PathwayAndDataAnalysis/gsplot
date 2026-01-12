@@ -196,6 +196,15 @@ def gene_input_view(request):
 
             dist_key = thr_key + " - " + distance_type
             distance_matrix = cache.get(dist_key)
+            expected_n = len(signif_gene_sets)
+
+            if distance_matrix is not None:
+                try:
+                    if distance_matrix.shape[0] != expected_n:
+                        distance_matrix = None
+                except Exception:
+                    distance_matrix = None
+
             if distance_matrix is None:
                 print("generating distance matrix")
                 distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
@@ -351,6 +360,15 @@ def gene_input_view2(request):
 
             dist_key = thr_key + " - " + distance_type
             distance_matrix = cache.get(dist_key)
+            expected_n = len(signif_gene_sets)
+
+            if distance_matrix is not None:
+                try:
+                    if distance_matrix.shape[0] != expected_n:
+                        distance_matrix = None
+                except Exception:
+                    distance_matrix = None
+                    
             if distance_matrix is None:
                 print("generating distance matrix")
                 distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
