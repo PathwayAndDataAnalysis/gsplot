@@ -62,7 +62,7 @@
         "molecules",
         "color",
         "pointNumber",
-        "clusterName"
+        "clusterID"
       ];
 
       let m = [];
@@ -746,11 +746,11 @@
         ];
       }
 
-      function buildClusterColorMap(clusterNames) {
+      function buildClusterColorMap(clusterIDs) {
         const palette = getClusterPalette();
 
         // Keep only real clusters (exclude noise: -1 / null / undefined)
-        const clusters = Array.from(new Set(clusterNames))
+        const clusters = Array.from(new Set(clusterIDs))
           .filter((c) => c !== null && c !== undefined && c !== -1 && c !== "-1")
           .map((c) => (typeof c === "string" ? parseInt(c, 10) : c))
           .filter((c) => !Number.isNaN(c))
@@ -763,9 +763,9 @@
         return map;
       }
 
-      function getClusterFillColors(clusterNames) {
-        const map = buildClusterColorMap(clusterNames);
-        return clusterNames.map((c) => {
+      function getClusterFillColors(clusterIDs) {
+        const map = buildClusterColorMap(clusterIDs);
+        return clusterIDs.map((c) => {
           if (c === null || c === undefined || c === -1 || c === "-1") return NOISE_COLOR;
           const cid = typeof c === "string" ? parseInt(c, 10) : c;
           return map[cid] ?? NOISE_COLOR;
@@ -797,7 +797,7 @@
         let marker = null;
 
         if (clusterMode) {
-          const fillColors = getClusterFillColors(data["clusterName"] || []);
+          const fillColors = getClusterFillColors(data["clusterID"] || []);
           marker = {
             ...markerBase,
             color: fillColors,      // discrete colors per cluster

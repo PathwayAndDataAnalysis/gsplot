@@ -35,14 +35,14 @@ def home(request):
 def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=None):
     """
     points: list[dict] each dict contains "X", "Y"
-    Adds: point["clusterName"] = int label (noise = -1)
+    Adds: point["clusterID"] = int label (noise = -1)
     """
     if hdbscan is None:
         raise RuntimeError("hdbscan is not installed on the server. Please add it to requirements and install.")
 
     if not points or len(points) < 4:
         for p in points:
-            p["clusterName"] = -1
+            p["clusterID"] = -1
         return points
 
     X = np.array([[float(p["X"]), float(p["Y"])] for p in points], dtype=float)
@@ -56,7 +56,7 @@ def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=No
 
     labels = clusterer.fit_predict(X)  # noise = -1
     for i, lbl in enumerate(labels):
-        points[i]["clusterName"] = int(lbl)
+        points[i]["clusterID"] = int(lbl)
 
     return points
 
