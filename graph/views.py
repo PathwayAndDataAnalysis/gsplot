@@ -7,6 +7,10 @@ try:
     import hdbscan
 except ImportError:
     hdbscan = None
+from .cluster_labeling import (
+    build_cluster_summaries,
+    label_clusters_with_llm,
+)
 from django.http import JsonResponse, FileResponse
 from django.conf import settings
 from django.views.decorators.http import require_GET
@@ -220,6 +224,33 @@ def gene_input_view(request):
             # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
             data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
 
+            #settings in views is dict (settings = data.get("settings"))
+            #prepare for LLM
+            summaries = build_cluster_summaries(data)
+            name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
+
+            #DEBUG
+            print("DEBUG name_by_id:", name_by_id)
+
+            # attach label back to each point
+            for p in data:
+                cid = p.get("clusterID", -1)
+                try:
+                    cid = int(cid)
+                except Exception:
+                    cid = -1
+
+                if cid == -1:
+                    p["clusterLabel"] = ""  # noise points
+                else:
+                    p["clusterLabel"] = name_by_id.get(cid, "Unknown pathway")
+
+            #DEBUG2
+            if len(data) > 0:
+                print("DEBUG sample points after attach:")
+                for i in range(min(3, len(data))):
+                    print("  ", i, "cid=", data[i].get("clusterID"), "label=", data[i].get("clusterLabel"))
+
             print("grphing")
             return JsonResponse({
                 "umap": data,
@@ -386,6 +417,23 @@ def gene_input_view2(request):
             # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
             data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
 
+            #prepare for LLM
+            summaries = build_cluster_summaries(data)
+            name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
+
+            # attach label back to each point
+            for p in data:
+                cid = p.get("clusterID", -1)
+                try:
+                    cid = int(cid)
+                except Exception:
+                    cid = -1
+
+                if cid == -1:
+                    p["clusterLabel"] = ""  # noise points
+                else:
+                    p["clusterLabel"] = name_by_id.get(cid, "Unknown pathway")
+
             print("grphing")
             return JsonResponse({
                 "umap": data,
@@ -415,17 +463,26 @@ def preview_threshold(request):
         sig_genes = data.get("sig_genes", [])
         insig_genes = data.get("insig_genes", [])
 
+        p_val = float(p_val) if p_val else None
+        fdr = float(fdr) if fdr else None
+
         if ranked_genes:
             filtered = [{"matched_genes": [g], "gene_set_name": f"Gene {i}"} for i, g in enumerate(ranked_genes)]
-            _, computed_p, computed_fdr = calculate_pvals(filtered, p_val, fdr, ranked_genes)
+            gene_sets_with_p = calculate_pvals(filtered, ranked_genes)
         elif sig_genes or insig_genes:
             filtered = [{
                 "matched_genes": list(set(sig_genes + insig_genes)),
                 "gene_set_name": "combined"
             }]
-            _, computed_p, computed_fdr = run_fishers_test(filtered, p_val, fdr, sig_genes, insig_genes)
+            gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes)
         else:
             return JsonResponse({"error": "Missing gene input"}, status=400)
+
+        result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_val, fdr)
+        if result_filtered is None:
+            return JsonResponse({"error": "No gene sets passed threshold"}, status=400)
+
+        _, computed_p, computed_fdr = result_filtered
 
         return JsonResponse({
             "p_val": computed_p,
