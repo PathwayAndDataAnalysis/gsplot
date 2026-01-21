@@ -1,6 +1,6 @@
 from __future__ import annotations
 from collections import defaultdict, Counter
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List
 import json
 import hashlib
 import os
@@ -108,9 +108,8 @@ def _stable_hash(obj: Any) -> str:
     s = json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.md5(s.encode("utf-8")).hexdigest()
 
-from azure.ai.inference import ChatCompletionsClient
-from azure.ai.inference.models import SystemMessage, UserMessage
-from azure.core.credentials import AzureKeyCredential
+from google import genai
+from google.genai import types
 
 def label_clusters_with_llm(
     summaries: Dict[int, dict],
@@ -162,54 +161,65 @@ def label_clusters_with_llm(
         return " ".join(words[:max_name_words]).strip()
 
     try:
-        # --- GitHub Models settings ---
-        endpoint = os.getenv("GITHUB_MODELS_ENDPOINT", "https://models.github.ai/inference")
-        token = os.getenv("GITHUB_TOKEN")
-        if not token:
-            raise RuntimeError("Missing GITHUB_TOKEN in environment (.env)")
-
-        model = model or os.getenv("GITHUB_MODELS_MODEL", "openai/gpt-4o-mini")
-
-        # Optional knobs (some models may reject temperature; see fallback below)
+        # --- Gemini (Google GenAI SDK) settings ---
+        model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         temperature = os.getenv("LLM_TEMPERATURE")
-        max_out = int(os.getenv("LLM_MAX_TOKENS", "200"))
+        max_out = int(os.getenv("LLM_MAX_TOKENS", "12000"))
 
-        client = ChatCompletionsClient(
-            endpoint=endpoint,
-            credential=AzureKeyCredential(token),
-        )
+        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-        kwargs = dict(
-            messages=[
-                SystemMessage(instructions),
-                UserMessage(user_input),
-            ],
-            model=model,
-            max_tokens=max_out,
-            response_format="json_object",  # JSON mode :contentReference[oaicite:3]{index=3}
+        cfg_kwargs = dict(
+            system_instruction=instructions,
+            response_mime_type="application/json",  
+            max_output_tokens=max_out,
         )
         if temperature is not None:
             try:
-                kwargs["temperature"] = float(temperature)
+                cfg_kwargs["temperature"] = float(temperature)
             except Exception:
                 pass
 
-        # Try once with temperature (if set); if model complains, retry without it
-        try:
-            response = client.complete(**kwargs)
-        except Exception:
-            kwargs.pop("temperature", None)
-            response = client.complete(**kwargs)
+        response = client.models.generate_content(
+            model=model,
+            contents=user_input,
+            config=types.GenerateContentConfig(**cfg_kwargs),
+        )
 
-        text = (response.choices[0].message.content or "").strip()
+        def _extract_text(resp) -> str:
+            # 1) preferred
+            t = (getattr(resp, "text", None) or "").strip()
+            if t:
+                return t
 
-        # Parse JSON robustly
+            # 2) fallback: dig into candidates/parts
+            try:
+                parts = resp.candidates[0].content.parts
+                t2 = "".join(getattr(p, "text", "") for p in parts).strip()
+                return t2
+            except Exception:
+                return ""
+
+        text = _extract_text(response)
+        if not text:
+            raise ValueError("Gemini returned empty text (no JSON). Check prompt_feedback / finish_reason.")
+
+        # strip markdown code fences if any
+        if text.startswith("```"):
+            text = text.strip()
+            text = text.replace("```json", "```").replace("```JSON", "```")
+            if text.startswith("```"):
+                text = text.split("```", 2)[1].strip() if "```" in text else text
+
+        # parse JSON robustly
         try:
             parsed = json.loads(text)
         except Exception:
             a = text.find("{")
             b = text.rfind("}")
-            parsed = json.loads(text[a:b+1]) if (a != -1 and b != -1 and b > a) else {}
+            if a != -1 and b != -1 and b > a:
+                parsed = json.loads(text[a:b+1])
+            else:
+                raise
 
         name_by_id: Dict[int, str] = {}
         for k, v in parsed.items():
