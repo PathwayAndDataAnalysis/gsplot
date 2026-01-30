@@ -4,7 +4,6 @@ from typing import Any, Dict, Iterator, List
 import json
 import hashlib
 import os
-from openai import OpenAI
 
 def _iter_points(payload: Any) -> Iterator[dict]:
     """
@@ -124,7 +123,9 @@ def label_clusters_with_llm(
     if cache_obj is not None:
         cached = cache_obj.get(cache_key)
         if cached:
+            print("[LLM DEBUG] cached type:", type(cached))
             if isinstance(cached, str):
+                print("[LLM DEBUG] cached head:", cached[:200])
                 try:
                     return {int(k): v for k, v in json.loads(cached).items()}
                 except Exception:
@@ -200,6 +201,8 @@ def label_clusters_with_llm(
                 return ""
 
         text = _extract_text(response)
+        print("[LLM DEBUG] gemini text head:", text[:200])
+        print("[LLM DEBUG] gemini text startswith:", text.strip()[:1])
         if not text:
             raise ValueError("Gemini returned empty text (no JSON). Check prompt_feedback / finish_reason.")
 
@@ -213,6 +216,7 @@ def label_clusters_with_llm(
         # parse JSON robustly
         try:
             parsed = json.loads(text)
+            print("[LLM DEBUG] parsed type:", type(parsed))
         except Exception:
             a = text.find("{")
             b = text.rfind("}")
@@ -220,6 +224,29 @@ def label_clusters_with_llm(
                 parsed = json.loads(text[a:b+1])
             else:
                 raise
+
+        # normalize list -> dict if Gemini returns a list
+        if isinstance(parsed, list):
+            # 1) list of pairs: [[k,v], [k,v]]
+            if all(isinstance(i, (list, tuple)) and len(i) == 2 for i in parsed):
+                parsed = {str(k): v for k, v in parsed}
+
+            # 2) list of dict records: [{"clusterID":0,"short_name":"..."}, ...]
+            elif all(isinstance(i, dict) for i in parsed):
+                tmp = {}
+                for i in parsed:
+                    cid = i.get("clusterID", i.get("clusterId", i.get("id")))
+                    name = i.get("short_name", i.get("name", i.get("label")))
+                    if cid is None:
+                        continue
+                    tmp[str(cid)] = name if name is not None else ""
+                parsed = tmp
+
+            else:
+                raise TypeError(f"Unexpected JSON list format: {str(parsed)[:200]}")
+
+        if not isinstance(parsed, dict):
+            raise TypeError(f"Expected JSON object mapping, got {type(parsed)}: {str(parsed)[:200]}")
 
         name_by_id: Dict[int, str] = {}
         for k, v in parsed.items():
