@@ -227,11 +227,19 @@ def label_clusters_with_llm(
 
         # normalize list -> dict if Gemini returns a list
         if isinstance(parsed, list):
-            # 1) list of pairs: [[k,v], [k,v]]
-            if all(isinstance(i, (list, tuple)) and len(i) == 2 for i in parsed):
+            # Case A) list of single-key dicts: [{"7": "..."}, {"2": "..."}]
+            if all(isinstance(i, dict) and len(i) == 1 for i in parsed):
+                merged = {}
+                for i in parsed:
+                    (k, v), = i.items()
+                    merged[str(k)] = v
+                parsed = merged
+
+            # Case B) list of pairs: [[k,v], [k,v]]
+            elif all(isinstance(i, (list, tuple)) and len(i) == 2 for i in parsed):
                 parsed = {str(k): v for k, v in parsed}
 
-            # 2) list of dict records: [{"clusterID":0,"short_name":"..."}, ...]
+            # Case C) list of dict records: [{"clusterID":..,"short_name":..}, ...]
             elif all(isinstance(i, dict) for i in parsed):
                 tmp = {}
                 for i in parsed:
