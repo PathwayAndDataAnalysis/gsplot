@@ -83,7 +83,7 @@ def gene_input_view(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
             settings = data.get("settings")
-            relevant_members = (data.get("relevant_members"))
+            relevant_members = data.get("relevant_members") or []
 
             cache_key_data = {
                 "sig_genes": sig_input,
@@ -108,8 +108,8 @@ def gene_input_view(request):
                 sig_genes = [gene.strip() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
                 insig_genes = [gene.strip() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
-                if (len(relevant_members) > 0):
-                    filtered = json.loads(data.get("relevant_members"))
+                if relevant_members:
+                    filtered = json.loads(relevant_members) if isinstance(relevant_members, str) else relevant_members
                 else:
 
                     # Load gene set data
@@ -286,7 +286,7 @@ def gene_input_view2(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
             settings = data.get("settings")
-            relevant_members = (data.get("relevant_members"))
+            relevant_members = data.get("relevant_members") or []
 
             cache_key_data = {
                 "ranked_genes": genes_input,
@@ -308,8 +308,8 @@ def gene_input_view2(request):
                 # Split inputs into cleaned gene lists
                 ranked_genes = [gene.strip() for gene in genes_input.replace(',', '\n').splitlines() if gene.strip()]
 
-                if (len(relevant_members) > 0):
-                    filtered = json.loads(data.get("relevant_members"))
+                if relevant_members:
+                    filtered = json.loads(relevant_members) if isinstance(relevant_members, str) else relevant_members
                 else:
                     # Load gene set data
                     species = species.lower()

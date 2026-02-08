@@ -495,7 +495,7 @@
               settings: settings,
               distance_type: distanceType,
               distancesM: distancesM,
-              relevant_members: relevantMembers
+              relevant_members: []
             }),
           })
             .then((response) => {
@@ -515,10 +515,9 @@
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
               const distancesRet = data.distancesM;
-              const relevant_members = data.relevant_members;
               let distancesV = true;
               m = distancesRet;
-              relevantMembers = relevant_members;
+              relevantMembers = [];
               localStorage.setItem("distances-M", JSON.stringify(distancesV));
 
               window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
@@ -637,7 +636,7 @@
               settings: settings,
               distance_type: distanceType,
               distancesM: distancesM,
-              relevant_members: relevantMembers
+              relevant_members: []
             }),
           })
             .then((response) => {
@@ -657,10 +656,9 @@
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
               const distancesRet = data.distancesM;
-              const relevant_members = data.relevant_members;
               let distancesV = true;
               m = distancesRet;
-              relevantMembers = relevant_members;
+              relevantMembers = [];
               localStorage.setItem("distances-M", JSON.stringify(distancesV));
 
               window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
