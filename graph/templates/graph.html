@@ -126,6 +126,22 @@
         mainDisplay[0].style.boxShadow = "0 4px 8px rgba(0, 0, 0, 0.1)";
       }
 
+      function getAxisLabels(settings) {
+        const mode = settings?.mode || settings?.reduction?.mode || "umap";
+        let prefix = "UMAP";
+
+        if (mode === "tsne") {
+          prefix = "t-SNE";
+        } else if (mode === "isomap") {
+          prefix = "Isomap";
+        }
+
+        return {
+          x: `${prefix}-1`,
+          y: `${prefix}-2`,
+        };
+      }
+
       // Draws graph based on current data stored in local storage
       function graph() {
         console.log("trying to grph");
@@ -166,18 +182,19 @@
         // Create a plotly trace, this contians all data for each point on graph based on displayedGraphData
         // trace = the visual data for Plotly to use (coordinates, sizes, color, etc.)
         let trace = makeTrace(displayedGraphData, settings);
+        const axisLabels = getAxisLabels(settings);
 
         // Define layout properties of graoh
         let layout = {
-          title: "Double Click To Edit",
+          title: "Double-click here to name your plot",
           hovermode: "closest",
           dragmode: "select",
           xaxis: {
-            title: "UMAP-1",
+            title: axisLabels.x,
             zeroline: false, // This makes sure that the x and y axis aren't highlighted at 0
           },
           yaxis: {
-            title: "UMAP-2",
+            title: axisLabels.y,
             zeroline: false,
           },
           height: Math.max(window.innerHeight - 50, 300), // Set minimum on height and width as plotly stops working below 300 x 300
@@ -211,6 +228,8 @@
         if (camera) {
           layout.xaxis = camera["xaxis"];
           layout.yaxis = camera["yaxis"];
+          layout.xaxis.title = axisLabels.x;
+          layout.yaxis.title = axisLabels.y;
           Plotly.newPlot(myPlot, [trace], layout, config);
 
           // If not, it figures out the best zoom and saves it.
@@ -226,13 +245,13 @@
           // Create camera settings with new zoom levels
           camera = {
             xaxis: {
-              title: "UMAP-1",
+              title: axisLabels.x,
               autorange: false, // Autorange causes some interference with camera so its turned off
               range: myPlot.layout.xaxis.range,
               zeroline: false,
             },
             yaxis: {
-              title: "UMAP-2",
+              title: axisLabels.y,
               autorange: false,
               range: myPlot.layout.yaxis.range,
               zeroline: false,
