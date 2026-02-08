@@ -179,7 +179,9 @@ def gene_input_view(request):
                 cache.set(thr_key, fisher_result_filtered, timeout=cache_timeout)
 
             if fisher_result_filtered is None:
-                return JsonResponse({"error": "Fisher's test returned no results. Please enter higher p-value/FDR threshold or change the selections."}, status=400)
+                return JsonResponse({
+                    "error": "No gene sets passed the selected threshold. Please choose another collection or increase the p-value/FDR threshold."
+                }, status=400)
             
             signif_gene_sets, pvl, fdr = fisher_result_filtered
 
@@ -367,8 +369,9 @@ def gene_input_view2(request):
 
             if result_filtered is None:
                 return JsonResponse({
-                    "error": "calculate_pvals returned no results. "
-                    "Please enter higher p-value/FDR threshold or change the selections."}, status=400)
+                    "error": "No gene sets passed the selected threshold. "
+                    "Please choose another collection or increase the p-value/FDR threshold."
+                }, status=400)
 
             print("completed p clcultions")
             signif_gene_sets, pvl, fdr = result_filtered
@@ -480,7 +483,10 @@ def preview_threshold(request):
 
         result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_val, fdr)
         if result_filtered is None:
-            return JsonResponse({"error": "No gene sets passed threshold"}, status=400)
+            return JsonResponse({
+                "error": "No gene sets passed the selected threshold. "
+                "Please choose another collection or increase the p-value/FDR threshold."
+            }, status=400)
 
         _, computed_p, computed_fdr = result_filtered
 

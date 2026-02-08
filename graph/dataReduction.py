@@ -220,10 +220,18 @@ def filter_gene_sets_by_significance(gene_sets_with_p, pval_thr, fdr_thr):
     filtered_gene_sets = {}
     if pval_thr:
         filtered_gene_sets = {key: value for key, value in gene_sets_with_p.items() if value[1] <= pval_thr}
+        if not filtered_gene_sets:
+            return None
         fdr_thr = (pval_thr * len(gene_sets_with_p)) / len(filtered_gene_sets)
     elif fdr_thr:
         filtered_gene_sets = {key: value for key, value in gene_sets_with_p.items() if value[2] <= fdr_thr}
+        if not filtered_gene_sets:
+            return None
         pval_thr = max(value[1] for value in filtered_gene_sets.values())
+    else:
+        filtered_gene_sets = gene_sets_with_p
+        if not filtered_gene_sets:
+            return None
 
     return filtered_gene_sets, pval_thr, fdr_thr
 
