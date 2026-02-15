@@ -83,19 +83,33 @@ function main() {
   // --- Instant Cluster Mode toggle (no Apply needed) ---
   const clusterEl = document.getElementById("cluster-mode");
   if (clusterEl) {
-    clusterEl.addEventListener("change", () => {
-      const raw = JSON.parse(localStorage.getItem("settings") || "{}");
-      raw["cluster-mode"] = !!clusterEl.checked;
-
-      localStorage.setItem("settings", JSON.stringify(raw));
-
-      // mark as styling-only
-      localStorage.setItem("justStyling", "true");
-
-      // if graph already exists, update visuals instantly
+    clusterEl.addEventListener("change", async () => {
       const hasRendered = localStorage.getItem("data") !== null;
-      if (hasRendered && typeof frame !== "undefined" && frame?.updateGraphStyling) {
+
+      // Keep settings state in sync without toast side-effects.
+      updateSettings(true);
+
+      // No graph yet: just save the setting; submit will fetch as usual.
+      if (!hasRendered) {
+        return;
+      }
+
+      // Force backend relabel pipeline when turning cluster mode ON.
+      if (clusterEl.checked) {
+        await applySettingsAndRender();
+        return;
+      }
+
+      // Turning OFF cluster mode stays frontend-only.
+      if (typeof frame !== "undefined" && frame?.updateGraphStyling) {
         frame.updateGraphStyling();
+      }
+      // Keep applied-baseline settings in sync for instant frontend-only toggles.
+      try {
+        const currentSettings = JSON.parse(localStorage.getItem("settings") || "{}");
+        localStorage.setItem("previous_settings", JSON.stringify(currentSettings));
+      } catch (e) {
+        console.warn("Failed to sync previous_settings after cluster mode OFF toggle:", e);
       }
     });
   }
@@ -182,8 +196,12 @@ function updateSettings(suppressToast = false) {
     }
   }
 
-  // Compare UMAP settings
-  let oldSettings = JSON.parse(localStorage.getItem("settings"));
+  // Compare against last applied settings (graph state), not current draft settings
+  let oldSettings = JSON.parse(
+    localStorage.getItem("previous_settings") ||
+    localStorage.getItem("settings") ||
+    "{}"
+  );
   if (isEmbeddingChanged(newSettings, oldSettings)) {
     newSettings.umapChange = true;
   }
@@ -207,17 +225,26 @@ function updateSettings(suppressToast = false) {
     localStorage.removeItem("p-value");
   }
 
-  // Save settings
+  // Save draft settings; previous_settings is updated after successful apply
   localStorage.setItem("settings", JSON.stringify(newSettings));
-  localStorage.setItem("previous_settings", JSON.stringify(newSettings));
 
   const stylingOnly = detectFrontendOnlyChanges();
   const isDataChange = isEmbeddingChanged(newSettings, oldSettings);
   const thresholdChange = isThresholdChanged(newSettings, oldSettings);
+  const clusterModeChanged = !!newSettings["cluster-mode"] !== !!oldSettings["cluster-mode"];
+  const requiresClusterRelabel = clusterModeChanged && !!newSettings["cluster-mode"];
+  const clusterVisualOnlyChange = clusterModeChanged && !newSettings["cluster-mode"];
+  const relabelOnly = requiresClusterRelabel && !isDataChange && !thresholdChange;
 
-  localStorage.setItem("justStyling", stylingOnly && !isDataChange && !thresholdChange ? "true" : "false");
+  localStorage.setItem(
+    "justStyling",
+    ((stylingOnly || clusterVisualOnlyChange) && !isDataChange && !thresholdChange && !requiresClusterRelabel)
+      ? "true"
+      : "false"
+  );
+  localStorage.setItem("relabelOnly", relabelOnly ? "true" : "false");
 
-  if (!stylingOnly && !isDataChange && !thresholdChange) {
+  if (!stylingOnly && !isDataChange && !thresholdChange && !clusterModeChanged) {
     if (!suppressToast) {
       const toast = document.getElementById("toast-message");
       if (toast) {
@@ -233,23 +260,18 @@ function updateSettings(suppressToast = false) {
     return;
   }
 
+  const hasRendered = localStorage.getItem("data") !== null;
+  if (hasRendered && !suppressToast) {
+    applySettingsAndRender();
+  }
+
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
     toast.style.display = "block";
     toast.style.color = "#2ecc71";
-
-    // Check if graph has been rendered before
-    const hasRendered = localStorage.getItem("data") !== null;
-
-    if (hasRendered) {
-      // If graph exists, Apply will trigger a re-render
-      toast.textContent = "Settings applied! Graph will update...";
-      // Trigger the graph update
-      applySettingsAndRender();
-    } else {
-      // If no graph yet, just save settings
-      toast.textContent = "Settings saved! Click Submit to generate the graph.";
-    }
+    toast.textContent = hasRendered
+      ? "Settings applied! Graph will update..."
+      : "Settings saved! Click Submit to generate the graph.";
 
     setTimeout(() => {
       toast.style.display = "none";
@@ -268,7 +290,6 @@ function detectFrontendOnlyChanges() {
     fixedSizeVal: document.getElementById("fixed-size-input")?.value,
     dynamicScalar: document.getElementById("dynamic-size-scalar")?.value,
     showSigOnly: document.getElementById("show-sig-only")?.checked,
-    clusterMode: document.getElementById("cluster-mode")?.checked,
   };
 
   const previousRaw = localStorage.getItem("previous_styling");
@@ -288,17 +309,26 @@ async function applySettingsAndRender() {
 
   try {
     const newSettings = JSON.parse(localStorage.getItem("settings"));
-    const oldSettings = JSON.parse(localStorage.getItem("previous_settings") || "{}");
 
     const stylingOnly = localStorage.getItem("justStyling") === "true";
+    const relabelOnly = localStorage.getItem("relabelOnly") === "true";
     localStorage.removeItem("justStyling");
+    localStorage.removeItem("relabelOnly");
 
-    const settingsChanged = JSON.stringify(newSettings) !== JSON.stringify(oldSettings);
     const hasRendered = localStorage.getItem("data") !== null;
 
-    if (stylingOnly && !settingsChanged && hasRendered) {
+    if (relabelOnly && hasRendered) {
+      console.log("Cluster relabel-only change -> calling lightweight cluster labeling endpoint.");
+      await relabelCurrentClusters(newSettings);
+      localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+      loadingSpinner.style.display = "none";
+      return;
+    }
+
+    if (stylingOnly && hasRendered) {
       console.log("Styling-only change → updating graph visuals.");
       frame.updateGraphStyling();
+      localStorage.setItem("previous_settings", JSON.stringify(newSettings));
       loadingSpinner.style.display = "none";
       return;
     }
@@ -330,6 +360,7 @@ async function applySettingsAndRender() {
     clearPoints();
 
     frame.graph();
+    localStorage.setItem("previous_settings", JSON.stringify(newSettings));
 
     loadingSpinner.style.display = "none";
 
@@ -354,6 +385,57 @@ async function applySettingsAndRender() {
 
     loadingSpinner.style.display = "none";
     alert("Error applying settings: " + error.message);
+  }
+}
+
+async function relabelCurrentClusters(settings) {
+  const fullData = JSON.parse(localStorage.getItem("data") || "null");
+  if (!fullData || !Array.isArray(fullData["X"])) {
+    throw new Error("No graph data available for cluster relabeling.");
+  }
+
+  const n = fullData["X"].length;
+  const points = [];
+  for (let i = 0; i < n; i++) {
+    points.push({
+      X: fullData["X"]?.[i],
+      Y: fullData["Y"]?.[i],
+      clusterID: fullData["clusterID"]?.[i],
+      setName: fullData["setName"]?.[i],
+      molecules: fullData["molecules"]?.[i],
+      pValue: fullData["pValue"]?.[i],
+    });
+  }
+
+  const response = await fetch("/cluster-labels/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      points: points,
+      settings: settings,
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.error || "Cluster relabel request failed.");
+  }
+  if (!payload || !Array.isArray(payload.points)) {
+    throw new Error("Invalid cluster relabel response.");
+  }
+
+  fullData["clusterLabel"] = payload.points.map((p) => p?.clusterLabel ?? "");
+  if (Array.isArray(fullData["clusterID"])) {
+    fullData["clusterID"] = payload.points.map((p, idx) =>
+      p?.clusterID !== undefined ? p.clusterID : fullData["clusterID"][idx]
+    );
+  }
+  localStorage.setItem("data", JSON.stringify(fullData));
+
+  if (typeof frame !== "undefined" && frame?.updateGraphStyling) {
+    frame.updateGraphStyling();
+  } else if (typeof frame !== "undefined" && frame?.graph) {
+    frame.graph();
   }
 }
 

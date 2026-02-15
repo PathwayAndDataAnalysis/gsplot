@@ -64,6 +64,64 @@ def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=No
 
     return points
 
+def add_cluster_labels(points, settings, cache_obj=cache):
+    """
+    Attach clusterLabel to each point.
+    LLM labeling runs only when cluster-mode is enabled in settings.
+    """
+    cluster_mode_enabled = bool((settings or {}).get("cluster-mode", False))
+
+    if not cluster_mode_enabled:
+        for p in points:
+            p["clusterLabel"] = ""
+        return points
+
+    summaries = build_cluster_summaries(points)
+    name_by_id = label_clusters_with_llm(summaries, cache_obj=cache_obj)
+
+    for p in points:
+        cid = p.get("clusterID", -1)
+        try:
+            cid = int(cid)
+        except Exception:
+            cid = -1
+
+        if cid == -1:
+            p["clusterLabel"] = ""
+        else:
+            p["clusterLabel"] = name_by_id.get(cid, f"Cluster {cid}")
+
+    return points
+
+
+@csrf_exempt
+def cluster_label_view(request):
+    """
+    Lightweight endpoint to (re)name clusters without recomputing enrichment/UMAP.
+    Expects:
+      {
+        "points": [ { "X", "Y", "clusterID", "setName", "molecules", "pValue", ... }, ... ],
+        "settings": { "cluster-mode": true|false, ... }
+      }
+    Returns:
+      { "points": [...] } with clusterLabel attached.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        payload = json.loads(request.body or "{}")
+        points = payload.get("points") or []
+        settings = payload.get("settings") or {}
+
+        if not isinstance(points, list):
+            return JsonResponse({"error": "points must be a list"}, status=400)
+
+        labeled = add_cluster_labels(points, settings, cache_obj=cache)
+        return JsonResponse({"points": labeled})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
 @csrf_exempt
 def gene_input_view(request):
     if request.method == 'POST':
@@ -225,33 +283,7 @@ def gene_input_view(request):
             data = json.loads(mapped_result)  # or skip if already a Python object
             # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
             data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
-
-            #settings in views is dict (settings = data.get("settings"))
-            #prepare for LLM
-            summaries = build_cluster_summaries(data)
-            name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
-
-            #DEBUG
-            print("DEBUG name_by_id:", name_by_id)
-
-            # attach label back to each point
-            for p in data:
-                cid = p.get("clusterID", -1)
-                try:
-                    cid = int(cid)
-                except Exception:
-                    cid = -1
-
-                if cid == -1:
-                    p["clusterLabel"] = ""  # noise points
-                else:
-                    p["clusterLabel"] = name_by_id.get(cid, "Unknown pathway")
-
-            #DEBUG2
-            if len(data) > 0:
-                print("DEBUG sample points after attach:")
-                for i in range(min(3, len(data))):
-                    print("  ", i, "cid=", data[i].get("clusterID"), "label=", data[i].get("clusterLabel"))
+            data = add_cluster_labels(data, settings, cache_obj=cache)
 
             print("grphing")
             return JsonResponse({
@@ -419,23 +451,7 @@ def gene_input_view2(request):
             print("returning teh response")
             # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
             data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
-
-            #prepare for LLM
-            summaries = build_cluster_summaries(data)
-            name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
-
-            # attach label back to each point
-            for p in data:
-                cid = p.get("clusterID", -1)
-                try:
-                    cid = int(cid)
-                except Exception:
-                    cid = -1
-
-                if cid == -1:
-                    p["clusterLabel"] = ""  # noise points
-                else:
-                    p["clusterLabel"] = name_by_id.get(cid, "Unknown pathway")
+            data = add_cluster_labels(data, settings, cache_obj=cache)
 
             print("grphing")
             return JsonResponse({

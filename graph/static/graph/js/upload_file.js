@@ -23,6 +23,7 @@ const importNavButton = document.getElementById("nav-import"); // nav button in 
 const fileInput = document.getElementById("initial-file-input"); // Select file button
 
 const transitionDuration = 300;
+const LAST_SUBMISSION_SIGNATURE_KEY = "last-submission-signature";
 
 // Add this function to check settings
 function checkSettingsNeedApply() {
@@ -88,11 +89,10 @@ document.querySelectorAll(".settings input, .settings select").forEach((el) => {
 
 // Import file button script
 function importFile() {
-  // Clear selected points and remove local storage
+  // Return to input view, but keep data so unchanged submit can restore instantly.
   localStorage.setItem("selected", "[]");
   localStorage.removeItem("rawFile");
   localStorage.removeItem("camera");
-  localStorage.removeItem("data");
   localStorage.removeItem("annotations");
   localStorage.setItem("reset", JSON.stringify(true));
   clearPoints()
@@ -117,6 +117,24 @@ function convertToExpectedFormat(arrayOfObjects) {
     result[key] = arrayOfObjects.map((obj) => obj[key]);
   }
   return result;
+}
+
+function stableSerialize(value) {
+  if (Array.isArray(value)) {
+    return value.map(stableSerialize);
+  }
+  if (value && typeof value === "object") {
+    const sorted = {};
+    Object.keys(value).sort().forEach((key) => {
+      sorted[key] = stableSerialize(value[key]);
+    });
+    return sorted;
+  }
+  return value;
+}
+
+function buildSubmissionSignature(payload) {
+  return JSON.stringify(stableSerialize(payload));
 }
 
 document.getElementById("submit-gene-button").addEventListener("click", async function (e) {
@@ -237,25 +255,58 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     localStorage.removeItem("p-value");
   }
 
+  const currentSettings = JSON.parse(localStorage.getItem("settings") || "{}");
+  const customDataForSignature =
+    species === "custom"
+      ? (window?.GSP?.customGeneSets?.data || window?.GSP?.customGeneSets || null)
+      : null;
+  const submissionSignature = buildSubmissionSignature({
+    singleList: singleList,
+    species: species,
+    minMembers: minMembers,
+    sigGenes: sigGenes.trim(),
+    insigGenes: insigGenes.trim(),
+    rankedGenes: rankedGenes.trim(),
+    thresholdType: thresholdType,
+    pValue: thresholdType === "pvalue" ? Number.parseFloat(pvThr) : null,
+    fdr: thresholdType === "fdr" ? Number.parseFloat(fdrThr) : null,
+    selectedGeneSets: selectedGeneSets,
+    settings: currentSettings,
+    customData: customDataForSignature,
+  });
+  const lastSubmissionSignature = localStorage.getItem(LAST_SUBMISSION_SIGNATURE_KEY);
+
   try {
     loadingSpinner.style.display = "flex";
 
-    // Check if we have existing data
-    const hasData = localStorage.getItem("data") !== null;
+    const hasReusableData = localStorage.getItem("data") !== null;
+    const unchangedSubmission = hasReusableData && lastSubmissionSignature === submissionSignature;
 
-    if (!hasData) {
-      // First time submission - need to generate the graph
-      await frame.main();
+    if (unchangedSubmission) {
+      frame.graph();
       hideUpload();
       hideInput();
       setTimeout(() => showGraph(), transitionDuration);
-
-      // Hide the submit button after first render
       document.getElementById("submit-section-wrapper").style.display = "none";
-    } else {
-      // Subsequent submissions - just update the graph
-      await frame.applySettingsAndRender();
+      loadingSpinner.style.display = "none";
+      return;
     }
+
+    // Inputs/settings changed. Force fresh computation.
+    localStorage.removeItem("data");
+    localStorage.removeItem("camera");
+    localStorage.removeItem("annotations");
+    localStorage.setItem("reset", JSON.stringify(true));
+    clearPoints();
+
+    await frame.main();
+    hideUpload();
+    hideInput();
+    setTimeout(() => showGraph(), transitionDuration);
+
+    // Hide the submit button after first render
+    document.getElementById("submit-section-wrapper").style.display = "none";
+    localStorage.setItem(LAST_SUBMISSION_SIGNATURE_KEY, submissionSignature);
 
     loadingSpinner.style.display = "none";
 
