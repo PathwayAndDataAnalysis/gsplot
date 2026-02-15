@@ -4,6 +4,7 @@ from typing import Any, Dict, Iterator, List
 import json
 import hashlib
 import os
+import re
 
 def _iter_points(payload: Any) -> Iterator[dict]:
     """
@@ -107,6 +108,83 @@ def _stable_hash(obj: Any) -> str:
     s = json.dumps(obj, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.md5(s.encode("utf-8")).hexdigest()
 
+
+def _strip_markdown_fences(text: str) -> str:
+    text = (text or "").strip()
+    if not text.startswith("```"):
+        return text
+    text = text.replace("```json", "```").replace("```JSON", "```")
+    parts = text.split("```")
+    if len(parts) >= 3:
+        return parts[1].strip()
+    return text.strip("`").strip()
+
+
+def _remove_trailing_commas(text: str) -> str:
+    # Common malformed JSON pattern from LLMs: trailing commas before } or ]
+    return re.sub(r",\s*([}\]])", r"\1", text)
+
+
+def _normalize_cluster_mapping(parsed: Any) -> Dict[str, Any]:
+    # normalize list -> dict when model returns list-like structures
+    if isinstance(parsed, list):
+        # Case A) list of single-key dicts: [{"7": "..."}, {"2": "..."}]
+        if all(isinstance(i, dict) and len(i) == 1 for i in parsed):
+            merged = {}
+            for i in parsed:
+                (k, v), = i.items()
+                merged[str(k)] = v
+            return merged
+
+        # Case B) list of pairs: [[k,v], [k,v]]
+        if all(isinstance(i, (list, tuple)) and len(i) == 2 for i in parsed):
+            return {str(k): v for k, v in parsed}
+
+        # Case C) list of records: [{"clusterID":..,"short_name":..}, ...]
+        if all(isinstance(i, dict) for i in parsed):
+            tmp = {}
+            for i in parsed:
+                cid = i.get("clusterID", i.get("clusterId", i.get("id")))
+                name = i.get("short_name", i.get("name", i.get("label")))
+                if cid is None:
+                    continue
+                tmp[str(cid)] = name if name is not None else ""
+            return tmp
+
+        raise TypeError(f"Unexpected JSON list format: {str(parsed)[:200]}")
+
+    if not isinstance(parsed, dict):
+        raise TypeError(f"Expected JSON object mapping, got {type(parsed)}: {str(parsed)[:200]}")
+
+    return parsed
+
+
+def _parse_cluster_mapping_json(raw_text: str) -> Dict[str, Any]:
+    text = _strip_markdown_fences(raw_text)
+    attempts = [text]
+
+    # If there is extra prose around JSON, try extracting object span.
+    a = text.find("{")
+    b = text.rfind("}")
+    if a != -1 and b != -1 and b > a:
+        attempts.append(text[a:b + 1])
+
+    # Retry parse with trailing comma cleanup.
+    attempts.extend([_remove_trailing_commas(t) for t in attempts])
+
+    last_error = None
+    for candidate in attempts:
+        try:
+            parsed = json.loads(candidate)
+            return _normalize_cluster_mapping(parsed)
+        except Exception as e:
+            last_error = e
+            continue
+
+    if last_error is not None:
+        raise last_error
+    raise ValueError("Unable to parse cluster mapping JSON.")
+
 from google import genai
 from google.genai import types
 
@@ -206,55 +284,29 @@ def label_clusters_with_llm(
         if not text:
             raise ValueError("Gemini returned empty text (no JSON). Check prompt_feedback / finish_reason.")
 
-        # strip markdown code fences if any
-        if text.startswith("```"):
-            text = text.strip()
-            text = text.replace("```json", "```").replace("```JSON", "```")
-            if text.startswith("```"):
-                text = text.split("```", 2)[1].strip() if "```" in text else text
-
-        # parse JSON robustly
         try:
-            parsed = json.loads(text)
+            parsed = _parse_cluster_mapping_json(text)
             print("[LLM DEBUG] parsed type:", type(parsed))
-        except Exception:
-            a = text.find("{")
-            b = text.rfind("}")
-            if a != -1 and b != -1 and b > a:
-                parsed = json.loads(text[a:b+1])
-            else:
-                raise
-
-        # normalize list -> dict if Gemini returns a list
-        if isinstance(parsed, list):
-            # Case A) list of single-key dicts: [{"7": "..."}, {"2": "..."}]
-            if all(isinstance(i, dict) and len(i) == 1 for i in parsed):
-                merged = {}
-                for i in parsed:
-                    (k, v), = i.items()
-                    merged[str(k)] = v
-                parsed = merged
-
-            # Case B) list of pairs: [[k,v], [k,v]]
-            elif all(isinstance(i, (list, tuple)) and len(i) == 2 for i in parsed):
-                parsed = {str(k): v for k, v in parsed}
-
-            # Case C) list of dict records: [{"clusterID":..,"short_name":..}, ...]
-            elif all(isinstance(i, dict) for i in parsed):
-                tmp = {}
-                for i in parsed:
-                    cid = i.get("clusterID", i.get("clusterId", i.get("id")))
-                    name = i.get("short_name", i.get("name", i.get("label")))
-                    if cid is None:
-                        continue
-                    tmp[str(cid)] = name if name is not None else ""
-                parsed = tmp
-
-            else:
-                raise TypeError(f"Unexpected JSON list format: {str(parsed)[:200]}")
-
-        if not isinstance(parsed, dict):
-            raise TypeError(f"Expected JSON object mapping, got {type(parsed)}: {str(parsed)[:200]}")
+        except Exception as parse_error:
+            print("LLM JSON parse failed, attempting repair:", type(parse_error).__name__, str(parse_error))
+            repair_prompt = (
+                "Convert the following content into STRICT valid JSON only.\n"
+                "Return a single JSON object mapping clusterID -> short_name.\n"
+                "No markdown, no comments, no trailing commas.\n\n"
+                f"Content:\n{text}"
+            )
+            repair_response = client.models.generate_content(
+                model=model,
+                contents=repair_prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    max_output_tokens=max_out,
+                ),
+            )
+            repaired_text = _extract_text(repair_response)
+            print("[LLM DEBUG] repaired text head:", repaired_text[:200])
+            parsed = _parse_cluster_mapping_json(repaired_text)
+            print("[LLM DEBUG] repaired parsed type:", type(parsed))
 
         name_by_id: Dict[int, str] = {}
         for k, v in parsed.items():

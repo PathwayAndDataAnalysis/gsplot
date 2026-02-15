@@ -7,6 +7,8 @@ const defaultSettings = {
   "fixed-size-input": "6",
   "dynamic-size-scalar": "1",
   "cluster-mode": false,
+  "hdbscan-min-cluster-size": "5",
+  "hdbscan-min-samples": "5",
 };
 
 const inputRefrences = {};
@@ -32,6 +34,8 @@ let lastFDR = document.getElementById("fdr-input")?.value || "0.05";
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
+const clusterModeToggle = document.getElementById("cluster-mode");
+const hdbscanParamsContainer = document.getElementById("hdbscan-params-container");
 
 
 const algorithmSelect = document.getElementById('algorithmSelect');
@@ -75,6 +79,7 @@ function main() {
     displayValues(defaultSettings);
   }
   toggleSizeVisibility();
+  toggleClusterParamsVisibility();
 
   document.querySelectorAll('input[name="threshold-type"]').forEach((radio) => {
     radio.addEventListener("change", updateThresholdInputs);
@@ -84,6 +89,7 @@ function main() {
   const clusterEl = document.getElementById("cluster-mode");
   if (clusterEl) {
     clusterEl.addEventListener("change", async () => {
+      toggleClusterParamsVisibility();
       const hasRendered = localStorage.getItem("data") !== null;
 
       // Keep settings state in sync without toast side-effects.
@@ -123,6 +129,7 @@ function displayValues(settings) {
       value.value = settings[key];
     }
   }
+  toggleClusterParamsVisibility();
 }
 function getReduction() { // get input based on user input on sidebar
   const selectedAlgorithm = algorithmSelect.value;
@@ -232,9 +239,21 @@ function updateSettings(suppressToast = false) {
   const isDataChange = isEmbeddingChanged(newSettings, oldSettings);
   const thresholdChange = isThresholdChanged(newSettings, oldSettings);
   const clusterModeChanged = !!newSettings["cluster-mode"] !== !!oldSettings["cluster-mode"];
-  const requiresClusterRelabel = clusterModeChanged && !!newSettings["cluster-mode"];
+  const clusterParamsChanged = areClusterParamsChanged(newSettings, oldSettings);
+  const requiresClusterRelabel =
+    (clusterModeChanged && !!newSettings["cluster-mode"]) || clusterParamsChanged;
   const clusterVisualOnlyChange = clusterModeChanged && !newSettings["cluster-mode"];
-  const relabelOnly = requiresClusterRelabel && !isDataChange && !thresholdChange;
+  const relabelOnly =
+    clusterModeChanged &&
+    !!newSettings["cluster-mode"] &&
+    !clusterParamsChanged &&
+    !isDataChange &&
+    !thresholdChange;
+  const reclusterOnly =
+    clusterParamsChanged &&
+    !clusterModeChanged &&
+    !isDataChange &&
+    !thresholdChange;
 
   localStorage.setItem(
     "justStyling",
@@ -243,8 +262,9 @@ function updateSettings(suppressToast = false) {
       : "false"
   );
   localStorage.setItem("relabelOnly", relabelOnly ? "true" : "false");
+  localStorage.setItem("reclusterOnly", reclusterOnly ? "true" : "false");
 
-  if (!stylingOnly && !isDataChange && !thresholdChange && !clusterModeChanged) {
+  if (!stylingOnly && !isDataChange && !thresholdChange && !clusterModeChanged && !clusterParamsChanged) {
     if (!suppressToast) {
       const toast = document.getElementById("toast-message");
       if (toast) {
@@ -312,14 +332,24 @@ async function applySettingsAndRender() {
 
     const stylingOnly = localStorage.getItem("justStyling") === "true";
     const relabelOnly = localStorage.getItem("relabelOnly") === "true";
+    const reclusterOnly = localStorage.getItem("reclusterOnly") === "true";
     localStorage.removeItem("justStyling");
     localStorage.removeItem("relabelOnly");
+    localStorage.removeItem("reclusterOnly");
 
     const hasRendered = localStorage.getItem("data") !== null;
 
     if (relabelOnly && hasRendered) {
       console.log("Cluster relabel-only change -> calling lightweight cluster labeling endpoint.");
       await relabelCurrentClusters(newSettings);
+      localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+      loadingSpinner.style.display = "none";
+      return;
+    }
+
+    if (reclusterOnly && hasRendered) {
+      console.log("Cluster parameter change -> reclustering + relabeling without full pipeline.");
+      await reclusterCurrentGraph(newSettings);
       localStorage.setItem("previous_settings", JSON.stringify(newSettings));
       loadingSpinner.style.display = "none";
       return;
@@ -439,6 +469,55 @@ async function relabelCurrentClusters(settings) {
   }
 }
 
+async function reclusterCurrentGraph(settings) {
+  const fullData = JSON.parse(localStorage.getItem("data") || "null");
+  if (!fullData || !Array.isArray(fullData["X"])) {
+    throw new Error("No graph data available for reclustering.");
+  }
+
+  const n = fullData["X"].length;
+  const points = [];
+  for (let i = 0; i < n; i++) {
+    points.push({
+      X: fullData["X"]?.[i],
+      Y: fullData["Y"]?.[i],
+      clusterID: fullData["clusterID"]?.[i],
+      setName: fullData["setName"]?.[i],
+      molecules: fullData["molecules"]?.[i],
+      pValue: fullData["pValue"]?.[i],
+    });
+  }
+
+  const response = await fetch("/cluster-recluster/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      points: points,
+      settings: settings,
+    }),
+  });
+
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.error || "Cluster recluster request failed.");
+  }
+  if (!payload || !Array.isArray(payload.points)) {
+    throw new Error("Invalid cluster recluster response.");
+  }
+
+  fullData["clusterID"] = payload.points.map((p, idx) =>
+    p?.clusterID !== undefined ? p.clusterID : (fullData["clusterID"]?.[idx] ?? -1)
+  );
+  fullData["clusterLabel"] = payload.points.map((p) => p?.clusterLabel ?? "");
+  localStorage.setItem("data", JSON.stringify(fullData));
+
+  if (typeof frame !== "undefined" && frame?.updateGraphStyling) {
+    frame.updateGraphStyling();
+  } else if (typeof frame !== "undefined" && frame?.graph) {
+    frame.graph();
+  }
+}
+
 function isEmbeddingChanged(setting1, setting2) {
   return (
     setting1["distance_type"] !== setting2["distance_type"] ||
@@ -493,6 +572,41 @@ function toggleSizeVisibility() {
     dynamicInput.style.display = "block";
     fixedInput.style.display = "none";
   }
+}
+
+function normalizeClusterSettingInt(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    return fallback;
+  }
+  return parsed;
+}
+
+function getEffectiveClusterParams(settings) {
+  return {
+    minClusterSize: normalizeClusterSettingInt(settings?.["hdbscan-min-cluster-size"], 5),
+    minSamples: normalizeClusterSettingInt(settings?.["hdbscan-min-samples"], 5),
+  };
+}
+
+function areClusterParamsChanged(newSettings, oldSettings) {
+  if (!newSettings?.["cluster-mode"]) {
+    return false;
+  }
+
+  const nextParams = getEffectiveClusterParams(newSettings);
+  const prevParams = getEffectiveClusterParams(oldSettings || {});
+  return (
+    nextParams.minClusterSize !== prevParams.minClusterSize ||
+    nextParams.minSamples !== prevParams.minSamples
+  );
+}
+
+function toggleClusterParamsVisibility() {
+  if (!hdbscanParamsContainer || !clusterModeToggle) {
+    return;
+  }
+  hdbscanParamsContainer.style.display = clusterModeToggle.checked ? "block" : "none";
 }
 
 function addSpinnerOverlay() {

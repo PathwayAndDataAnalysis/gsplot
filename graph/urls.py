@@ -13,4 +13,5 @@ urlpatterns = [
     path('api/upload_custom_gene_sets/', views.upload_custom_gene_sets, name='upload_custom_gene_sets'),
     path('preview-threshold/', views.preview_threshold, name='preview_threshold'),
     path('cluster-labels/', views.cluster_label_view, name='cluster_label_view'),
+    path('cluster-recluster/', views.cluster_recluster_view, name='cluster_recluster_view'),
 ]

@@ -52,9 +52,22 @@ def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=No
     X = np.array([[float(p["X"]), float(p["Y"])] for p in points], dtype=float)
 
     # If min_samples is not provided, HDBSCAN uses min_cluster_size by default behavior
+    try:
+        min_cluster_size = max(2, int(min_cluster_size))
+    except Exception:
+        min_cluster_size = 5
+
+    if min_samples is None:
+        parsed_min_samples = None
+    else:
+        try:
+            parsed_min_samples = max(1, int(min_samples))
+        except Exception:
+            parsed_min_samples = None
+
     clusterer = hdbscan.HDBSCAN(
-        min_cluster_size=int(min_cluster_size),
-        min_samples=(int(min_samples) if min_samples is not None else None),
+        min_cluster_size=min_cluster_size,
+        min_samples=parsed_min_samples,
         metric="euclidean"
     )
 
@@ -63,6 +76,43 @@ def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=No
         points[i]["clusterID"] = int(lbl)
 
     return points
+
+
+def get_hdbscan_params_from_settings(settings):
+    """
+    Use backend defaults when cluster mode is OFF.
+    When cluster mode is ON, read user-specified values from settings.
+    """
+    default_min_cluster_size = 5
+    default_min_samples = None
+    settings = settings or {}
+
+    cluster_mode_enabled = bool(settings.get("cluster-mode", False))
+    if not cluster_mode_enabled:
+        print(
+            f"[HDBSCAN DEBUG] cluster-mode=OFF -> using defaults: "
+            f"min_cluster_size={default_min_cluster_size}, min_samples={default_min_samples}"
+        )
+        return default_min_cluster_size, default_min_samples
+
+    raw_min_cluster_size = settings.get("hdbscan-min-cluster-size", default_min_cluster_size)
+    raw_min_samples = settings.get("hdbscan-min-samples", default_min_cluster_size)
+
+    try:
+        min_cluster_size = max(2, int(raw_min_cluster_size))
+    except Exception:
+        min_cluster_size = default_min_cluster_size
+
+    try:
+        min_samples = max(1, int(raw_min_samples))
+    except Exception:
+        min_samples = default_min_cluster_size
+
+    print(
+        f"[HDBSCAN DEBUG] cluster-mode=ON -> using settings: "
+        f"min_cluster_size={min_cluster_size}, min_samples={min_samples}"
+    )
+    return min_cluster_size, min_samples
 
 def add_cluster_labels(points, settings, cache_obj=cache):
     """
@@ -118,6 +168,46 @@ def cluster_label_view(request):
             return JsonResponse({"error": "points must be a list"}, status=400)
 
         labeled = add_cluster_labels(points, settings, cache_obj=cache)
+        return JsonResponse({"points": labeled})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@csrf_exempt
+def cluster_recluster_view(request):
+    """
+    Lightweight endpoint to rerun HDBSCAN on existing 2D points then relabel clusters.
+    Expects:
+      {
+        "points": [ { "X", "Y", "setName", "molecules", "pValue", ... }, ... ],
+        "settings": { "cluster-mode": true|false, "hdbscan-min-cluster-size": 5, "hdbscan-min-samples": 5, ... }
+      }
+    Returns:
+      { "points": [...] } with updated clusterID and clusterLabel.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    try:
+        payload = json.loads(request.body or "{}")
+        points = payload.get("points") or []
+        settings = payload.get("settings") or {}
+
+        if not isinstance(points, list):
+            return JsonResponse({"error": "points must be a list"}, status=400)
+
+        min_cluster_size, min_samples = get_hdbscan_params_from_settings(settings)
+        print(
+            f"[HDBSCAN DEBUG] endpoint=/cluster-recluster/ "
+            f"min_cluster_size={min_cluster_size}, min_samples={min_samples}, "
+            f"points={len(points)}"
+        )
+        clustered = add_hdbscan_clusters_on_embedding(
+            points,
+            min_cluster_size=min_cluster_size,
+            min_samples=min_samples
+        )
+        labeled = add_cluster_labels(clustered, settings, cache_obj=cache)
         return JsonResponse({"points": labeled})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
@@ -282,7 +372,17 @@ def gene_input_view(request):
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
             # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
-            data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
+            min_cluster_size, min_samples = get_hdbscan_params_from_settings(settings)
+            print(
+                f"[HDBSCAN DEBUG] endpoint=/gene-input/ "
+                f"min_cluster_size={min_cluster_size}, min_samples={min_samples}, "
+                f"points={len(data)}"
+            )
+            data = add_hdbscan_clusters_on_embedding(
+                data,
+                min_cluster_size=min_cluster_size,
+                min_samples=min_samples
+            )
             data = add_cluster_labels(data, settings, cache_obj=cache)
 
             print("grphing")
@@ -450,7 +550,17 @@ def gene_input_view2(request):
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("returning teh response")
             # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
-            data = add_hdbscan_clusters_on_embedding(data, min_cluster_size=5, min_samples=None)
+            min_cluster_size, min_samples = get_hdbscan_params_from_settings(settings)
+            print(
+                f"[HDBSCAN DEBUG] endpoint=/gene-input2/ "
+                f"min_cluster_size={min_cluster_size}, min_samples={min_samples}, "
+                f"points={len(data)}"
+            )
+            data = add_hdbscan_clusters_on_embedding(
+                data,
+                min_cluster_size=min_cluster_size,
+                min_samples=min_samples
+            )
             data = add_cluster_labels(data, settings, cache_obj=cache)
 
             print("grphing")
