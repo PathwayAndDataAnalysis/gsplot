@@ -241,6 +241,51 @@ function updateSettings(suppressToast = false) {
 
   const anythingChanged = stylingOnly || isDataChange || thresholdChange || clusterChanged;
 
+  // --------------------
+  // FORCE CLUSTER APPLY when:
+  // - graph already rendered
+  // - cluster-mode is ON
+  // - BUT current localStorage.data has no clusterID (or clusterID empty / all -1)
+  // This fixes: submit with cluster OFF, later turn ON and apply with same params => should still run HDBSCAN.
+  // --------------------
+  const hasRendered = localStorage.getItem("data") !== null;
+
+  let needClusterCompute = false;
+  if (hasRendered && newSettings["cluster-mode"] === true) {
+    try {
+      const d = JSON.parse(localStorage.getItem("data") || "{}");
+      const cids = d.clusterID;
+
+      if (!Array.isArray(cids) || cids.length === 0) {
+        needClusterCompute = true;
+      } else {
+        const allEmpty = cids.every(v => v === -1 || v === null || v === undefined);
+        if (allEmpty) needClusterCompute = true;
+      }
+    } catch (e) {
+      needClusterCompute = true;
+    }
+  }
+
+  localStorage.setItem("forceClusterApply", needClusterCompute ? "true" : "false");
+
+  // If nothing changed in settings BUT we need cluster, still apply.
+  if (!anythingChanged && needClusterCompute) {
+    if (!suppressToast) {
+      const toast = document.getElementById("toast-message");
+      if (toast) {
+        toast.style.display = "block";
+        toast.style.color = "#2ecc71";
+        toast.textContent = "Cluster mode enabled — computing clusters...";
+        setTimeout(() => { toast.style.display = "none"; }, 2000);
+      }
+    }
+
+    hasUnsavedSettings = false;
+    applySettingsAndRender(); // will run cluster-only path
+    return;
+  }
+
   if (!anythingChanged) {
     if (!suppressToast) {
       const toast = document.getElementById("toast-message");
@@ -362,6 +407,9 @@ async function applySettingsAndRender() {
       (newSettings["hdbscan-min-cluster-size"] !== oldSettings["hdbscan-min-cluster-size"]) ||
       (newSettings["hdbscan-min-samples"] !== oldSettings["hdbscan-min-samples"]);
 
+    const forceClusterApply = localStorage.getItem("forceClusterApply") === "true";
+    localStorage.removeItem("forceClusterApply");
+
     // 1) Styling-only update (fast path)
     if (hasRendered && stylingOnly && !dataChange && !thresholdChange && !clusterChanged) {
       if (frame?.updateGraphStyling) frame.updateGraphStyling();
@@ -371,11 +419,31 @@ async function applySettingsAndRender() {
     }
 
     // 2) Cluster-only apply (Option 2)
-    if (hasRendered && newSettings["cluster-mode"] === true && clusterChanged && !dataChange && !thresholdChange) {
-      await applyClusterOnly();
-      localStorage.setItem("previous_settings", JSON.stringify(newSettings));
-      loadingSpinner.style.display = "none";
-      return;
+    // Run when clusterChanged OR forceClusterApply.
+    // If analysis_id missing/expired => fallback to full rerun below.
+    if (
+      hasRendered &&
+      newSettings["cluster-mode"] === true &&
+      (clusterChanged || forceClusterApply) &&
+      !dataChange &&
+      !thresholdChange
+    ) {
+      try {
+        await applyClusterOnly();
+        localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+        loadingSpinner.style.display = "none";
+        return;
+      } catch (e) {
+        const msg = (e?.message || String(e) || "").toLowerCase();
+
+        // If cluster-only failed due to cache/analysis_id => just fall through to full rerun
+        if (msg.includes("analysis_id") || msg.includes("expired") || msg.includes("not found")) {
+          console.warn("[cluster-only] analysis_id missing/expired -> fallback to full rerun");
+          // do NOT return; fall through
+        } else {
+          throw e;
+        }
+      }
     }
 
     // 3) Cluster turned OFF (only cluster settings changed) => no backend; just restyle
