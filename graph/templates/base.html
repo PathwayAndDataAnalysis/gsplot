@@ -179,14 +179,17 @@
         </label>
       </div>
 
-      <div id="hdbscan-params-container" style="display: none;">
+      <div id="cluster-params" style="display:none; margin-top:10px;">
+        <h5>HDBSCAN Settings</h5>
+
         <div class="option">
-          <label for="hdbscan-min-cluster-size">Min Cluster Size:</label>
-          <input type="number" id="hdbscan-min-cluster-size" min="2" step="1" value="5" />
+          <label for="hdbscan-min-cluster-size">Min Cluster Size</label>
+          <input type="number" id="hdbscan-min-cluster-size" value="5" min="2">
         </div>
+
         <div class="option">
-          <label for="hdbscan-min-samples">Min Samples:</label>
-          <input type="number" id="hdbscan-min-samples" min="1" step="1" value="5" />
+          <label for="hdbscan-min-samples">Min Samples (optional)</label>
+          <input type="number" id="hdbscan-min-samples" placeholder="leave empty = default" min="1">
         </div>
       </div>
 

@@ -530,6 +530,14 @@
               localStorage.removeItem("camera");
               localStorage.removeItem("annotations");
 
+              // Save analysis_id for cluster-only apply later
+              if (data.analysis_id) {
+                localStorage.setItem("analysis_id", data.analysis_id);
+              } else {
+                // optional: clear to avoid using stale id
+                localStorage.removeItem("analysis_id");
+              }
+
               const pvalDisplay = data.p_value;
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
@@ -670,6 +678,14 @@
               // Clear camera and annotations as data changed
               localStorage.removeItem("camera");
               localStorage.removeItem("annotations");
+
+              // Save analysis_id for cluster-only apply later
+              if (data.analysis_id) {
+                localStorage.setItem("analysis_id", data.analysis_id);
+              } else {
+                // optional: clear to avoid using stale id
+                localStorage.removeItem("analysis_id");
+              }
 
               const pvalDisplay = data.p_value;
               const fdrDisplay = data.fdr_value;

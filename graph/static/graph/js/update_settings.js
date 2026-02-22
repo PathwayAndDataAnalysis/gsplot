@@ -8,7 +8,7 @@ const defaultSettings = {
   "dynamic-size-scalar": "1",
   "cluster-mode": false,
   "hdbscan-min-cluster-size": "5",
-  "hdbscan-min-samples": "5",
+  "hdbscan-min-samples": "",
 };
 
 const inputRefrences = {};
@@ -34,8 +34,6 @@ let lastFDR = document.getElementById("fdr-input")?.value || "0.05";
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
-const clusterModeToggle = document.getElementById("cluster-mode");
-const hdbscanParamsContainer = document.getElementById("hdbscan-params-container");
 
 
 const algorithmSelect = document.getElementById('algorithmSelect');
@@ -79,46 +77,37 @@ function main() {
     displayValues(defaultSettings);
   }
   toggleSizeVisibility();
-  toggleClusterParamsVisibility();
 
   document.querySelectorAll('input[name="threshold-type"]').forEach((radio) => {
     radio.addEventListener("change", updateThresholdInputs);
   });
   updateThresholdInputs(); // Call on load
-  // --- Instant Cluster Mode toggle (no Apply needed) ---
+  toggleClusterParamsVisibility();
+
   const clusterEl = document.getElementById("cluster-mode");
   if (clusterEl) {
-    clusterEl.addEventListener("change", async () => {
+    clusterEl.addEventListener("change", () => {
       toggleClusterParamsVisibility();
+
+      // Turning OFF can update visuals immediately (no backend)
       const hasRendered = localStorage.getItem("data") !== null;
-
-      // Keep settings state in sync without toast side-effects.
-      updateSettings(true);
-
-      // No graph yet: just save the setting; submit will fetch as usual.
-      if (!hasRendered) {
-        return;
-      }
-
-      // Force backend relabel pipeline when turning cluster mode ON.
-      if (clusterEl.checked) {
-        await applySettingsAndRender();
-        return;
-      }
-
-      // Turning OFF cluster mode stays frontend-only.
-      if (typeof frame !== "undefined" && frame?.updateGraphStyling) {
+      if (!clusterEl.checked && hasRendered && frame?.updateGraphStyling) {
         frame.updateGraphStyling();
-      }
-      // Keep applied-baseline settings in sync for instant frontend-only toggles.
-      try {
-        const currentSettings = JSON.parse(localStorage.getItem("settings") || "{}");
-        localStorage.setItem("previous_settings", JSON.stringify(currentSettings));
-      } catch (e) {
-        console.warn("Failed to sync previous_settings after cluster mode OFF toggle:", e);
       }
     });
   }
+
+  if (!localStorage.getItem("previous_settings")) {
+    const cur = localStorage.getItem("settings") || JSON.stringify(defaultSettings);
+    localStorage.setItem("previous_settings", cur);
+  }
+}
+
+function toggleClusterParamsVisibility() {
+  const clusterEl = document.getElementById("cluster-mode");
+  const box = document.getElementById("cluster-params");
+  if (!clusterEl || !box) return;
+  box.style.display = clusterEl.checked ? "block" : "none";
 }
 
 function displayValues(settings) {
@@ -129,7 +118,6 @@ function displayValues(settings) {
       value.value = settings[key];
     }
   }
-  toggleClusterParamsVisibility();
 }
 function getReduction() { // get input based on user input on sidebar
   const selectedAlgorithm = algorithmSelect.value;
@@ -174,6 +162,8 @@ function updateSettings(suppressToast = false) {
   let newSettings = {};
   newSettings.umapChange = false;
 
+  const appliedSettings = JSON.parse(localStorage.getItem("previous_settings") || "{}");
+
   // Collect input
   for (const [key, value] of Object.entries(inputRefrences)) {
     if (value === null) continue;
@@ -183,11 +173,12 @@ function updateSettings(suppressToast = false) {
       newSettings[key] = value.value;
     }
   }
-  const reduction = getReduction(newSettings);
-  newSettings['reduction'] = reduction;
-  newSettings['mode'] = reduction['mode'];
 
-  // Jaccard type
+  const reduction = getReduction(newSettings);
+  newSettings["reduction"] = reduction;
+  newSettings["mode"] = reduction["mode"];
+
+  // Distance type
   const distanceMetric = document.getElementById("distance-metric")?.value;
   if (distanceMetric === "jaccard-distance") {
     if (document.getElementById("plain-jaccard")?.checked) {
@@ -203,100 +194,84 @@ function updateSettings(suppressToast = false) {
     }
   }
 
-  // Compare against last applied settings (graph state), not current draft settings
-  let oldSettings = JSON.parse(
-    localStorage.getItem("previous_settings") ||
-    localStorage.getItem("settings") ||
-    "{}"
-  );
-  if (isEmbeddingChanged(newSettings, oldSettings)) {
-    newSettings.umapChange = true;
-  }
-  let distancesM = JSON.parse(localStorage.getItem("distances-M"));
-  distancesM = !(newSettings["distance_type"] !== oldSettings["distance_type"]);
-  localStorage.setItem("distances-M", JSON.stringify(distancesM));
-
+  // Threshold type
   const pvThr = document.getElementById("pvalue-input")?.value;
   const fdrThr = document.getElementById("fdr-input")?.value;
-
   const selectedType = document.querySelector('input[name="threshold-type"]:checked')?.value;
+
   if (selectedType === "pvalue") {
     newSettings["p_value_threshold"] = parseFloat(pvThr);
     delete newSettings["fdr_threshold"];
     localStorage.setItem("p-value", newSettings["p_value_threshold"]);
     localStorage.removeItem("fdr");
-  } else if (selectedType === "fdr") {
+  } else {
     newSettings["fdr_threshold"] = parseFloat(fdrThr);
     delete newSettings["p_value_threshold"];
     localStorage.setItem("fdr", newSettings["fdr_threshold"]);
     localStorage.removeItem("p-value");
   }
 
-  // Save draft settings; previous_settings is updated after successful apply
-  localStorage.setItem("settings", JSON.stringify(newSettings));
+  // Detect changes vs applied baseline
+  const isDataChange = isEmbeddingChanged(newSettings, appliedSettings);
+  const thresholdChange = isThresholdChanged(newSettings, appliedSettings);
+
+  const clusterChanged =
+    (newSettings["cluster-mode"] !== appliedSettings["cluster-mode"]) ||
+    (newSettings["hdbscan-min-cluster-size"] !== appliedSettings["hdbscan-min-cluster-size"]) ||
+    (newSettings["hdbscan-min-samples"] !== appliedSettings["hdbscan-min-samples"]);
 
   const stylingOnly = detectFrontendOnlyChanges();
-  const isDataChange = isEmbeddingChanged(newSettings, oldSettings);
-  const thresholdChange = isThresholdChanged(newSettings, oldSettings);
-  const clusterModeChanged = !!newSettings["cluster-mode"] !== !!oldSettings["cluster-mode"];
-  const clusterParamsChanged = areClusterParamsChanged(newSettings, oldSettings);
-  const requiresClusterRelabel =
-    (clusterModeChanged && !!newSettings["cluster-mode"]) || clusterParamsChanged;
-  const clusterVisualOnlyChange = clusterModeChanged && !newSettings["cluster-mode"];
-  const relabelOnly =
-    clusterModeChanged &&
-    !!newSettings["cluster-mode"] &&
-    !clusterParamsChanged &&
-    !isDataChange &&
-    !thresholdChange;
-  const reclusterOnly =
-    clusterParamsChanged &&
-    !clusterModeChanged &&
-    !isDataChange &&
-    !thresholdChange;
 
-  localStorage.setItem(
-    "justStyling",
-    ((stylingOnly || clusterVisualOnlyChange) && !isDataChange && !thresholdChange && !requiresClusterRelabel)
-      ? "true"
-      : "false"
-  );
-  localStorage.setItem("relabelOnly", relabelOnly ? "true" : "false");
-  localStorage.setItem("reclusterOnly", reclusterOnly ? "true" : "false");
+  // decide justStyling
+  const justStyling = stylingOnly && !isDataChange && !thresholdChange && !clusterChanged;
+  localStorage.setItem("justStyling", justStyling ? "true" : "false");
 
-  if (!stylingOnly && !isDataChange && !thresholdChange && !clusterModeChanged && !clusterParamsChanged) {
+  // distances-M: only reuse if distance_type same to appliedSettings
+  let distancesM = JSON.parse(localStorage.getItem("distances-M"));
+  distancesM = !(newSettings["distance_type"] !== appliedSettings["distance_type"]);
+  localStorage.setItem("distances-M", JSON.stringify(distancesM));
+
+  // mark umapChange based on applied baseline
+  if (isDataChange) {
+    newSettings.umapChange = true;
+  }
+
+  // Save ONLY current UI settings
+  localStorage.setItem("settings", JSON.stringify(newSettings));
+
+  const anythingChanged = stylingOnly || isDataChange || thresholdChange || clusterChanged;
+
+  if (!anythingChanged) {
     if (!suppressToast) {
       const toast = document.getElementById("toast-message");
       if (toast) {
         toast.style.display = "block";
         toast.style.color = "#2ecc71";
         toast.textContent = "No changes detected.";
-        setTimeout(() => {
-          toast.style.display = "none";
-        }, 2000);
+        setTimeout(() => { toast.style.display = "none"; }, 2000);
       }
     }
     hasUnsavedSettings = false;
     return;
   }
 
-  const hasRendered = localStorage.getItem("data") !== null;
-  if (hasRendered && !suppressToast) {
-    applySettingsAndRender();
-  }
-
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
     toast.style.display = "block";
     toast.style.color = "#2ecc71";
-    toast.textContent = hasRendered
-      ? "Settings applied! Graph will update..."
-      : "Settings saved! Click Submit to generate the graph.";
 
-    setTimeout(() => {
-      toast.style.display = "none";
-    }, 2000);
+    const hasRendered = localStorage.getItem("data") !== null;
+
+    if (hasRendered) {
+      toast.textContent = "Settings applied! Graph will update...";
+      applySettingsAndRender();
+    } else {
+      toast.textContent = "Settings saved! Click Submit to generate the graph.";
+    }
+
+    setTimeout(() => { toast.style.display = "none"; }, 2000);
   }
+
   hasUnsavedSettings = false;
 }
 
@@ -321,49 +296,98 @@ function detectFrontendOnlyChanges() {
   return changed;
 }
 
+async function applyClusterOnly() {
+  const analysisId = localStorage.getItem("analysis_id");
+  if (!analysisId) {
+    throw new Error("Missing analysis_id. Please click Submit once to generate the graph first.");
+  }
+
+  const settings = JSON.parse(localStorage.getItem("settings") || "{}");
+
+  const minClusterSize = parseInt(settings["hdbscan-min-cluster-size"] || "5", 10);
+  const minSamplesRaw = settings["hdbscan-min-samples"];
+  const minSamples = (minSamplesRaw === "" || minSamplesRaw == null) ? null : parseInt(minSamplesRaw, 10);
+
+  const res = await fetch("/cluster_only/", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      analysis_id: analysisId,
+      min_cluster_size: minClusterSize,
+      min_samples: minSamples,
+    }),
+  });
+
+  const out = await res.json();
+  if (!res.ok) throw new Error(out?.error || "Cluster-only request failed.");
+
+  // Inject cluster arrays into localStorage.data (NO backend rerun)
+  const fullData = JSON.parse(localStorage.getItem("data") || "{}");
+  fullData["clusterID"] = out.cluster_ids;
+  fullData["clusterLabel"] = out.cluster_labels;
+  localStorage.setItem("data", JSON.stringify(fullData));
+
+  // Reset selection + re-graph
+  localStorage.removeItem("camera");
+  localStorage.removeItem("annotations");
+  localStorage.setItem("selected", "[]");
+  localStorage.setItem("reset", JSON.stringify(true));
+
+  clearPoints();
+  frame.graph(); // redraw only
+}
+
 async function applySettingsAndRender() {
   const loadingSpinner = document.getElementById("loading-spinner");
   loadingSpinner.style.display = "flex";
 
   const backupData = localStorage.getItem("data");
+  const backupSettings = localStorage.getItem("settings");
+  const backupPrevSettings = localStorage.getItem("previous_settings");
 
   try {
-    const newSettings = JSON.parse(localStorage.getItem("settings"));
+    const newSettings = JSON.parse(localStorage.getItem("settings") || "{}");
+    const oldSettings = JSON.parse(localStorage.getItem("previous_settings") || "{}");
 
     const stylingOnly = localStorage.getItem("justStyling") === "true";
-    const relabelOnly = localStorage.getItem("relabelOnly") === "true";
-    const reclusterOnly = localStorage.getItem("reclusterOnly") === "true";
     localStorage.removeItem("justStyling");
-    localStorage.removeItem("relabelOnly");
-    localStorage.removeItem("reclusterOnly");
 
     const hasRendered = localStorage.getItem("data") !== null;
 
-    if (relabelOnly && hasRendered) {
-      console.log("Cluster relabel-only change -> calling lightweight cluster labeling endpoint.");
-      await relabelCurrentClusters(newSettings);
+    const dataChange = isEmbeddingChanged(newSettings, oldSettings);
+    const thresholdChange = isThresholdChanged(newSettings, oldSettings);
+
+    const clusterChanged =
+      (newSettings["cluster-mode"] !== oldSettings["cluster-mode"]) ||
+      (newSettings["hdbscan-min-cluster-size"] !== oldSettings["hdbscan-min-cluster-size"]) ||
+      (newSettings["hdbscan-min-samples"] !== oldSettings["hdbscan-min-samples"]);
+
+    // 1) Styling-only update (fast path)
+    if (hasRendered && stylingOnly && !dataChange && !thresholdChange && !clusterChanged) {
+      if (frame?.updateGraphStyling) frame.updateGraphStyling();
       localStorage.setItem("previous_settings", JSON.stringify(newSettings));
       loadingSpinner.style.display = "none";
       return;
     }
 
-    if (reclusterOnly && hasRendered) {
-      console.log("Cluster parameter change -> reclustering + relabeling without full pipeline.");
-      await reclusterCurrentGraph(newSettings);
+    // 2) Cluster-only apply (Option 2)
+    if (hasRendered && newSettings["cluster-mode"] === true && clusterChanged && !dataChange && !thresholdChange) {
+      await applyClusterOnly();
       localStorage.setItem("previous_settings", JSON.stringify(newSettings));
       loadingSpinner.style.display = "none";
       return;
     }
 
-    if (stylingOnly && hasRendered) {
-      console.log("Styling-only change → updating graph visuals.");
-      frame.updateGraphStyling();
+    // 3) Cluster turned OFF (only cluster settings changed) => no backend; just restyle
+    if (hasRendered && newSettings["cluster-mode"] === false && clusterChanged && !dataChange && !thresholdChange) {
+      if (frame?.updateGraphStyling) frame.updateGraphStyling();
       localStorage.setItem("previous_settings", JSON.stringify(newSettings));
       loadingSpinner.style.display = "none";
       return;
     }
 
-    const singleList = JSON.parse(localStorage.getItem("single-list"));
+    // 4) Otherwise: full rerun pipeline (Submit-like)
+    const singleList = JSON.parse(localStorage.getItem("single-list") || "false");
 
     if (singleList) {
       await frame.getGeneData(newSettings);
@@ -372,7 +396,6 @@ async function applySettingsAndRender() {
     }
 
     const fullData = JSON.parse(localStorage.getItem("data") || "null");
-
     if (
       !fullData ||
       !Array.isArray(fullData["X"]) ||
@@ -388,133 +411,34 @@ async function applySettingsAndRender() {
     localStorage.setItem("reset", JSON.stringify(true));
 
     clearPoints();
-
     frame.graph();
+
     localStorage.setItem("previous_settings", JSON.stringify(newSettings));
-
     loadingSpinner.style.display = "none";
-
   } catch (error) {
-    const parsedBackup = JSON.parse(backupData || "null");
-    if (
-      parsedBackup &&
-      Array.isArray(parsedBackup["X"]) &&
-      parsedBackup["X"].length >= 4
-    ) {
-      localStorage.setItem("data", backupData);
-      const oldSettings = JSON.parse(localStorage.getItem("previous_settings"));
-      localStorage.setItem("settings", JSON.stringify(oldSettings));
+    // Roll back to backup if possible
+    try {
+      const parsedBackup = JSON.parse(backupData || "null");
+      if (parsedBackup && Array.isArray(parsedBackup["X"]) && parsedBackup["X"].length >= 4) {
+        localStorage.setItem("data", backupData);
 
-      localStorage.removeItem("camera");
-      localStorage.removeItem("annotations");
-      localStorage.setItem("selected", "[]");
-      localStorage.setItem("reset", JSON.stringify(true));
-      clearPoints();
-      frame.graph();
+        if (backupSettings != null) localStorage.setItem("settings", backupSettings);
+        if (backupPrevSettings != null) localStorage.setItem("previous_settings", backupPrevSettings);
+
+        localStorage.removeItem("camera");
+        localStorage.removeItem("annotations");
+        localStorage.setItem("selected", "[]");
+        localStorage.setItem("reset", JSON.stringify(true));
+
+        clearPoints();
+        frame.graph();
+      }
+    } catch (e) {
+      // ignore rollback errors
     }
 
     loadingSpinner.style.display = "none";
-    alert("Error applying settings: " + error.message);
-  }
-}
-
-async function relabelCurrentClusters(settings) {
-  const fullData = JSON.parse(localStorage.getItem("data") || "null");
-  if (!fullData || !Array.isArray(fullData["X"])) {
-    throw new Error("No graph data available for cluster relabeling.");
-  }
-
-  const n = fullData["X"].length;
-  const points = [];
-  for (let i = 0; i < n; i++) {
-    points.push({
-      X: fullData["X"]?.[i],
-      Y: fullData["Y"]?.[i],
-      clusterID: fullData["clusterID"]?.[i],
-      setName: fullData["setName"]?.[i],
-      molecules: fullData["molecules"]?.[i],
-      pValue: fullData["pValue"]?.[i],
-    });
-  }
-
-  const response = await fetch("/cluster-labels/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      points: points,
-      settings: settings,
-    }),
-  });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload?.error || "Cluster relabel request failed.");
-  }
-  if (!payload || !Array.isArray(payload.points)) {
-    throw new Error("Invalid cluster relabel response.");
-  }
-
-  fullData["clusterLabel"] = payload.points.map((p) => p?.clusterLabel ?? "");
-  if (Array.isArray(fullData["clusterID"])) {
-    fullData["clusterID"] = payload.points.map((p, idx) =>
-      p?.clusterID !== undefined ? p.clusterID : fullData["clusterID"][idx]
-    );
-  }
-  localStorage.setItem("data", JSON.stringify(fullData));
-
-  if (typeof frame !== "undefined" && frame?.updateGraphStyling) {
-    frame.updateGraphStyling();
-  } else if (typeof frame !== "undefined" && frame?.graph) {
-    frame.graph();
-  }
-}
-
-async function reclusterCurrentGraph(settings) {
-  const fullData = JSON.parse(localStorage.getItem("data") || "null");
-  if (!fullData || !Array.isArray(fullData["X"])) {
-    throw new Error("No graph data available for reclustering.");
-  }
-
-  const n = fullData["X"].length;
-  const points = [];
-  for (let i = 0; i < n; i++) {
-    points.push({
-      X: fullData["X"]?.[i],
-      Y: fullData["Y"]?.[i],
-      clusterID: fullData["clusterID"]?.[i],
-      setName: fullData["setName"]?.[i],
-      molecules: fullData["molecules"]?.[i],
-      pValue: fullData["pValue"]?.[i],
-    });
-  }
-
-  const response = await fetch("/cluster-recluster/", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      points: points,
-      settings: settings,
-    }),
-  });
-
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload?.error || "Cluster recluster request failed.");
-  }
-  if (!payload || !Array.isArray(payload.points)) {
-    throw new Error("Invalid cluster recluster response.");
-  }
-
-  fullData["clusterID"] = payload.points.map((p, idx) =>
-    p?.clusterID !== undefined ? p.clusterID : (fullData["clusterID"]?.[idx] ?? -1)
-  );
-  fullData["clusterLabel"] = payload.points.map((p) => p?.clusterLabel ?? "");
-  localStorage.setItem("data", JSON.stringify(fullData));
-
-  if (typeof frame !== "undefined" && frame?.updateGraphStyling) {
-    frame.updateGraphStyling();
-  } else if (typeof frame !== "undefined" && frame?.graph) {
-    frame.graph();
+    alert("Error applying settings: " + (error?.message || String(error)));
   }
 }
 
@@ -572,41 +496,6 @@ function toggleSizeVisibility() {
     dynamicInput.style.display = "block";
     fixedInput.style.display = "none";
   }
-}
-
-function normalizeClusterSettingInt(value, fallback) {
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isNaN(parsed)) {
-    return fallback;
-  }
-  return parsed;
-}
-
-function getEffectiveClusterParams(settings) {
-  return {
-    minClusterSize: normalizeClusterSettingInt(settings?.["hdbscan-min-cluster-size"], 5),
-    minSamples: normalizeClusterSettingInt(settings?.["hdbscan-min-samples"], 5),
-  };
-}
-
-function areClusterParamsChanged(newSettings, oldSettings) {
-  if (!newSettings?.["cluster-mode"]) {
-    return false;
-  }
-
-  const nextParams = getEffectiveClusterParams(newSettings);
-  const prevParams = getEffectiveClusterParams(oldSettings || {});
-  return (
-    nextParams.minClusterSize !== prevParams.minClusterSize ||
-    nextParams.minSamples !== prevParams.minSamples
-  );
-}
-
-function toggleClusterParamsVisibility() {
-  if (!hdbscanParamsContainer || !clusterModeToggle) {
-    return;
-  }
-  hdbscanParamsContainer.style.display = clusterModeToggle.checked ? "block" : "none";
 }
 
 function addSpinnerOverlay() {
@@ -714,3 +603,11 @@ function updateThresholdInputs() {
 
   localStorage.setItem("threshold-type", selectedType);
 }
+
+window.addEventListener("load", () => {
+  if (!localStorage.getItem("previous_settings")) {
+    const cur = localStorage.getItem("settings") || JSON.stringify(defaultSettings);
+    localStorage.setItem("previous_settings", cur);
+    console.log("[update_settings] re-seeded previous_settings on window.load");
+  }
+});

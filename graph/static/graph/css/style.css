@@ -227,17 +227,17 @@ html {
 }
 
 /* Keep HDBSCAN numeric inputs compact inside the settings sidebar */
-#hdbscan-params-container .option {
+#cluster-params .option {
   align-items: center;
 }
 
-#hdbscan-params-container .option label {
+#cluster-params .option label {
   flex: 1 1 auto;
   min-width: 0;
   text-wrap: wrap;
 }
 
-#hdbscan-params-container .option input[type="number"] {
+#cluster-params .option input[type="number"] {
   width: 72px;
   max-width: 72px;
   text-align: right;

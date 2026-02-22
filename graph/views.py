@@ -52,22 +52,9 @@ def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=No
     X = np.array([[float(p["X"]), float(p["Y"])] for p in points], dtype=float)
 
     # If min_samples is not provided, HDBSCAN uses min_cluster_size by default behavior
-    try:
-        min_cluster_size = max(2, int(min_cluster_size))
-    except Exception:
-        min_cluster_size = 5
-
-    if min_samples is None:
-        parsed_min_samples = None
-    else:
-        try:
-            parsed_min_samples = max(1, int(min_samples))
-        except Exception:
-            parsed_min_samples = None
-
     clusterer = hdbscan.HDBSCAN(
-        min_cluster_size=min_cluster_size,
-        min_samples=parsed_min_samples,
+        min_cluster_size=int(min_cluster_size),
+        min_samples=(int(min_samples) if min_samples is not None else None),
         metric="euclidean"
     )
 
@@ -77,140 +64,66 @@ def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=No
 
     return points
 
-
-def get_hdbscan_params_from_settings(settings):
-    """
-    Use backend defaults when cluster mode is OFF.
-    When cluster mode is ON, read user-specified values from settings.
-    """
-    default_min_cluster_size = 5
-    default_min_samples = None
-    settings = settings or {}
-
-    cluster_mode_enabled = bool(settings.get("cluster-mode", False))
-    if not cluster_mode_enabled:
-        print(
-            f"[HDBSCAN DEBUG] cluster-mode=OFF -> using defaults: "
-            f"min_cluster_size={default_min_cluster_size}, min_samples={default_min_samples}"
-        )
-        return default_min_cluster_size, default_min_samples
-
-    raw_min_cluster_size = settings.get("hdbscan-min-cluster-size", default_min_cluster_size)
-    raw_min_samples = settings.get("hdbscan-min-samples", default_min_cluster_size)
-
-    try:
-        min_cluster_size = max(2, int(raw_min_cluster_size))
-    except Exception:
-        min_cluster_size = default_min_cluster_size
-
-    try:
-        min_samples = max(1, int(raw_min_samples))
-    except Exception:
-        min_samples = default_min_cluster_size
-
-    print(
-        f"[HDBSCAN DEBUG] cluster-mode=ON -> using settings: "
-        f"min_cluster_size={min_cluster_size}, min_samples={min_samples}"
-    )
-    return min_cluster_size, min_samples
-
-def add_cluster_labels(points, settings, cache_obj=cache):
-    """
-    Attach clusterLabel to each point.
-    LLM labeling runs only when cluster-mode is enabled in settings.
-    """
-    cluster_mode_enabled = bool((settings or {}).get("cluster-mode", False))
-
-    if not cluster_mode_enabled:
-        for p in points:
-            p["clusterLabel"] = ""
-        return points
-
-    summaries = build_cluster_summaries(points)
-    name_by_id = label_clusters_with_llm(summaries, cache_obj=cache_obj)
-
-    for p in points:
-        cid = p.get("clusterID", -1)
-        try:
-            cid = int(cid)
-        except Exception:
-            cid = -1
-
-        if cid == -1:
-            p["clusterLabel"] = ""
-        else:
-            p["clusterLabel"] = name_by_id.get(cid, f"Cluster {cid}")
-
-    return points
-
-
 @csrf_exempt
-def cluster_label_view(request):
-    """
-    Lightweight endpoint to (re)name clusters without recomputing enrichment/UMAP.
-    Expects:
-      {
-        "points": [ { "X", "Y", "clusterID", "setName", "molecules", "pValue", ... }, ... ],
-        "settings": { "cluster-mode": true|false, ... }
-      }
-    Returns:
-      { "points": [...] } with clusterLabel attached.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
+def cluster_only_view(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
 
     try:
         payload = json.loads(request.body or "{}")
-        points = payload.get("points") or []
-        settings = payload.get("settings") or {}
+        analysis_id = payload.get("analysis_id")
+        if not analysis_id:
+            return JsonResponse({"error": "Missing analysis_id"}, status=400)
 
-        if not isinstance(points, list):
-            return JsonResponse({"error": "points must be a list"}, status=400)
+        cached_json = cache.get(f"analysis_points:{analysis_id}")
+        if not cached_json:
+            return JsonResponse(
+                {"error": "analysis_id not found or expired. Please click Submit again."},
+                status=400
+            )
 
-        labeled = add_cluster_labels(points, settings, cache_obj=cache)
-        return JsonResponse({"points": labeled})
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        # Load clean base points (unclustered) from cache
+        points = json.loads(cached_json)
 
+        min_cluster_size = int(payload.get("min_cluster_size", 5))
+        min_samples_raw = payload.get("min_samples", None)
+        min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
 
-@csrf_exempt
-def cluster_recluster_view(request):
-    """
-    Lightweight endpoint to rerun HDBSCAN on existing 2D points then relabel clusters.
-    Expects:
-      {
-        "points": [ { "X", "Y", "setName", "molecules", "pValue", ... }, ... ],
-        "settings": { "cluster-mode": true|false, "hdbscan-min-cluster-size": 5, "hdbscan-min-samples": 5, ... }
-      }
-    Returns:
-      { "points": [...] } with updated clusterID and clusterLabel.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
+        # Cache cluster results per param combo to avoid repeated LLM calls
+        result_key = f"cluster_result:{analysis_id}:{min_cluster_size}:{min_samples if min_samples is not None else 'None'}"
+        cached_result = cache.get(result_key)
+        if cached_result:
+            return JsonResponse(cached_result)
 
-    try:
-        payload = json.loads(request.body or "{}")
-        points = payload.get("points") or []
-        settings = payload.get("settings") or {}
-
-        if not isinstance(points, list):
-            return JsonResponse({"error": "points must be a list"}, status=400)
-
-        min_cluster_size, min_samples = get_hdbscan_params_from_settings(settings)
-        print(
-            f"[HDBSCAN DEBUG] endpoint=/cluster-recluster/ "
-            f"min_cluster_size={min_cluster_size}, min_samples={min_samples}, "
-            f"points={len(points)}"
-        )
-        clustered = add_hdbscan_clusters_on_embedding(
+        points = add_hdbscan_clusters_on_embedding(
             points,
             min_cluster_size=min_cluster_size,
             min_samples=min_samples
         )
-        labeled = add_cluster_labels(clustered, settings, cache_obj=cache)
-        return JsonResponse({"points": labeled})
+
+        summaries = build_cluster_summaries(points)
+        name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
+
+        cluster_ids = []
+        cluster_labels = []
+        for p in points:
+            try:
+                cid = int(p.get("clusterID", -1))
+            except Exception:
+                cid = -1
+            cluster_ids.append(cid)
+            cluster_labels.append("" if cid == -1 else name_by_id.get(cid, "Unknown pathway"))
+
+        result = {
+            "analysis_id": analysis_id,
+            "cluster_ids": cluster_ids,
+            "cluster_labels": cluster_labels,
+        }
+        cache.set(result_key, result, timeout=1000)
+        return JsonResponse(result)
+
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=400)
+        return JsonResponse({"error": str(e)}, status=500)
 
 @csrf_exempt
 def gene_input_view(request):
@@ -371,22 +284,51 @@ def gene_input_view(request):
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
-            # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
-            min_cluster_size, min_samples = get_hdbscan_params_from_settings(settings)
-            print(
-                f"[HDBSCAN DEBUG] endpoint=/gene-input/ "
-                f"min_cluster_size={min_cluster_size}, min_samples={min_samples}, "
-                f"points={len(data)}"
-            )
-            data = add_hdbscan_clusters_on_embedding(
-                data,
-                min_cluster_size=min_cluster_size,
-                min_samples=min_samples
-            )
-            data = add_cluster_labels(data, settings, cache_obj=cache)
+            # Create a stable ID for this embedding result
+            analysis_id = hashlib.md5(mapped_result.encode("utf-8")).hexdigest()
+
+            # Cache the UNCLUSTERED points as a JSON string (no extra imports, no mutation risk)
+            cache.set(f"analysis_points:{analysis_id}", json.dumps(data), timeout=1000)
+
+            # Only run HDBSCAN + LLM if cluster-mode is ON
+            cluster_on = False
+            if isinstance(settings, dict):
+                cluster_on = bool(settings.get("cluster-mode", False))
+
+            if cluster_on:
+                min_cluster_size = int(settings.get("hdbscan-min-cluster-size", 5))
+                min_samples_raw = settings.get("hdbscan-min-samples", None)
+                min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
+
+                data = add_hdbscan_clusters_on_embedding(
+                    data,
+                    min_cluster_size=min_cluster_size,
+                    min_samples=min_samples
+                )
+
+                summaries = build_cluster_summaries(data)
+                name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
+
+                for p in data:
+                    try:
+                        cid = int(p.get("clusterID", -1))
+                    except Exception:
+                        cid = -1
+                    p["clusterLabel"] = "" if cid == -1 else name_by_id.get(cid, "Unknown pathway")
+            else:
+                for p in data:
+                    p["clusterID"] = -1
+                    p["clusterLabel"] = ""
+
+            #DEBUG2
+            if len(data) > 0:
+                print("DEBUG sample points after attach:")
+                for i in range(min(3, len(data))):
+                    print("  ", i, "cid=", data[i].get("clusterID"), "label=", data[i].get("clusterLabel"))
 
             print("grphing")
             return JsonResponse({
+                "analysis_id": analysis_id,
                 "umap": data,
                 "relevant_members": json.dumps(filtered),
                 "distancesM": [],
@@ -549,22 +491,45 @@ def gene_input_view2(request):
             print("loding result into json")
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("returning teh response")
-            # --- HDBSCAN clustering based on the 2D embedding coordinates (X, Y) ---
-            min_cluster_size, min_samples = get_hdbscan_params_from_settings(settings)
-            print(
-                f"[HDBSCAN DEBUG] endpoint=/gene-input2/ "
-                f"min_cluster_size={min_cluster_size}, min_samples={min_samples}, "
-                f"points={len(data)}"
-            )
-            data = add_hdbscan_clusters_on_embedding(
-                data,
-                min_cluster_size=min_cluster_size,
-                min_samples=min_samples
-            )
-            data = add_cluster_labels(data, settings, cache_obj=cache)
+            # Create a stable ID for this embedding result
+            analysis_id = hashlib.md5(mapped_result.encode("utf-8")).hexdigest()
+
+            # Cache the UNCLUSTERED points as a JSON string (no extra imports, no mutation risk)
+            cache.set(f"analysis_points:{analysis_id}", json.dumps(data), timeout=1000)
+
+            # Only run HDBSCAN + LLM if cluster-mode is ON
+            cluster_on = False
+            if isinstance(settings, dict):
+                cluster_on = bool(settings.get("cluster-mode", False))
+
+            if cluster_on:
+                min_cluster_size = int(settings.get("hdbscan-min-cluster-size", 5))
+                min_samples_raw = settings.get("hdbscan-min-samples", None)
+                min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
+
+                data = add_hdbscan_clusters_on_embedding(
+                    data,
+                    min_cluster_size=min_cluster_size,
+                    min_samples=min_samples
+                )
+
+                summaries = build_cluster_summaries(data)
+                name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
+
+                for p in data:
+                    try:
+                        cid = int(p.get("clusterID", -1))
+                    except Exception:
+                        cid = -1
+                    p["clusterLabel"] = "" if cid == -1 else name_by_id.get(cid, "Unknown pathway")
+            else:
+                for p in data:
+                    p["clusterID"] = -1
+                    p["clusterLabel"] = ""
 
             print("grphing")
             return JsonResponse({
+                "analysis_id": analysis_id,
                 "umap": data,
                 "distancesM": [],
                 "relevant_members": json.dumps(filtered),
