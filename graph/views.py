@@ -71,29 +71,30 @@ def cluster_only_view(request):
 
     try:
         payload = json.loads(request.body or "{}")
-        analysis_id = payload.get("analysis_id")
-        if not analysis_id:
-            return JsonResponse({"error": "Missing analysis_id"}, status=400)
 
-        cached_json = cache.get(f"analysis_points:{analysis_id}")
-        if not cached_json:
-            return JsonResponse(
-                {"error": "analysis_id not found or expired. Please click Submit again."},
-                status=400
-            )
+        points = payload.get("points")
+        if points is None:
+            return JsonResponse({"error": "Missing points"}, status=400)
 
-        # Load clean base points (unclustered) from cache
-        points = json.loads(cached_json)
+        # Accept dict-of-arrays (localStorage.data) or list[dict]
+        if isinstance(points, dict):
+            xs = points.get("X", [])
+            ys = points.get("Y", [])
+            n = min(len(xs), len(ys))
+            keys = list(points.keys())
+
+            normalized = []
+            for i in range(n):
+                p = {}
+                for k in keys:
+                    arr = points.get(k, [])
+                    p[k] = arr[i] if i < len(arr) else None
+                normalized.append(p)
+            points = normalized
 
         min_cluster_size = int(payload.get("min_cluster_size", 5))
         min_samples_raw = payload.get("min_samples", None)
         min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
-
-        # Cache cluster results per param combo to avoid repeated LLM calls
-        result_key = f"cluster_result:{analysis_id}:{min_cluster_size}:{min_samples if min_samples is not None else 'None'}"
-        cached_result = cache.get(result_key)
-        if cached_result:
-            return JsonResponse(cached_result)
 
         points = add_hdbscan_clusters_on_embedding(
             points,
@@ -114,13 +115,10 @@ def cluster_only_view(request):
             cluster_ids.append(cid)
             cluster_labels.append("" if cid == -1 else name_by_id.get(cid, "Unknown pathway"))
 
-        result = {
-            "analysis_id": analysis_id,
+        return JsonResponse({
             "cluster_ids": cluster_ids,
             "cluster_labels": cluster_labels,
-        }
-        cache.set(result_key, result, timeout=1000)
-        return JsonResponse(result)
+        })
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -284,11 +282,6 @@ def gene_input_view(request):
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
-            # Create a stable ID for this embedding result
-            analysis_id = hashlib.md5(mapped_result.encode("utf-8")).hexdigest()
-
-            # Cache the UNCLUSTERED points as a JSON string (no extra imports, no mutation risk)
-            cache.set(f"analysis_points:{analysis_id}", json.dumps(data), timeout=1000)
 
             # Only run HDBSCAN + LLM if cluster-mode is ON
             cluster_on = False
@@ -328,7 +321,6 @@ def gene_input_view(request):
 
             print("grphing")
             return JsonResponse({
-                "analysis_id": analysis_id,
                 "umap": data,
                 "relevant_members": json.dumps(filtered),
                 "distancesM": [],
@@ -491,11 +483,6 @@ def gene_input_view2(request):
             print("loding result into json")
             data = json.loads(mapped_result)  # or skip if already a Python object
             print("returning teh response")
-            # Create a stable ID for this embedding result
-            analysis_id = hashlib.md5(mapped_result.encode("utf-8")).hexdigest()
-
-            # Cache the UNCLUSTERED points as a JSON string (no extra imports, no mutation risk)
-            cache.set(f"analysis_points:{analysis_id}", json.dumps(data), timeout=1000)
 
             # Only run HDBSCAN + LLM if cluster-mode is ON
             cluster_on = False
@@ -529,7 +516,6 @@ def gene_input_view2(request):
 
             print("grphing")
             return JsonResponse({
-                "analysis_id": analysis_id,
                 "umap": data,
                 "distancesM": [],
                 "relevant_members": json.dumps(filtered),

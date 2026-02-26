@@ -342,22 +342,22 @@ function detectFrontendOnlyChanges() {
 }
 
 async function applyClusterOnly() {
-  const analysisId = localStorage.getItem("analysis_id");
-  if (!analysisId) {
-    throw new Error("Missing analysis_id. Please click Submit once to generate the graph first.");
-  }
-
   const settings = JSON.parse(localStorage.getItem("settings") || "{}");
 
   const minClusterSize = parseInt(settings["hdbscan-min-cluster-size"] || "5", 10);
   const minSamplesRaw = settings["hdbscan-min-samples"];
   const minSamples = (minSamplesRaw === "" || minSamplesRaw == null) ? null : parseInt(minSamplesRaw, 10);
 
+  const fullData = JSON.parse(localStorage.getItem("data") || "null");
+  if (!fullData || !Array.isArray(fullData["X"]) || fullData["X"].length < 4) {
+    throw new Error("Missing graph data. Please click Submit once to generate the graph first.");
+  }
+
   const res = await fetch("/cluster_only/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      analysis_id: analysisId,
+      points: fullData,
       min_cluster_size: minClusterSize,
       min_samples: minSamples,
     }),
@@ -366,20 +366,17 @@ async function applyClusterOnly() {
   const out = await res.json();
   if (!res.ok) throw new Error(out?.error || "Cluster-only request failed.");
 
-  // Inject cluster arrays into localStorage.data (NO backend rerun)
-  const fullData = JSON.parse(localStorage.getItem("data") || "{}");
   fullData["clusterID"] = out.cluster_ids;
   fullData["clusterLabel"] = out.cluster_labels;
   localStorage.setItem("data", JSON.stringify(fullData));
 
-  // Reset selection + re-graph
   localStorage.removeItem("camera");
   localStorage.removeItem("annotations");
   localStorage.setItem("selected", "[]");
   localStorage.setItem("reset", JSON.stringify(true));
 
   clearPoints();
-  frame.graph(); // redraw only
+  frame.graph();
 }
 
 async function applySettingsAndRender() {
@@ -428,22 +425,10 @@ async function applySettingsAndRender() {
       !dataChange &&
       !thresholdChange
     ) {
-      try {
-        await applyClusterOnly();
-        localStorage.setItem("previous_settings", JSON.stringify(newSettings));
-        loadingSpinner.style.display = "none";
-        return;
-      } catch (e) {
-        const msg = (e?.message || String(e) || "").toLowerCase();
-
-        // If cluster-only failed due to cache/analysis_id => just fall through to full rerun
-        if (msg.includes("analysis_id") || msg.includes("expired") || msg.includes("not found")) {
-          console.warn("[cluster-only] analysis_id missing/expired -> fallback to full rerun");
-          // do NOT return; fall through
-        } else {
-          throw e;
-        }
-      }
+      await applyClusterOnly();
+      localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+      loadingSpinner.style.display = "none";
+      return;
     }
 
     // 3) Cluster turned OFF (only cluster settings changed) => no backend; just restyle
