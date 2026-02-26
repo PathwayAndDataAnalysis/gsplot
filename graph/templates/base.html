@@ -26,7 +26,7 @@
     <div class="nav-links">
       <span class="nav-button" id="nav-import" onclick="importFile()">Input</span>
       <a class="nav-button" href="/help">Help</a>
-      <a class="nav-button" href="/about">About Us</a>
+      <a class="nav-button" href="/about">About</a>
       <div class="settings-button">
         <!-- Gear Icon -->
         <svg height="100%" id="Layer_1" style="enable-background: new 0 0 512 512" version="1.1" viewBox="0 0 512 512"
@@ -43,20 +43,6 @@
     <div id="welcome-message">
       <h1>Welcome to Gene Set Plot</h1>
       <h3>A Gene Set Enrichment Analysis (GSEA) visualization tool.</h3>
-    </div>
-  </div>
-
-  <!--Human/Mouse/Upload Dataset Selection-->
-  <div id="species-selector" style="text-align: center; margin-top: 30px;">
-    <label><strong>Select Gene Set Dataset:</strong></label>
-    <select id="species-select" onchange="handleSpeciesChange()" style="margin-left: 10px; padding: 5px;">
-      <option value="human" selected>Human (MSigDB)</option>
-      <option value="mouse">Mouse (MSigDB)</option>
-      <option value="custom">Upload your own</option>
-    </select>
-    <div id="custom-upload-section" style="display: none; margin-top: 15px;">
-      <input type="file" id="custom-json-input" accept=".json" />
-      <p style="color: gray; margin-top: 10px;">Upload a custom gene set JSON file</p>
     </div>
   </div>
 
@@ -94,6 +80,20 @@
           placeholder="Enter all genes, comma or newline separated. You might need to specify significance in a separate file or method."></textarea>
         <button onclick="clearSingleGeneList()">Clear</button>
       </div>
+    </div>
+  </div>
+
+  <!--Human/Mouse/Upload Dataset Selection-->
+  <div id="species-selector" style="text-align: center; margin-top: 30px;">
+    <label><strong>Select Gene Set Dataset:</strong></label>
+    <select id="species-select" onchange="handleSpeciesChange()" style="margin-left: 10px; padding: 5px;">
+      <option value="human" selected>Human (MSigDB)</option>
+      <option value="mouse">Mouse (MSigDB)</option>
+      <option value="custom">Upload your own</option>
+    </select>
+    <div id="custom-upload-section" style="display: none; margin-top: 15px;">
+      <input type="file" id="custom-json-input" accept=".json" />
+      <p style="color: gray; margin-top: 10px;">Upload a custom gene set JSON file</p>
     </div>
   </div>
 
