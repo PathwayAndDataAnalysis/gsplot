@@ -581,6 +581,7 @@
               // Save data
               setLocalStorage("data", dataStorage);
               resolve();
+              window.parent.localStorage.setItem("previous_settings", JSON.stringify(settings));
             })
             .catch((error) => {
               reject(error);
@@ -722,6 +723,7 @@
               // Save data
               setLocalStorage("data", dataStorage);
               resolve();
+              window.parent.localStorage.setItem("previous_settings", JSON.stringify(settings));
             })
             .catch((error) => {
               reject(error);
