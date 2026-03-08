@@ -259,7 +259,7 @@ def gene_input_view(request):
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
             print("building weights done")
 
-            dist_key = thr_key + " - " + distance_type
+            dist_key = f"{key_hash}|{thr_key}|{distance_type}|rescaled_v1"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -458,7 +458,7 @@ def gene_input_view2(request):
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
             print("weights built")
 
-            dist_key = thr_key + " - " + distance_type
+            dist_key = f"{key_hash}|{thr_key}|{distance_type}|rescaled_v1"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 

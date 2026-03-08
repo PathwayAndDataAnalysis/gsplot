@@ -11,6 +11,8 @@ from scipy.stats import norm
 
 from sklearn.manifold import Isomap, TSNE
 
+DISTANCE_RESCALING_CAP = 100.0
+
 
 # python manage.py runserver
 # python manage.py migrate
@@ -36,6 +38,22 @@ def weighted_jaccard_distance(user_weights, gene_seta, gene_setb):
         denominator += max(w_a, w_b)
 
     return 1 - (numerator / denominator) if denominator else 1.0    # distance = 1 - similarity
+
+
+def rescale_distance(raw_distance, cap=DISTANCE_RESCALING_CAP):
+    """
+    Convert bounded raw distance d in [0, 1] to d/(1-d), capped to avoid infinities.
+    """
+    d = float(raw_distance)
+    if not np.isfinite(d):
+        return cap
+
+    d = max(0.0, d)
+    denom = 1.0 - d
+    if denom <= 0.0:
+        return cap
+
+    return min(d / denom, cap)
 
 
 def build_weights_from_ranked_list(ranked_genes):
@@ -322,8 +340,9 @@ def umap_reduction(fileDataOrString, settings, user_weights, distance_type, dist
                         dist = overlap_coef(set1, set2)
                     else:
                         raise ValueError(f"Unknown distance_type: {distance_type}")
-                    distance_matrix[i, j] = dist
-                    distance_matrix[j, i] = dist
+                    scaled_dist = rescale_distance(dist)
+                    distance_matrix[i, j] = scaled_dist
+                    distance_matrix[j, i] = scaled_dist
             if i % 50 == 0:
                 print(f"{i}/{n}")
 
@@ -376,8 +395,9 @@ def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights):
                 dist = overlap_coef(set1, set2)
             else:
                 raise ValueError(f"Unknown distance_type: {distance_type}")
-            distance_matrix[i, j] = dist
-            distance_matrix[j, i] = dist
+            scaled_dist = rescale_distance(dist)
+            distance_matrix[i, j] = scaled_dist
+            distance_matrix[j, i] = scaled_dist
 
     if i % 50 == 0:
         print(f"{i}/{n}")
