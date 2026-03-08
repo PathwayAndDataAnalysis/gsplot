@@ -28,7 +28,7 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["gsplot.cs.umb.edu"]
+ALLOWED_HOSTS = ["gsplot.cs.umb.edu", "localhost", "127.0.0.1"]
 
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
