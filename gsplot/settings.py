@@ -30,7 +30,6 @@ DEBUG = False
 
 ALLOWED_HOSTS = ["gsplot.cs.umb.edu"]
 
-SECURE_SSL_REDIRECT = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 
