@@ -440,9 +440,12 @@ async function applySettingsAndRender() {
     }
 
     // 4) Otherwise: full rerun pipeline (Submit-like)
+    const inputMode = localStorage.getItem("gene-input-mode");
     const singleList = JSON.parse(localStorage.getItem("single-list") || "false");
 
-    if (singleList) {
+    if (inputMode === "scored-genes") {
+      await frame.getScoredGenesData(newSettings);
+    } else if (singleList) {
       await frame.getGeneData(newSettings);
     } else {
       await frame.getGeneInputData(newSettings);

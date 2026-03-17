@@ -50,12 +50,26 @@
     <h2>Manual Gene Input</h2>
 
     <div class="gene-input-tabs">
-      <span class="gene-input-tab-button active" onclick="showGeneInputTab('two-textareas', event)">Thresholded
-        Input</span>
-      <span class="gene-input-tab-button" onclick="showGeneInputTab('single-textarea')">Single List Input</span>
+      <span class="gene-input-tab-button active" onclick="showGeneInputTab('scored-genes', event)">Scored
+        Genes</span>
+      <span class="gene-input-tab-button" onclick="showGeneInputTab('two-textareas', event)">Thresholded
+        Genes</span>
+      <span class="gene-input-tab-button" onclick="showGeneInputTab('single-textarea')">Ranked Genes</span>
     </div>
 
-    <div id="two-textareas-content" class="gene-input-content">
+    <div id="scored-genes-content" class="gene-input-content">
+      <label for="id_scored_genes_file" style="font-weight: bold">Upload Scored Genes File:</label><br />
+      <div class="gene-input-column">
+        <input id="id_scored_genes_file" type="file" accept=".tsv,.txt" />
+        <p style="color: gray; margin-top: 10px;">
+          Upload a <code>.tsv</code> or <code>.txt</code> file with two columns: gene and score without headers.
+        </p>
+        <div id="scored-genes-file-status" style="margin-top: 8px; color: gray;"></div>
+        <button onclick="clearScoredGenesFile()">Clear</button>
+      </div>
+    </div>
+
+    <div id="two-textareas-content" class="gene-input-content" style="display: none;">
       <div class="gene-input-side-by-side">
         <div class="gene-input-column">
           <label for="id_significant_genes" style="font-weight: bold">Significant Genes:</label><br />
@@ -200,7 +214,7 @@
             <i class="tooltip-icon">i</i>
             <span class="tooltip-text">
               This option filters the selected point(s) to show only significant genes.<br>
-              Only available when you use thresholded input.
+              Only available when you use thresholded genes.
             </span>
           </span>
         </h4>

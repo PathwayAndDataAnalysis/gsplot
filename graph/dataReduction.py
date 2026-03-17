@@ -1,5 +1,9 @@
 import math
-
+import csv
+try:
+    import blitzgsea as blitz
+except ImportError:
+    blitz = None
 import pandas as pd
 import umap.umap_ as umap
 import numpy as np
@@ -89,6 +93,176 @@ def build_weights_from_sets(sig_genes, insig_genes):
 
     return user_weights
 
+def parse_scored_genes_raw(scored_genes_raw):
+    """
+    Parse raw uploaded scored-genes text into:
+    1) scored_genes: ordered list of {"gene": ..., "score": abs_score}
+    2) user_weights: dict {gene: abs_score}
+
+    Expected input: two columns, no header.
+    Prefer tab-delimited, but also allow generic whitespace split.
+    Duplicate genes: keep first occurrence.
+    """
+    if not scored_genes_raw or not scored_genes_raw.strip():
+        return [], {}
+
+    scored_genes = []
+    seen = set()
+
+    lines = scored_genes_raw.splitlines()
+    for line_no, raw_line in enumerate(lines, start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        # Try tab first
+        if "\t" in line:
+            parts = [p.strip() for p in line.split("\t") if p.strip()]
+        else:
+            # fallback for plain .txt separated by spaces
+            parts = line.split()
+
+        if len(parts) < 2:
+            raise ValueError(
+                f"Invalid scored genes file format at line {line_no}. "
+                f"Each line must contain exactly 2 columns: gene and score."
+            )
+
+        gene = parts[0].strip()
+        score_raw = parts[1].strip()
+
+        if not gene:
+            continue
+
+        try:
+            score = abs(float(score_raw))
+        except ValueError:
+            raise ValueError(
+                f"Invalid score at line {line_no} for gene '{gene}'. "
+                f"Score must be numeric."
+            )
+
+        if not np.isfinite(score):
+            raise ValueError(
+                f"Invalid score at line {line_no} for gene '{gene}'. "
+                f"Score must be a finite number."
+            )
+
+        if gene in seen:
+            continue
+
+        seen.add(gene)
+        scored_genes.append({
+            "gene": gene,
+            "score": score,
+        })
+
+    if not scored_genes:
+        return [], {}
+
+    # Sort by absolute change from most changed to least changed
+    scored_genes.sort(key=lambda x: x["score"], reverse=True)
+
+    user_weights = {row["gene"]: row["score"] for row in scored_genes}
+    return scored_genes, user_weights
+
+def build_weights_from_scored_genes(scored_genes):
+    """
+    scored_genes: list of {"gene": ..., "score": ...}
+    Returns natural score-based weights for weighted distances.
+    """
+    if not scored_genes:
+        return {}
+
+    return {
+        row["gene"].strip(): float(abs(row["score"]))
+        for row in scored_genes
+        if row.get("gene") and np.isfinite(float(row["score"]))
+    }
+
+def run_blitzgsea_signless(filtered, scored_genes):
+    if blitz is None:
+        raise RuntimeError(
+            "blitzgsea is not installed on the server. "
+            "Install it with: pip install blitzgsea"
+        )
+
+    if not filtered or not scored_genes:
+        return {}
+
+    signature = pd.DataFrame(
+        [(row["gene"], float(abs(row["score"]))) for row in scored_genes],
+        columns=[0, 1]
+    )
+
+    library = {
+        geneset["gene_set_name"]: list(geneset["matched_genes"])
+        for geneset in filtered
+    }
+
+    result = blitz.gsea(signature, library)
+
+    if result is None or len(result) == 0:
+        return {}
+
+    cols_lower = {str(c).strip().lower(): c for c in result.columns}
+
+    term_col = None
+    for candidate in ["term", "geneset", "gene_set", "name", "pathway"]:
+        if candidate in cols_lower:
+            term_col = cols_lower[candidate]
+            break
+
+    use_index_for_term = term_col is None
+
+    p_col = None
+    for candidate in ["pval", "p_value", "p-value", "pvalue", "p"]:
+        if candidate in cols_lower:
+            p_col = cols_lower[candidate]
+            break
+
+    q_col = None
+    for candidate in ["fdr", "qval", "q_value", "q-value", "padj", "adj_pval"]:
+        if candidate in cols_lower:
+            q_col = cols_lower[candidate]
+            break
+
+    if p_col is None:
+        raise ValueError(
+            f"Could not find p-value column in BlitzGSEA result. Columns: {list(result.columns)}"
+        )
+
+    matched_by_name = {
+        geneset["gene_set_name"]: " ".join(str(g) for g in geneset["matched_genes"])
+        for geneset in filtered
+    }
+
+    gene_sets_with_p = {}
+
+    if q_col is not None:
+        for idx, row in result.iterrows():
+            set_name = str(idx if use_index_for_term else row[term_col])
+            if set_name not in matched_by_name:
+                continue
+
+            p_raw = float(row[p_col])
+            q_val = float(row[q_col])
+            gene_string = matched_by_name[set_name]
+            gene_sets_with_p[set_name] = (gene_string, p_raw, q_val)
+
+        return gene_sets_with_p
+
+    tmp = {}
+    for idx, row in result.iterrows():
+        set_name = str(idx if use_index_for_term else row[term_col])
+        if set_name not in matched_by_name:
+            continue
+
+        p_raw = float(row[p_col])
+        gene_string = matched_by_name[set_name]
+        tmp[set_name] = (gene_string, p_raw)
+
+    return add_q_values(tmp)
 
 def get_vals(gene_sets_for_umap, reject_count, total, p_val, fdr):
     sorted_items = sorted(gene_sets_for_umap.items(), key=lambda item: item[1][1])

@@ -88,6 +88,7 @@
         const sigGenes = localStorage.getItem("sigGenes") || "";
         const insigGenes = localStorage.getItem("insigGenes") || "";
         const rankedGenes = localStorage.getItem("rankedGenes") || "";
+        const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
 
         let singleList = false; // Default value if not found
         const storedSingleList = localStorage.getItem("single-list");
@@ -101,7 +102,9 @@
         if (getLocalStorage("data") === null) {
           showSpinner();
           try {
-            if (singleList == true) {
+            if (inputMode === "scored-genes") {
+              await getScoredGenesData(settings);
+            } else if (singleList == true) {
               await getGeneData(settings);
             } else {
               await getGeneInputData(settings);
@@ -594,8 +597,8 @@
       function getGeneInputData(settings) {
         return new Promise((resolve, reject) => {
           console.log("Seen")
-          const sigGenes = localStorage.getItem("sigGenes")
-          const insigGenes = localStorage.getItem("insigGenes")
+          const sigGenes = localStorage.getItem("sigGenes") || "";
+          const insigGenes = localStorage.getItem("insigGenes") || "";
           const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
           const minMembers = localStorage.getItem("minMembers")
           const pVal = localStorage.getItem("p-value")
@@ -731,8 +734,109 @@
         });
       }
 
+      function getScoredGenesData(settings) {
+        return new Promise((resolve, reject) => {
+          const selectedGeneSets = window?.parent?.GSP?.selectedGeneSets || window?.GSP?.selectedGeneSets || [];
+          const scoredGenesRaw = localStorage.getItem("scoredGenesRaw") || "";
+          const species = localStorage.getItem("species") || "human";
+          const minMembers = parseInt(localStorage.getItem("minMembers") || "5", 10);
+          const pThr = localStorage.getItem("p-value");
+          const fdrThr = localStorage.getItem("fdr");
+          const distanceType = settings?.distance_type || "jaccard_weighted";
+
+          const customData =
+            species === "custom"
+              ? (window.parent?.GSP?.customGeneSets?.data ||
+                window.parent?.GSP?.customGeneSets ||
+                window?.GSP?.customGeneSets?.data ||
+                window?.GSP?.customGeneSets ||
+                null)
+              : null;
+
+          fetch("/scored-genes/", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
+            body: JSON.stringify({
+              scored_genes_raw: scoredGenesRaw,
+              selected_genes_sets: selectedGeneSets,
+              minMembers: minMembers,
+              p_thr: pThr,
+              fdr_thr: fdrThr,
+              species: species,
+              custom_data: customData,
+              settings: settings,
+              relevant_members: [],
+              distance_type: distanceType,
+            }),
+          })
+            .then(async (response) => {
+              const data = await response.json();
+              if (!response.ok) {
+                throw new Error(data.error || "Failed to fetch scored genes data.");
+              }
+
+              localStorage.setItem("relevant-members", data.relevant_members);
+              localStorage.removeItem("camera");
+              localStorage.removeItem("annotations");
+
+              const pvalDisplay = data.p_value;
+              const fdrDisplay = data.fdr_value;
+              const umapData = data.umap;
+              const distancesRet = data.distancesM;
+              let distancesV = true;
+              m = distancesRet;
+              relevantMembers = [];
+              localStorage.setItem("distances-M", JSON.stringify(distancesV));
+
+              window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
+              window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
+              window.parent.localStorage.setItem("computed-p-value", parseFloat(pvalDisplay).toFixed(4));
+              window.parent.localStorage.setItem("computed-fdr", parseFloat(fdrDisplay).toFixed(4));
+
+              let dataStorage = {};
+              dataKeys.forEach((key) => {
+                dataStorage[key] = [];
+              });
+
+              for (let i = 0; i < umapData.length; i++) {
+                dataKeys.forEach((key) => {
+                  if (key === "color") {
+                    dataStorage["color"].push("white");
+                  } else if (key === "pointNumber") {
+                    dataStorage["pointNumber"].push(i);
+                  } else {
+                    dataStorage[key].push(umapData[i][key]);
+                  }
+                });
+              }
+
+              const qVals = umapData.map(point => point.qValue);
+              const minQ = Math.min(...qVals);
+              const maxQ = Math.max(...qVals);
+
+              let currentSettings = getLocalStorage("settings") || {};
+              currentSettings["q-value-minimum"] = minQ;
+              currentSettings["q-value-maximum"] = maxQ;
+              setLocalStorage("settings", currentSettings);
+
+              window.parent.update_settings?.displayValues(currentSettings);
+
+              setLocalStorage("data", dataStorage);
+              window.parent.localStorage.setItem("previous_settings", JSON.stringify(settings));
+              resolve();
+            })
+            .catch((error) => {
+              reject(error);
+            });
+        });
+      }
+
       // Get umap data once more and draw graph. Selected are cleared as new UMAP data doesn't carry over selected points since they are in new positions
       async function applyUmapChange(settings) {
+        const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
         let singleList = false; // Default value if not found
         const storedSingleList = localStorage.getItem("single-list");
         if (storedSingleList !== null) {
@@ -740,7 +844,9 @@
         }
         showSpinner();
 
-        if (singleList == true) {
+        if (inputMode === "scored-genes") {
+          await getScoredGenesData(settings);
+        } else if (singleList == true) {
           await getGeneData(settings);
         } else {
           await getGeneInputData(settings);

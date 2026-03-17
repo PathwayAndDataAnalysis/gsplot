@@ -16,13 +16,20 @@ from django.conf import settings
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
-from .dataReduction import umap_reduction, build_weights_from_ranked_list, build_weights_from_sets
-from .dataReduction import calculate_pvals
+from .dataReduction import (
+    umap_reduction,
+    build_weights_from_ranked_list,
+    build_weights_from_sets,
+    build_weights_from_scored_genes,
+    calculate_pvals,
+    run_fishers_test,
+    filter_gene_sets_by_significance,
+    calculate_distance_matrix,
+    parse_scored_genes_raw,
+    run_blitzgsea_signless,
+)
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
-from .dataReduction import run_fishers_test
-from .dataReduction import filter_gene_sets_by_significance
-from .dataReduction import calculate_distance_matrix
 
 # Create your views here.
 # When someone goes to the website root (/), it shows the homepage (base.html).
@@ -155,14 +162,17 @@ def gene_input_view(request):
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
 
-            gene_sets_with_p = cache.get(key_hash)
+            analysis_cache_key = f"{key_hash}|gene_sets_with_p"
+            sig_genes_cache_key = f"{key_hash}|sig_genes"
+            insig_genes_cache_key = f"{key_hash}|insig_genes"
+            filtered_cache_key = f"{key_hash}|filtered_sets"
+
+            gene_sets_with_p = cache.get(analysis_cache_key)
             sig_genes = []
             insig_genes = []
             filtered = []
 
             if gene_sets_with_p is None:
-                cache.clear()
-
                 # Split inputs into cleaned gene lists
                 sig_genes = [gene.strip() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
                 insig_genes = [gene.strip() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
@@ -210,14 +220,14 @@ def gene_input_view(request):
                 print("running fishers test")
                 gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes)
                 print("fisher test done")
-                cache.set(key_hash, gene_sets_with_p, timeout=cache_timeout - 50)
-                cache.set("sig_genes", sig_genes, timeout=cache_timeout)
-                cache.set("insig_genes", insig_genes, timeout=cache_timeout)
-                cache.set("filtered_sets", filtered, timeout=cache_timeout)
+                cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
+                cache.set(sig_genes_cache_key, sig_genes, timeout=cache_timeout)
+                cache.set(insig_genes_cache_key, insig_genes, timeout=cache_timeout)
+                cache.set(filtered_cache_key, filtered, timeout=cache_timeout)
             else:
-                sig_genes = cache.get("sig_genes")
-                insig_genes = cache.get("insig_genes")
-                filtered = cache.get("filtered_sets")
+                sig_genes = cache.get(sig_genes_cache_key) or []
+                insig_genes = cache.get(insig_genes_cache_key) or []
+                filtered = cache.get(filtered_cache_key) or []
 
             # Convert thresholds to float if provided
             thr_key = ''
@@ -230,12 +240,13 @@ def gene_input_view(request):
 
             print("thr_key = " + thr_key)
 
-            fisher_result_filtered = cache.get(thr_key)
+            threshold_cache_key = f"{key_hash}|{thr_key}"
+            fisher_result_filtered = cache.get(threshold_cache_key)
             if fisher_result_filtered is None:
                 print("filtering gene sets")
                 fisher_result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_thr, fdr_thr)
                 print("filtering gene sets done")
-                cache.set(thr_key, fisher_result_filtered, timeout=cache_timeout)
+                cache.set(threshold_cache_key, fisher_result_filtered, timeout=cache_timeout)
 
             if fisher_result_filtered is None:
                 return JsonResponse({
@@ -366,13 +377,15 @@ def gene_input_view2(request):
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
 
-            gene_sets_with_p = cache.get(key_hash)
+            analysis_cache_key = f"{key_hash}|gene_sets_with_p"
+            ranked_genes_cache_key = f"{key_hash}|ranked_genes"
+            filtered_cache_key = f"{key_hash}|filtered_sets"
+
+            gene_sets_with_p = cache.get(analysis_cache_key)
             ranked_genes = []
             filtered = []
 
             if gene_sets_with_p is None:
-                cache.clear()
-
                 # Split inputs into cleaned gene lists
                 ranked_genes = [gene.strip() for gene in genes_input.replace(',', '\n').splitlines() if gene.strip()]
 
@@ -408,12 +421,12 @@ def gene_input_view2(request):
                     print(len(gene_sets_data))
 
                 gene_sets_with_p = calculate_pvals(filtered, ranked_genes)
-                cache.set(key_hash, gene_sets_with_p, timeout=cache_timeout - 50)
-                cache.set("ranked_genes", ranked_genes, timeout=cache_timeout)
-                cache.set("filtered_sets", filtered, timeout=cache_timeout)
+                cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
+                cache.set(ranked_genes_cache_key, ranked_genes, timeout=cache_timeout)
+                cache.set(filtered_cache_key, filtered, timeout=cache_timeout)
             else:
-                ranked_genes = cache.get("ranked_genes")
-                filtered = cache.get("filtered_sets")
+                ranked_genes = cache.get(ranked_genes_cache_key) or []
+                filtered = cache.get(filtered_cache_key) or []
 
             # Convert thresholds to float if provided
             thr_key = ''
@@ -426,12 +439,13 @@ def gene_input_view2(request):
 
             print("thr_key = " + thr_key)
 
-            result_filtered = cache.get(thr_key)
+            threshold_cache_key = f"{key_hash}|{thr_key}"
+            result_filtered = cache.get(threshold_cache_key)
             if result_filtered is None:
                 print("filtering gene sets")
                 result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_thr, fdr_thr)
                 print("filtering gene sets done")
-                cache.set(thr_key, result_filtered, timeout=cache_timeout)
+                cache.set(threshold_cache_key, result_filtered, timeout=cache_timeout)
 
             if result_filtered is None:
                 return JsonResponse({
@@ -528,6 +542,200 @@ def gene_input_view2(request):
 
     # Method not allowed
     return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+@csrf_exempt
+def scored_genes_view(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+
+            print("Called scored_genes_view")
+            cache_timeout = 1000
+
+            scored_genes_raw = data.get("scored_genes_raw", "")
+            selected_gene_sets = data.get("selected_genes_sets", [])
+            min_members = int(data.get("minMembers", 5))
+            p_thr = data.get("p_thr")
+            fdr_thr = data.get("fdr_thr")
+            species = data.get("species", "human")
+            custom_data = data.get("custom_data")
+            settings = data.get("settings")
+            cache_key_data = {
+                "scored_genes_raw": scored_genes_raw,
+                "sel_gene_sets": selected_gene_sets,
+                "min_members": min_members,
+                "species": species,
+                "custom_data": custom_data,
+            }
+            serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
+            key_hash = hashlib.md5(serialized_data.encode("utf-8")).hexdigest()
+
+            analysis_cache_key = f"{key_hash}|gene_sets_with_p"
+            gene_sets_with_p = cache.get(analysis_cache_key)
+            filtered = []
+            scored_genes = []
+            user_weights = None
+
+            if gene_sets_with_p is None:
+                if not scored_genes_raw.strip():
+                    return JsonResponse({"error": "Missing scored genes input."}, status=400)
+
+                # Parse uploaded scored genes text into ordered rows + weight map
+                scored_genes, user_weights = parse_scored_genes_raw(scored_genes_raw)
+
+                if not scored_genes:
+                    return JsonResponse({"error": "No valid scored genes were found in the uploaded file."}, status=400)
+
+                ranked_genes = [row["gene"] for row in scored_genes]
+
+                species = species.lower()
+                if species == "custom":
+                    if not custom_data:
+                        return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                    gene_sets_data = custom_data
+                else:
+                    file_map = {
+                        "human": "msigdb.v2025.1.Hs.json",
+                        "mouse": "msigdb.v2025.1.Mm.json"
+                    }
+                    filename = file_map.get(species)
+                    if not filename:
+                        return JsonResponse({"error": "Invalid species"}, status=400)
+
+                    file_path = os.path.join(os.path.dirname(__file__), "static", "resources", filename)
+                    with open(file_path, "r") as f:
+                        gene_sets_data = json.load(f)
+
+                print("collecting selected genes with relevant members for scored genes")
+                filtered = get_selected_gene_sets_with_relevant_members(
+                    gene_list=ranked_genes,
+                    min_members_threshold=min_members,
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
+
+                if not filtered:
+                    return JsonResponse({
+                        "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
+                    }, status=400)
+
+                print("running signless BlitzGSEA")
+                gene_sets_with_p = run_blitzgsea_signless(filtered, scored_genes)
+                print("signless BlitzGSEA done")
+
+                cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
+                cache.set(f"{key_hash}|scored_genes", scored_genes, timeout=cache_timeout)
+                cache.set(f"{key_hash}|user_weights", user_weights, timeout=cache_timeout)
+                cache.set(f"{key_hash}|filtered_sets", filtered, timeout=cache_timeout)
+            else:
+                scored_genes = cache.get(f"{key_hash}|scored_genes") or []
+                user_weights = cache.get(f"{key_hash}|user_weights") or {}
+                filtered = cache.get(f"{key_hash}|filtered_sets") or []
+
+            # Convert thresholds to float if provided
+            thr_key = ""
+            if p_thr:
+                p_thr = float(p_thr)
+                thr_key = f"p-thresholded-{p_thr}"
+            if fdr_thr:
+                fdr_thr = float(fdr_thr)
+                thr_key = f"fdr-thresholded-{fdr_thr}"
+
+            print("thr_key = " + thr_key)
+
+            result_filtered = cache.get(f"{key_hash}|{thr_key}")
+            if result_filtered is None:
+                print("filtering gene sets")
+                result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_thr, fdr_thr)
+                print("filtering gene sets done")
+                cache.set(f"{key_hash}|{thr_key}", result_filtered, timeout=cache_timeout)
+
+            if result_filtered is None:
+                return JsonResponse({
+                    "error": "No gene sets passed the selected threshold. Please choose another collection or increase the p-value/FDR threshold."
+                }, status=400)
+
+            signif_gene_sets, pvl, fdr = result_filtered
+
+            try:
+                if len(signif_gene_sets) < 4:
+                    raise ValueError(
+                        "Not enough gene sets passed the threshold to render a graph. Please increase your FDR or p-value."
+                    )
+            except ValueError as e:
+                return JsonResponse({"error": str(e)}, status=400)
+
+            distance_type = (data.get("distance_type") or "jaccard_weighted").lower()
+
+            # For scored genes mode, weighted distances must use the natural score-based weights
+            if distance_type in ["jaccard_weighted", "overlap_weighted"] and not user_weights:
+                user_weights = build_weights_from_scored_genes(scored_genes)
+
+            dist_key = f"{key_hash}|{thr_key}|{distance_type}|rescaled_v1|scored"
+            distance_matrix = cache.get(dist_key)
+            expected_n = len(signif_gene_sets)
+
+            if distance_matrix is not None:
+                try:
+                    if distance_matrix.shape[0] != expected_n:
+                        distance_matrix = None
+                except Exception:
+                    distance_matrix = None
+
+            if distance_matrix is None:
+                print("generating distance matrix")
+                distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
+                print("distance matrix generated")
+                cache.set(dist_key, distance_matrix, timeout=cache_timeout)
+
+            print("running umap")
+            mapped_result, _ = umap_reduction(signif_gene_sets, settings, user_weights, distance_type, distance_matrix)
+            print("completed umap")
+
+            graph_data = json.loads(mapped_result)
+
+            cluster_on = False
+            if isinstance(settings, dict):
+                cluster_on = bool(settings.get("cluster-mode", False))
+
+            if cluster_on:
+                min_cluster_size = int(settings.get("hdbscan-min-cluster-size", 5))
+                min_samples_raw = settings.get("hdbscan-min-samples", None)
+                min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
+
+                graph_data = add_hdbscan_clusters_on_embedding(
+                    graph_data,
+                    min_cluster_size=min_cluster_size,
+                    min_samples=min_samples
+                )
+
+                summaries = build_cluster_summaries(graph_data)
+                name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
+
+                for p in graph_data:
+                    try:
+                        cid = int(p.get("clusterID", -1))
+                    except Exception:
+                        cid = -1
+                    p["clusterLabel"] = "" if cid == -1 else name_by_id.get(cid, "Unknown pathway")
+            else:
+                for p in graph_data:
+                    p["clusterID"] = -1
+                    p["clusterLabel"] = ""
+
+            print("graphing scored genes result")
+            return JsonResponse({
+                "umap": graph_data,
+                "relevant_members": json.dumps(filtered),
+                "distancesM": [],
+                "p_value": pvl,
+                "fdr_value": fdr
+            })
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
 
 @csrf_exempt
 def preview_threshold(request):

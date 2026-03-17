@@ -15,6 +15,7 @@ let currentActiveGeneInputTabId = '';
 let hasUnsavedSettings = false;
 let settingsNeedApply = false;
 let allTablesContainer2 = document.getElementById("selected-points-container");
+let parsedScoredGenes = [];
 
 const uploadContainer = document.getElementById("upload-container"); // Container for the upload file button
 const selectedPoints = document.getElementById("selected-section"); // Container for selected points below graph
@@ -39,7 +40,9 @@ clearLocalStorageExceptSettings()
 
 // Ensure default tab and id
 LoadInput();
-currentActiveGeneInputTabId = 'two-textareas';
+currentActiveGeneInputTabId = 'scored-genes';
+localStorage.setItem("single-list", JSON.stringify(false));
+localStorage.setItem("gene-input-mode", "scored-genes");
 
 // This becomes a refrence to the iframe once it has loaded
 let frame;
@@ -94,11 +97,13 @@ function importFile() {
   localStorage.removeItem("camera");
   localStorage.removeItem("data");
   localStorage.removeItem("annotations");
+  localStorage.removeItem("relevant-members");
   localStorage.setItem("reset", JSON.stringify(true));
   clearPoints()
   // Show upload screen
   hideGraph();
   setTimeout(() => {
+    LoadInput();
     showUpload();
     showInput();
   }, transitionDuration);
@@ -148,16 +153,14 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
   const rankedGenes = document.getElementById("id_single_gene_list").value;
+  const scoredGenesRaw = localStorage.getItem("scoredGenesRaw") || "";
   const species = document.getElementById("species-select").value;
   const pvThr = document.getElementById("pvalue-input").value;
   const fdrThr = document.getElementById("fdr-input").value;
   const selectedGeneSets = window?.GSP?.selectedGeneSets || [];
 
-  let singleList = false;
-  const storedSingleList = localStorage.getItem("single-list");
-  if (storedSingleList !== null) {
-    singleList = JSON.parse(storedSingleList);
-  }
+  const inputMode = currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "scored-genes";
+  const singleList = inputMode === "single-textarea";
 
   const minInput = document.getElementById("min-member-input");
   let minMembers = 5;
@@ -177,7 +180,12 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     return;
   }
 
-  if (currentActiveGeneInputTabId === "two-textareas") {
+  if (currentActiveGeneInputTabId === "scored-genes") {
+    if (!scoredGenesRaw.trim()) {
+      alert("Please upload a scored genes .tsv or .txt file.");
+      return;
+    }
+  } else if (currentActiveGeneInputTabId === "two-textareas") {
     if (!sigGenes.trim() && !insigGenes.trim()) {
       alert("Please enter at least one gene in either field.");
       return;
@@ -189,7 +197,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     }
   }
 
-  if (!sigGenes.trim() && !insigGenes.trim() && !rankedGenes.trim()) {
+  if (!sigGenes.trim() && !insigGenes.trim() && !rankedGenes.trim() && !scoredGenesRaw.trim()) {
     alert("Please enter at least one gene.");
     return;
   }
@@ -200,12 +208,21 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   }
 
   // Save inputs
+  localStorage.setItem("gene-input-mode", inputMode);
   localStorage.setItem("minMembers", minMembers);
   localStorage.setItem("species", species);
 
-  if (singleList) {
+  if (inputMode === "scored-genes") {
+    localStorage.setItem("scoredGenesRaw", scoredGenesRaw);
+    localStorage.setItem("scoredGenes", JSON.stringify(parsedScoredGenes));
+    clearInsignificantGenes();
+    clearSignificantGenes();
+    clearSingleGeneList();
+  } else if (singleList) {
     if (rankedGenes !== "") {
       localStorage.setItem("rankedGenes", rankedGenes);
+      localStorage.removeItem("scoredGenesRaw");
+      localStorage.removeItem("scoredGenes");
       clearInsignificantGenes();
       clearSignificantGenes();
     } else {
@@ -215,6 +232,8 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   } else {
     localStorage.setItem("sigGenes", sigGenes.trim());
     localStorage.setItem("insigGenes", insigGenes.trim());
+    localStorage.removeItem("scoredGenesRaw");
+    localStorage.removeItem("scoredGenes");
   }
 
   if (species === "custom") {
@@ -283,11 +302,13 @@ function toggleJaccardOptions() {
 function showGeneInputTab(tabId, event = null) {
   // Assign the tabId to the global variable
   currentActiveGeneInputTabId = tabId;
-
-  let isSingleTextArea = (currentActiveGeneInputTabId == "single-textarea");
+  const isSingleTextArea = currentActiveGeneInputTabId === "single-textarea";
   localStorage.setItem("single-list", JSON.stringify(isSingleTextArea));
+  localStorage.setItem("gene-input-mode", tabId);
+  localStorage.removeItem("relevant-members");
 
   // Hide sall content divs
+  document.getElementById('scored-genes-content').style.display = 'none';
   document.getElementById('two-textareas-content').style.display = 'none';
   document.getElementById('single-textarea-content').style.display = 'none';
 
@@ -310,23 +331,127 @@ function showGeneInputTab(tabId, event = null) {
     }
   }
   const displayGenesContainer = document.getElementById("display-genes-container");
-  if (!isSingleTextArea) {
-    // two-textareas mode
+  if (tabId === "two-textareas") {
     displayGenesContainer.style.display = "block";
   } else {
-    // single-textarea mode (ranked list)
     displayGenesContainer.style.display = "none";
   }
 
+}
+
+function parseScoredGenesFileContent(content) {
+  const parsedRows = [];
+  const lines = content.split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) {
+      continue;
+    }
+
+    const columns = line.includes("\t")
+      ? line.split("\t").map((value) => value.trim()).filter(Boolean)
+      : line.split(/\s+/).map((value) => value.trim()).filter(Boolean);
+
+    if (columns.length !== 2) {
+      throw new Error(`Line ${index + 1} must contain exactly two columns: gene and score.`);
+    }
+
+    const [gene, scoreRaw] = columns;
+    const score = Number(scoreRaw);
+    if (!gene) {
+      throw new Error(`Line ${index + 1} is missing a gene name.`);
+    }
+    if (Number.isNaN(score)) {
+      throw new Error(`Line ${index + 1} has a non-numeric score.`);
+    }
+
+    parsedRows.push({ gene, score });
+  }
+
+  if (parsedRows.length === 0) {
+    throw new Error("The file is empty.");
+  }
+
+  return parsedRows;
+}
+
+function handleScoredGenesFileSelect(event) {
+  const file = event.target.files?.[0];
+  const statusEl = document.getElementById("scored-genes-file-status");
+
+  if (!file) {
+    clearScoredGenesFile();
+    return;
+  }
+
+  const lowerName = file.name.toLowerCase();
+  if (!(lowerName.endsWith(".tsv") || lowerName.endsWith(".txt"))) {
+    clearScoredGenesFile();
+    alert("Please upload a .tsv or .txt file for scored genes.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const content = typeof reader.result === "string" ? reader.result : "";
+      parsedScoredGenes = parseScoredGenesFileContent(content);
+      localStorage.removeItem("relevant-members");
+      localStorage.setItem("scoredGenesRaw", content);
+      localStorage.setItem("scoredGenes", JSON.stringify(parsedScoredGenes));
+      if (statusEl) {
+        statusEl.style.color = "green";
+        statusEl.textContent = `${file.name}: ${parsedScoredGenes.length} scored genes loaded.`;
+      }
+    } catch (error) {
+      clearScoredGenesFile();
+      alert(`Invalid scored genes file: ${error.message}`);
+    }
+  };
+
+  reader.onerror = () => {
+    clearScoredGenesFile();
+    alert("Unable to read the scored genes file.");
+  };
+
+  reader.readAsText(file);
+}
+
+function clearScoredGenesFile() {
+  const input = document.getElementById("id_scored_genes_file");
+  const statusEl = document.getElementById("scored-genes-file-status");
+  parsedScoredGenes = [];
+  if (input) {
+    input.value = "";
+  }
+  if (statusEl) {
+    statusEl.style.color = "gray";
+    statusEl.textContent = "";
+  }
+  localStorage.removeItem("relevant-members");
+  localStorage.removeItem("scoredGenesRaw");
+  localStorage.removeItem("scoredGenes");
 }
 
 function clearSingleGeneList() {
   document.getElementById('id_single_gene_list').value = '';
 }
 function LoadInput() {
-  document.getElementById('two-textareas-content').style.display = 'block';
+  currentActiveGeneInputTabId = "scored-genes";
+  localStorage.setItem("single-list", JSON.stringify(false));
+  localStorage.setItem("gene-input-mode", "scored-genes");
+  document.getElementById('scored-genes-content').style.display = 'block';
+  document.getElementById('two-textareas-content').style.display = 'none';
   document.getElementById('single-textarea-content').style.display = 'none';
+  document.querySelectorAll('.gene-input-tab-button').forEach((button) => {
+    button.classList.remove('active');
+  });
   document.querySelector('.gene-input-tab-button:first-child').classList.add('active'); // Activate the first tab button
+  const displayGenesContainer = document.getElementById("display-genes-container");
+  if (displayGenesContainer) {
+    displayGenesContainer.style.display = "none";
+  }
 }
 
 
@@ -419,14 +544,27 @@ document.addEventListener('DOMContentLoaded', () => {
 function clearLocalStorageExceptSettings() {
   const settingsBackup = localStorage.getItem("settings");
   const listBackup = localStorage.getItem("single-list");
+  const modeBackup = localStorage.getItem("gene-input-mode");
   localStorage.clear();
   if (settingsBackup) {
-    localStorage.setItem("single-list", listBackup);
+    if (listBackup !== null) {
+      localStorage.setItem("single-list", listBackup);
+    }
+    if (modeBackup !== null) {
+      localStorage.setItem("gene-input-mode", modeBackup);
+    }
     localStorage.setItem("settings", settingsBackup);
   }
   localStorage.setItem("selected", "[]");
 
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+  const scoredGenesFileInput = document.getElementById("id_scored_genes_file");
+  if (scoredGenesFileInput) {
+    scoredGenesFileInput.addEventListener("change", handleScoredGenesFileSelect);
+  }
+});
 
 function clearPoints() {
   allTablesContainer2.innerHTML = "";
