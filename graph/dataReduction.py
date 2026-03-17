@@ -1,5 +1,4 @@
 import math
-import csv
 try:
     import blitzgsea as blitz
 except ImportError:
@@ -7,8 +6,6 @@ except ImportError:
 import pandas as pd
 import umap.umap_ as umap
 import numpy as np
-import base64
-from io import BytesIO
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import norm
@@ -458,30 +455,21 @@ def calculate_pvals(filtered, ranked_genes):
     return add_q_values(gene_sets_with_p)
 
 
-def umap_reduction(fileDataOrString, settings, user_weights, distance_type, distance_matrix):
-    # Check if use weighted option without weights
-    if (distance_type in ['jaccard_weighted', 'overlap_weighted']) and user_weights is None:
+def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, distance_matrix):
+    if distance_type in ['jaccard_weighted', 'overlap_weighted'] and user_weights is None:
         raise ValueError("user_weights must be provided when using weighted option.")
-    try:
-        # Check if input looks like a base64-encoded file
-        if ';base64,' in fileDataOrString:
-            # --- FILE MODE ---
-            format, tsvData = fileDataOrString.split(';base64,')
-            file_content = base64.b64decode(tsvData)
-            tsvFile = BytesIO(file_content)
-            df = pd.read_csv(tsvFile, sep="\t")  # assumes TSV
-        else:
-            # --- RAW STRING MODE ---
-            all_rows = []
-            for set_name, (gene_string, p_raw, q_val) in fileDataOrString.items():
-                all_rows.append({
-                    "Name": set_name,
-                    "pValue": p_raw,
-                    "qValue": q_val,
-                    "Molecules": gene_string.strip()
-                })
 
-            df = pd.DataFrame(all_rows)
+    try:
+        all_rows = []
+        for set_name, (gene_string, p_raw, q_val) in gene_sets_with_stats.items():
+            all_rows.append({
+                "Name": set_name,
+                "pValue": p_raw,
+                "qValue": q_val,
+                "Molecules": gene_string.strip()
+            })
+
+        df = pd.DataFrame(all_rows)
 
         n = df.shape[0]
 

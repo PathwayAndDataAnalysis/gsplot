@@ -226,11 +226,6 @@ function updateSettings(suppressToast = false) {
   const justStyling = stylingOnly && !isDataChange && !thresholdChange && !clusterChanged;
   localStorage.setItem("justStyling", justStyling ? "true" : "false");
 
-  // distances-M: only reuse if distance_type same to appliedSettings
-  let distancesM = JSON.parse(localStorage.getItem("distances-M"));
-  distancesM = !(newSettings["distance_type"] !== appliedSettings["distance_type"]);
-  localStorage.setItem("distances-M", JSON.stringify(distancesM));
-
   // mark umapChange based on applied baseline
   if (isDataChange) {
     newSettings.umapChange = true;

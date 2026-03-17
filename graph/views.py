@@ -149,7 +149,6 @@ def gene_input_view(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
             settings = data.get("settings")
-            relevant_members = data.get("relevant_members") or []
 
             cache_key_data = {
                 "sig_genes": sig_input,
@@ -177,40 +176,36 @@ def gene_input_view(request):
                 sig_genes = [gene.strip() for gene in sig_input.replace(',', '\n').splitlines() if gene.strip()]
                 insig_genes = [gene.strip() for gene in insig_input.replace(',', '\n').splitlines() if gene.strip()]
 
-                if relevant_members:
-                    filtered = json.loads(relevant_members) if isinstance(relevant_members, str) else relevant_members
+                # Load gene set data
+                species = species.lower()
+                if species == "custom":
+                    if not custom_data:
+                        return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                    gene_sets_data = custom_data
                 else:
+                    file_map = {
+                        "human": "msigdb.v2025.1.Hs.json",
+                        "mouse": "msigdb.v2025.1.Mm.json"
+                    }
+                    filename = file_map.get(species)
+                    if not filename:
+                        return JsonResponse({"error": "Invalid species"}, status=400)
 
-                    # Load gene set data
-                    species = species.lower()
-                    if species == "custom":
-                        if not custom_data:
-                            return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
-                        gene_sets_data = custom_data
-                    else:
-                        file_map = {
-                            "human": "msigdb.v2025.1.Hs.json",
-                            "mouse": "msigdb.v2025.1.Mm.json"
-                        }
-                        filename = file_map.get(species)
-                        if not filename:
-                            return JsonResponse({"error": "Invalid species"}, status=400)
+                    file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                    with open(file_path, 'r') as f:
+                        gene_sets_data = json.load(f)
 
-                        file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-                        with open(file_path, 'r') as f:
-                            gene_sets_data = json.load(f)
+                genes = sig_genes + insig_genes
 
-                    genes = sig_genes + insig_genes
+                print("collecting selected genes w revelnt members")
 
-                    print("collecting selected genes w revelnt members")
-
-                    # Filter selected gene sets
-                    filtered = get_selected_gene_sets_with_relevant_members(
-                        gene_list=genes,
-                        min_members_threshold=min_members,
-                        selected_gene_sets=selected_gene_sets,
-                        gene_sets_data=gene_sets_data,
-                    )
+                # Filter selected gene sets
+                filtered = get_selected_gene_sets_with_relevant_members(
+                    gene_list=genes,
+                    min_members_threshold=min_members,
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
 
                 # If there is no matching gene set after filtering, return error
                 if not filtered:
@@ -333,8 +328,6 @@ def gene_input_view(request):
             print("grphing")
             return JsonResponse({
                 "umap": data,
-                "relevant_members": json.dumps(filtered),
-                "distancesM": [],
                 "p_value": pvl,
                 "fdr_value": fdr
             })
@@ -365,7 +358,6 @@ def gene_input_view2(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
             settings = data.get("settings")
-            relevant_members = data.get("relevant_members") or []
 
             cache_key_data = {
                 "ranked_genes": genes_input,
@@ -389,36 +381,33 @@ def gene_input_view2(request):
                 # Split inputs into cleaned gene lists
                 ranked_genes = [gene.strip() for gene in genes_input.replace(',', '\n').splitlines() if gene.strip()]
 
-                if relevant_members:
-                    filtered = json.loads(relevant_members) if isinstance(relevant_members, str) else relevant_members
+                # Load gene set data
+                species = species.lower()
+                if species == "custom":
+                    if not custom_data:
+                        return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+                    gene_sets_data = custom_data
                 else:
-                    # Load gene set data
-                    species = species.lower()
-                    if species == "custom":
-                        if not custom_data:
-                            return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
-                        gene_sets_data = custom_data
-                    else:
-                        file_map = {
-                            "human": "msigdb.v2025.1.Hs.json",
-                            "mouse": "msigdb.v2025.1.Mm.json"
-                        }
-                        filename = file_map.get(species)
-                        if not filename:
-                            return JsonResponse({"error": "Invalid species"}, status=400)
+                    file_map = {
+                        "human": "msigdb.v2025.1.Hs.json",
+                        "mouse": "msigdb.v2025.1.Mm.json"
+                    }
+                    filename = file_map.get(species)
+                    if not filename:
+                        return JsonResponse({"error": "Invalid species"}, status=400)
 
-                        file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
-                        with open(file_path, 'r') as f:
-                            gene_sets_data = json.load(f)
+                    file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
+                    with open(file_path, 'r') as f:
+                        gene_sets_data = json.load(f)
 
-                    # Filter selected gene sets
-                    filtered = get_selected_gene_sets_with_relevant_members(
-                        gene_list=ranked_genes,
-                        min_members_threshold=min_members,
-                        selected_gene_sets=selected_gene_sets,
-                        gene_sets_data=gene_sets_data,
-                    )
-                    print(len(gene_sets_data))
+                # Filter selected gene sets
+                filtered = get_selected_gene_sets_with_relevant_members(
+                    gene_list=ranked_genes,
+                    min_members_threshold=min_members,
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
+                print(len(gene_sets_data))
 
                 gene_sets_with_p = calculate_pvals(filtered, ranked_genes)
                 cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
@@ -531,8 +520,6 @@ def gene_input_view2(request):
             print("grphing")
             return JsonResponse({
                 "umap": data,
-                "distancesM": [],
-                "relevant_members": json.dumps(filtered),
                 "p_value": pvl,
                 "fdr_value": fdr
             })
@@ -726,8 +713,6 @@ def scored_genes_view(request):
             print("graphing scored genes result")
             return JsonResponse({
                 "umap": graph_data,
-                "relevant_members": json.dumps(filtered),
-                "distancesM": [],
                 "p_value": pvl,
                 "fdr_value": fdr
             })
@@ -782,25 +767,6 @@ def preview_threshold(request):
 
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-def read_output(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            fileData = data.get('file')
-            neighbors = data.get('neighbors')
-            seed = data.get('seed')
-            minDistance = data.get('minDistance')
-            output = umap_reduction(fileData, neighbors, minDistance, seed)
-            data = json.loads(output)
-            return JsonResponse(data, safe=False)
-        except Exception as e:
-            error_response = {
-                'error': str(e)
-            }
-            return JsonResponse(error_response, status=400)
-    else:
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 # Sends the graph.html file to be shown as a webpage — most likely inside an <iframe> on the main page.    
 def read_graph(request):

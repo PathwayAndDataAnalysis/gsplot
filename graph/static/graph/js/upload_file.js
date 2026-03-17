@@ -53,29 +53,32 @@ graph.onload = () => {
 
 // Entry point
 async function main() {
-  // If there is alreadt a file and UMAP data in local storage, call iframe.main()
-  if (
-    localStorage.getItem("data") !== null &&
-    localStorage.getItem("rawFile") !== null
-  ) {
-    // Show loading spinner
+  const hasData = localStorage.getItem("data") !== null;
+
+  const sigGenes = (localStorage.getItem("sigGenes") || "").trim();
+  const insigGenes = (localStorage.getItem("insigGenes") || "").trim();
+  const rankedGenes = (localStorage.getItem("rankedGenes") || "").trim();
+  const scoredGenesRaw = (localStorage.getItem("scoredGenesRaw") || "").trim();
+
+  const hasGeneInput =
+    sigGenes !== "" ||
+    insigGenes !== "" ||
+    rankedGenes !== "" ||
+    scoredGenesRaw !== "";
+
+  if (hasData && hasGeneInput) {
     loadingSpinner.style.display = "flex";
 
-    // Clear selected points on reload
     clearPoints();
 
     await frame.main();
 
-    // Hide spinner after graph is ready
     loadingSpinner.style.display = "none";
 
-
-    // Hide upload and show graph
     hideUpload();
     hideInput();
     showGraph();
   } else {
-    // Show upload screen
     showUpload();
     showInput();
     hideGraph();
@@ -93,11 +96,9 @@ document.querySelectorAll(".settings input, .settings select").forEach((el) => {
 function importFile() {
   // Clear selected points and remove local storage
   localStorage.setItem("selected", "[]");
-  localStorage.removeItem("rawFile");
   localStorage.removeItem("camera");
   localStorage.removeItem("data");
   localStorage.removeItem("annotations");
-  localStorage.removeItem("relevant-members");
   localStorage.setItem("reset", JSON.stringify(true));
   clearPoints()
   // Show upload screen
@@ -214,7 +215,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
 
   if (inputMode === "scored-genes") {
     localStorage.setItem("scoredGenesRaw", scoredGenesRaw);
-    localStorage.setItem("scoredGenes", JSON.stringify(parsedScoredGenes));
     clearInsignificantGenes();
     clearSignificantGenes();
     clearSingleGeneList();
@@ -222,7 +222,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     if (rankedGenes !== "") {
       localStorage.setItem("rankedGenes", rankedGenes);
       localStorage.removeItem("scoredGenesRaw");
-      localStorage.removeItem("scoredGenes");
       clearInsignificantGenes();
       clearSignificantGenes();
     } else {
@@ -233,7 +232,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     localStorage.setItem("sigGenes", sigGenes.trim());
     localStorage.setItem("insigGenes", insigGenes.trim());
     localStorage.removeItem("scoredGenesRaw");
-    localStorage.removeItem("scoredGenes");
   }
 
   if (species === "custom") {
@@ -305,7 +303,6 @@ function showGeneInputTab(tabId, event = null) {
   const isSingleTextArea = currentActiveGeneInputTabId === "single-textarea";
   localStorage.setItem("single-list", JSON.stringify(isSingleTextArea));
   localStorage.setItem("gene-input-mode", tabId);
-  localStorage.removeItem("relevant-members");
 
   // Hide sall content divs
   document.getElementById('scored-genes-content').style.display = 'none';
@@ -397,9 +394,7 @@ function handleScoredGenesFileSelect(event) {
     try {
       const content = typeof reader.result === "string" ? reader.result : "";
       parsedScoredGenes = parseScoredGenesFileContent(content);
-      localStorage.removeItem("relevant-members");
       localStorage.setItem("scoredGenesRaw", content);
-      localStorage.setItem("scoredGenes", JSON.stringify(parsedScoredGenes));
       if (statusEl) {
         statusEl.style.color = "green";
         statusEl.textContent = `${file.name}: ${parsedScoredGenes.length} scored genes loaded.`;
@@ -429,9 +424,7 @@ function clearScoredGenesFile() {
     statusEl.style.color = "gray";
     statusEl.textContent = "";
   }
-  localStorage.removeItem("relevant-members");
   localStorage.removeItem("scoredGenesRaw");
-  localStorage.removeItem("scoredGenes");
 }
 
 function clearSingleGeneList() {

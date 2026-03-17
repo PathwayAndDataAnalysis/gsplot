@@ -66,9 +66,6 @@
         "clusterLabel"
       ];
 
-      let m = [];
-      let relevantMembers = [];
-
       // Get refrences to graph div and loading spinner
       const myPlot = document.getElementById("plot-container");
       const spinnerOverlay =
@@ -84,7 +81,6 @@
         let settings = getLocalStorage("settings");
 
         // Check to see if there is already data saved, if not then fetch new data from backend
-        const hasRawFile = localStorage.getItem("rawFile");
         const sigGenes = localStorage.getItem("sigGenes") || "";
         const insigGenes = localStorage.getItem("insigGenes") || "";
         const rankedGenes = localStorage.getItem("rankedGenes") || "";
@@ -391,74 +387,6 @@
       }
       window.updateGraphStyling = updateGraphStyling;
 
-      // Get new graph data from UMAP on backend
-      function getUmapData(settings) {
-        return new Promise((resolve, reject) => {
-          // Load user input file and csrf token
-          let fileData = localStorage.getItem("rawFile");
-          const csrftoken = getCookie("csrftoken");
-
-          // Fetch data with umap settings and file
-          fetch("/read-output/", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-CSRFToken": csrftoken,
-            },
-            body: JSON.stringify({
-              file: fileData,
-              neighbors: settings["number-of-neighbors"],
-              minDistance: settings["minimum-distance"],
-              seed: settings["seed"],
-            }),
-          })
-            .then((response) => {
-              // If the response is not ok, reject the promise with an error message
-              if (!response.ok) {
-                return response.json().then((errorData) => {
-                  reject(
-                    new Error(errorData.error || "Unknown error occurred")
-                  );
-                });
-              }
-
-              // Otherwise, continue
-              return response.json();
-            })
-            .then((data) => {
-              // Clear out annotations and camera as these contain new cooridnates for every point and these won't apply
-              localStorage.removeItem("camera");
-              localStorage.removeItem("annotations");
-
-              // Object to store data from umap, initalize with empty lists
-              let dataStorage = {};
-              dataKeys.forEach((key) => {
-                dataStorage[key] = [];
-              });
-
-              for (let i = 0; i < data.length; i++) {
-                // If statement needed for color and pointnumber as these were not given by UMAP, so data[color] and data[pointNumber] don't exist
-                dataKeys.forEach((key) => {
-                  if (key === "color") {
-                    dataStorage["color"].push("white"); // Default outline color is white
-                  } else if (key === "pointNumber") {
-                    dataStorage["pointNumber"].push(i); // Pointnumber is the index of point in all data
-                  } else {
-                    dataStorage[key].push(data[i][key]);
-                  }
-                });
-              }
-
-              // Store the entire data object in localStorage as JSON string
-              setLocalStorage("data", dataStorage);
-              resolve();
-            })
-            .catch((error) => {
-              reject(error); // Catches any error that occured when reading data
-            });
-        });
-      }
-
       function getGeneData(settings) {
         return new Promise((resolve, reject) => {
           const rankedGenes = localStorage.getItem("rankedGenes")
@@ -469,27 +397,10 @@
           const species = localStorage.getItem("species")
           const distanceType = settings["distance_type"];
           const reset = localStorage.getItem("reset");
-          let distancesV = false;
-
-          if (localStorage.getItem("distances-M")) {
-            distancesV = JSON.parse(localStorage.getItem("distances-M"));
+          if (reset && JSON.parse(reset)) {
+            setLocalStorage("reset", false);
+            setLocalStorage("selected", []);
           }
-          if (reset) {
-            if (JSON.parse(reset)) {
-              distancesV = false;
-              m = [];
-              relevantMembers = [];
-              setLocalStorage("reset", false);
-              setLocalStorage("selected", []);
-            }
-          }
-          localStorage.setItem("distances-M", JSON.stringify(distancesV));
-
-          let distancesM = {
-            'use': distancesV,
-            'm': m
-          }
-
 
           // Get CSRF token as before
           const csrftoken = getCookie("csrftoken");
@@ -516,8 +427,6 @@
               custom_data: customGeneSets,
               settings: settings,
               distance_type: distanceType,
-              distancesM: distancesM,
-              relevant_members: []
             }),
           })
             .then((response) => {
@@ -536,11 +445,6 @@
               const pvalDisplay = data.p_value;
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
-              const distancesRet = data.distancesM;
-              let distancesV = true;
-              m = distancesRet;
-              relevantMembers = [];
-              localStorage.setItem("distances-M", JSON.stringify(distancesV));
 
               window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
               window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
@@ -606,24 +510,8 @@
           const species = localStorage.getItem("species");
           const distanceType = settings["distance_type"];
           const reset = localStorage.getItem("reset");
-          let distancesV = false;
-
-          if (localStorage.getItem("distances-M")) {
-            distancesV = JSON.parse(localStorage.getItem("distances-M"));
-          }
-          if (reset) {
-            if (JSON.parse(reset)) {
-              distancesV = false;
-              m = [];
-              relevantMembers = [];
-              setLocalStorage("reset", false);
-            }
-          }
-          localStorage.setItem("distances-M", JSON.stringify(distancesV));
-
-          let distancesM = {
-            'use': distancesV,
-            'm': m
+          if (reset && JSON.parse(reset)) {
+            setLocalStorage("reset", false);
           }
 
           if (!sigGenes.trim() && !insigGenes.trim()) {
@@ -638,7 +526,6 @@
           if (customGeneSets) {
             console.log("Received custom gene sets from parent:", customGeneSets)
           }
-          console.log(distancesM)
 
           // POST gene data to /gene-input/ endpoint
           fetch("/gene-input/", {
@@ -658,8 +545,6 @@
               custom_data: customGeneSets,
               settings: settings,
               distance_type: distanceType,
-              distancesM: distancesM,
-              relevant_members: []
             }),
           })
             .then((response) => {
@@ -678,11 +563,6 @@
               const pvalDisplay = data.p_value;
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
-              const distancesRet = data.distancesM;
-              let distancesV = true;
-              m = distancesRet;
-              relevantMembers = [];
-              localStorage.setItem("distances-M", JSON.stringify(distancesV));
 
               window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
               window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
@@ -768,7 +648,6 @@
               species: species,
               custom_data: customData,
               settings: settings,
-              relevant_members: [],
               distance_type: distanceType,
             }),
           })
@@ -778,18 +657,12 @@
                 throw new Error(data.error || "Failed to fetch scored genes data.");
               }
 
-              localStorage.setItem("relevant-members", data.relevant_members);
               localStorage.removeItem("camera");
               localStorage.removeItem("annotations");
 
               const pvalDisplay = data.p_value;
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
-              const distancesRet = data.distancesM;
-              let distancesV = true;
-              m = distancesRet;
-              relevantMembers = [];
-              localStorage.setItem("distances-M", JSON.stringify(distancesV));
 
               window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
               window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
