@@ -181,17 +181,17 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     return;
   }
 
-  if (currentActiveGeneInputTabId === "scored-genes") {
+  if (inputMode === "scored-genes") {
     if (!scoredGenesRaw.trim()) {
       alert("Please upload a scored genes .tsv or .txt file.");
       return;
     }
-  } else if (currentActiveGeneInputTabId === "two-textareas") {
+  } else if (inputMode === "two-textareas") {
     if (!sigGenes.trim() && !insigGenes.trim()) {
       alert("Please enter at least one gene in either field.");
       return;
     }
-  } else if (currentActiveGeneInputTabId === "single-textarea") {
+  } else if (inputMode === "single-textarea") {
     if (!rankedGenes.trim()) {
       alert("Please enter ranked genes in the single list.");
       return;
@@ -431,20 +431,8 @@ function clearSingleGeneList() {
   document.getElementById('id_single_gene_list').value = '';
 }
 function LoadInput() {
-  currentActiveGeneInputTabId = "scored-genes";
-  localStorage.setItem("single-list", JSON.stringify(false));
-  localStorage.setItem("gene-input-mode", "scored-genes");
-  document.getElementById('scored-genes-content').style.display = 'block';
-  document.getElementById('two-textareas-content').style.display = 'none';
-  document.getElementById('single-textarea-content').style.display = 'none';
-  document.querySelectorAll('.gene-input-tab-button').forEach((button) => {
-    button.classList.remove('active');
-  });
-  document.querySelector('.gene-input-tab-button:first-child').classList.add('active'); // Activate the first tab button
-  const displayGenesContainer = document.getElementById("display-genes-container");
-  if (displayGenesContainer) {
-    displayGenesContainer.style.display = "none";
-  }
+  const savedMode = localStorage.getItem("gene-input-mode") || "scored-genes";
+  showGeneInputTab(savedMode);
 }
 
 
