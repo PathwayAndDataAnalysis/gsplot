@@ -6,9 +6,16 @@ const defaultSettings = {
   "dynamic-size": false,
   "fixed-size-input": "6",
   "dynamic-size-scalar": "1",
+
   "cluster-mode": false,
+  "cluster-algorithm": "hdbscan",
+
   "hdbscan-min-cluster-size": "5",
   "hdbscan-min-samples": "",
+
+  "optics-min-cluster-size": "",
+  "optics-min-samples": "5",
+  "optics-xi": "0.05",
 };
 
 const inputRefrences = {};
@@ -40,6 +47,10 @@ const algorithmSelect = document.getElementById('algorithmSelect');
 const umapParams = document.getElementById('umapParams');
 const tsneParams = document.getElementById('tsneParams');
 const isomapParams = document.getElementById('isomapParams');
+
+const clusterAlgorithmSelect = document.getElementById("cluster-algorithm");
+const hdbscanOptionsContainer = document.getElementById("hdbscan-options-container");
+const opticsOptionsContainer = document.getElementById("optics-options-container");
 
 const fixedInput = document.getElementById("fixed-size-input-reveal");
 const dynamicInput = document.getElementById("dynamic-size-input-reveal");
@@ -83,6 +94,7 @@ function main() {
   });
   updateThresholdInputs(); // Call on load
   toggleClusterParamsVisibility();
+  toggleClusterAlgorithmParams();
 
   const clusterEl = document.getElementById("cluster-mode");
   if (clusterEl) {
@@ -96,6 +108,11 @@ function main() {
       }
     });
   }
+  if (clusterAlgorithmSelect) {
+    clusterAlgorithmSelect.addEventListener("change", () => {
+      toggleClusterAlgorithmParams();
+    });
+  }
 
   if (!localStorage.getItem("previous_settings")) {
     const cur = localStorage.getItem("settings") || JSON.stringify(defaultSettings);
@@ -106,8 +123,30 @@ function main() {
 function toggleClusterParamsVisibility() {
   const clusterEl = document.getElementById("cluster-mode");
   const box = document.getElementById("cluster-params");
+
   if (!clusterEl || !box) return;
-  box.style.display = clusterEl.checked ? "block" : "none";
+
+  if (!clusterEl.checked) {
+    box.style.display = "none";
+    return;
+  }
+
+  box.style.display = "block";
+  toggleClusterAlgorithmParams();
+}
+
+function toggleClusterAlgorithmParams() {
+  if (!clusterAlgorithmSelect || !hdbscanOptionsContainer || !opticsOptionsContainer) return;
+
+  const selected = clusterAlgorithmSelect.value;
+
+  if (selected === "hdbscan") {
+    hdbscanOptionsContainer.style.display = "block";
+    opticsOptionsContainer.style.display = "none";
+  } else if (selected === "optics") {
+    hdbscanOptionsContainer.style.display = "none";
+    opticsOptionsContainer.style.display = "block";
+  }
 }
 
 function displayValues(settings) {
@@ -118,7 +157,11 @@ function displayValues(settings) {
       value.value = settings[key];
     }
   }
+
+  toggleClusterParamsVisibility();
+  toggleClusterAlgorithmParams();
 }
+
 function getReduction() { // get input based on user input on sidebar
   const selectedAlgorithm = algorithmSelect.value;
   let setReduction = {}
@@ -217,8 +260,12 @@ function updateSettings(suppressToast = false) {
 
   const clusterChanged =
     (newSettings["cluster-mode"] !== appliedSettings["cluster-mode"]) ||
+    (newSettings["cluster-algorithm"] !== appliedSettings["cluster-algorithm"]) ||
     (newSettings["hdbscan-min-cluster-size"] !== appliedSettings["hdbscan-min-cluster-size"]) ||
-    (newSettings["hdbscan-min-samples"] !== appliedSettings["hdbscan-min-samples"]);
+    (newSettings["hdbscan-min-samples"] !== appliedSettings["hdbscan-min-samples"]) ||
+    (newSettings["optics-min-cluster-size"] !== appliedSettings["optics-min-cluster-size"]) ||
+    (newSettings["optics-min-samples"] !== appliedSettings["optics-min-samples"]) ||
+    (newSettings["optics-xi"] !== appliedSettings["optics-xi"]);
 
   const stylingOnly = detectFrontendOnlyChanges();
 
@@ -338,24 +385,43 @@ function detectFrontendOnlyChanges() {
 
 async function applyClusterOnly() {
   const settings = JSON.parse(localStorage.getItem("settings") || "{}");
-
-  const minClusterSize = parseInt(settings["hdbscan-min-cluster-size"] || "5", 10);
-  const minSamplesRaw = settings["hdbscan-min-samples"];
-  const minSamples = (minSamplesRaw === "" || minSamplesRaw == null) ? null : parseInt(minSamplesRaw, 10);
+  const clusterAlgorithm = settings["cluster-algorithm"] || "hdbscan";
 
   const fullData = JSON.parse(localStorage.getItem("data") || "null");
   if (!fullData || !Array.isArray(fullData["X"]) || fullData["X"].length < 4) {
     throw new Error("Missing graph data. Please click Submit once to generate the graph first.");
   }
 
+  let payload = {
+    points: fullData,
+    cluster_algorithm: clusterAlgorithm,
+  };
+
+  if (clusterAlgorithm === "hdbscan") {
+    const minClusterSize = parseInt(settings["hdbscan-min-cluster-size"] || "5", 10);
+    const minSamplesRaw = settings["hdbscan-min-samples"];
+    const minSamples =
+      (minSamplesRaw === "" || minSamplesRaw == null) ? null : parseInt(minSamplesRaw, 10);
+
+    payload.min_cluster_size = minClusterSize;
+    payload.min_samples = minSamples;
+  } else if (clusterAlgorithm === "optics") {
+    const minClusterSizeRaw = settings["optics-min-cluster-size"];
+    const minClusterSize =
+      (minClusterSizeRaw === "" || minClusterSizeRaw == null) ? null : parseInt(minClusterSizeRaw, 10);
+
+    const minSamples = parseInt(settings["optics-min-samples"] || "5", 10);
+    const xi = parseFloat(settings["optics-xi"] || "0.05");
+
+    payload.min_cluster_size = minClusterSize;
+    payload.min_samples = minSamples;
+    payload.xi = xi;
+  }
+
   const res = await fetch("/cluster_only/", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      points: fullData,
-      min_cluster_size: minClusterSize,
-      min_samples: minSamples,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const out = await res.json();
@@ -396,8 +462,12 @@ async function applySettingsAndRender() {
 
     const clusterChanged =
       (newSettings["cluster-mode"] !== oldSettings["cluster-mode"]) ||
+      (newSettings["cluster-algorithm"] !== oldSettings["cluster-algorithm"]) ||
       (newSettings["hdbscan-min-cluster-size"] !== oldSettings["hdbscan-min-cluster-size"]) ||
-      (newSettings["hdbscan-min-samples"] !== oldSettings["hdbscan-min-samples"]);
+      (newSettings["hdbscan-min-samples"] !== oldSettings["hdbscan-min-samples"]) ||
+      (newSettings["optics-min-cluster-size"] !== oldSettings["optics-min-cluster-size"]) ||
+      (newSettings["optics-min-samples"] !== oldSettings["optics-min-samples"]) ||
+      (newSettings["optics-xi"] !== oldSettings["optics-xi"]);
 
     const forceClusterApply = localStorage.getItem("forceClusterApply") === "true";
     localStorage.removeItem("forceClusterApply");
@@ -575,18 +645,26 @@ window.update_settings = {
   isEmbeddingChanged: isEmbeddingChanged,
   collectCurrentSettings: function () {
     let newSettings = {};
-    for (const [key, value] of Object.entries(inputRefrences)) {
-      if (value === null) continue;
-      if (key === "fixed-size" || key === "dynamic-size" || key === "cluster-mode") {
-        newSettings[key] = value.checked;
+
+    const checkboxKeys = new Set([
+      "fixed-size",
+      "dynamic-size",
+      "cluster-mode"
+    ]);
+
+    for (const [key, element] of Object.entries(inputRefrences)) {
+      if (!element) continue;
+
+      if (checkboxKeys.has(key)) {
+        newSettings[key] = element.checked;
       } else {
-        newSettings[key] = value.value;
+        newSettings[key] = element.value;
       }
     }
 
     const reduction = getReduction();
-    newSettings['reduction'] = reduction;
-    newSettings['mode'] = reduction['mode'];
+    newSettings["reduction"] = reduction;
+    newSettings["mode"] = reduction["mode"];
 
     const distanceMetric = document.getElementById("distance-metric")?.value;
     if (distanceMetric === "jaccard-distance") {

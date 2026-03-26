@@ -3,6 +3,7 @@ import os
 import json
 import hashlib
 import numpy as np
+from sklearn.cluster import OPTICS
 try:
     import hdbscan
 except ImportError:
@@ -31,25 +32,22 @@ from .dataReduction import (
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
 
-# Create your views here.
+# Create views here.
 # When someone goes to the website root (/), it shows the homepage (base.html).
 def home(request):
     return render(request, 'base.html')
 
-# This is the most important function.
-# It receives a POST request with:
-    # the uploaded .tsv file (base64 encoded),
-    # UMAP settings (neighbors, minDistance, seed).
-# Calls umap_reduction() with that data.
-# Sends back JSON data (the reduced coordinates + info) to the frontend.
-
-def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=None):
+def add_clusters_on_embedding(
+    points,
+    cluster_algorithm="hdbscan",
+    min_cluster_size=5,
+    min_samples=None,
+    xi=0.05,
+):
     """
-    points: list[dict] each dict contains "X", "Y"
+    points: list[dict], each dict contains "X", "Y"
     Adds: point["clusterID"] = int label (noise = -1)
     """
-    if hdbscan is None:
-        raise RuntimeError("hdbscan is not installed on the server. Please add it to requirements and install.")
 
     if not points or len(points) < 4:
         for p in points:
@@ -57,15 +55,37 @@ def add_hdbscan_clusters_on_embedding(points, min_cluster_size=5, min_samples=No
         return points
 
     X = np.array([[float(p["X"]), float(p["Y"])] for p in points], dtype=float)
+    algo = (cluster_algorithm or "hdbscan").lower()
 
-    # If min_samples is not provided, HDBSCAN uses min_cluster_size by default behavior
-    clusterer = hdbscan.HDBSCAN(
-        min_cluster_size=int(min_cluster_size),
-        min_samples=(int(min_samples) if min_samples is not None else None),
-        metric="euclidean"
-    )
+    if algo == "hdbscan":
+        if hdbscan is None:
+            raise RuntimeError("hdbscan is not installed on the server. Please add it to requirements and install.")
 
-    labels = clusterer.fit_predict(X)  # noise = -1
+        clusterer = hdbscan.HDBSCAN(
+            min_cluster_size=int(min_cluster_size),
+            min_samples=(int(min_samples) if min_samples is not None else None),
+            metric="euclidean"
+        )
+
+    elif algo == "optics":
+        optics_min_samples = int(min_samples) if min_samples is not None else 5
+        optics_min_cluster_size = (
+            int(min_cluster_size) if min_cluster_size is not None else None
+        )
+
+        clusterer = OPTICS(
+            min_samples=optics_min_samples,
+            min_cluster_size=optics_min_cluster_size,
+            xi=float(xi),
+            cluster_method="xi",
+            metric="euclidean"
+        )
+
+    else:
+        raise ValueError(f"Unsupported cluster algorithm: {cluster_algorithm}")
+
+    labels = clusterer.fit_predict(X)
+
     for i, lbl in enumerate(labels):
         points[i]["clusterID"] = int(lbl)
 
@@ -99,14 +119,31 @@ def cluster_only_view(request):
                 normalized.append(p)
             points = normalized
 
-        min_cluster_size = int(payload.get("min_cluster_size", 5))
-        min_samples_raw = payload.get("min_samples", None)
-        min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
+        cluster_algorithm = (payload.get("cluster_algorithm") or "hdbscan").lower()
 
-        points = add_hdbscan_clusters_on_embedding(
+        min_cluster_size_raw = payload.get("min_cluster_size", 5)
+        min_cluster_size = (
+            int(min_cluster_size_raw)
+            if (min_cluster_size_raw not in [None, "", "null"])
+            else None
+        )
+
+        min_samples_raw = payload.get("min_samples", None)
+        min_samples = (
+            int(min_samples_raw)
+            if (min_samples_raw not in [None, "", "null"])
+            else None
+        )
+
+        xi_raw = payload.get("xi", 0.05)
+        xi = float(xi_raw) if xi_raw not in [None, "", "null"] else 0.05
+
+        points = add_clusters_on_embedding(
             points,
+            cluster_algorithm=cluster_algorithm,
             min_cluster_size=min_cluster_size,
-            min_samples=min_samples
+            min_samples=min_samples,
+            xi=xi,
         )
 
         summaries = build_cluster_summaries(points)
@@ -295,14 +332,36 @@ def gene_input_view(request):
                 cluster_on = bool(settings.get("cluster-mode", False))
 
             if cluster_on:
-                min_cluster_size = int(settings.get("hdbscan-min-cluster-size", 5))
-                min_samples_raw = settings.get("hdbscan-min-samples", None)
-                min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
+                cluster_algorithm = (settings.get("cluster-algorithm") or "hdbscan").lower()
 
-                data = add_hdbscan_clusters_on_embedding(
+                if cluster_algorithm == "hdbscan":
+                    min_cluster_size_raw = settings.get("hdbscan-min-cluster-size", 5)
+                    min_samples_raw = settings.get("hdbscan-min-samples", None)
+                    xi = 0.05
+                elif cluster_algorithm == "optics":
+                    min_cluster_size_raw = settings.get("optics-min-cluster-size", None)
+                    min_samples_raw = settings.get("optics-min-samples", 5)
+                    xi = float(settings.get("optics-xi", 0.05))
+                else:
+                    return JsonResponse({"error": f"Unsupported cluster algorithm: {cluster_algorithm}"}, status=400)
+
+                min_cluster_size = (
+                    int(min_cluster_size_raw)
+                    if (min_cluster_size_raw not in [None, "", "null"])
+                    else None
+                )
+                min_samples = (
+                    int(min_samples_raw)
+                    if (min_samples_raw not in [None, "", "null"])
+                    else None
+                )
+
+                data = add_clusters_on_embedding(
                     data,
+                    cluster_algorithm=cluster_algorithm,
                     min_cluster_size=min_cluster_size,
-                    min_samples=min_samples
+                    min_samples=min_samples,
+                    xi=xi,
                 )
 
                 summaries = build_cluster_summaries(data)
@@ -493,14 +552,36 @@ def gene_input_view2(request):
                 cluster_on = bool(settings.get("cluster-mode", False))
 
             if cluster_on:
-                min_cluster_size = int(settings.get("hdbscan-min-cluster-size", 5))
-                min_samples_raw = settings.get("hdbscan-min-samples", None)
-                min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
+                cluster_algorithm = (settings.get("cluster-algorithm") or "hdbscan").lower()
 
-                data = add_hdbscan_clusters_on_embedding(
+                if cluster_algorithm == "hdbscan":
+                    min_cluster_size_raw = settings.get("hdbscan-min-cluster-size", 5)
+                    min_samples_raw = settings.get("hdbscan-min-samples", None)
+                    xi = 0.05
+                elif cluster_algorithm == "optics":
+                    min_cluster_size_raw = settings.get("optics-min-cluster-size", None)
+                    min_samples_raw = settings.get("optics-min-samples", 5)
+                    xi = float(settings.get("optics-xi", 0.05))
+                else:
+                    return JsonResponse({"error": f"Unsupported cluster algorithm: {cluster_algorithm}"}, status=400)
+
+                min_cluster_size = (
+                    int(min_cluster_size_raw)
+                    if (min_cluster_size_raw not in [None, "", "null"])
+                    else None
+                )
+                min_samples = (
+                    int(min_samples_raw)
+                    if (min_samples_raw not in [None, "", "null"])
+                    else None
+                )
+
+                data = add_clusters_on_embedding(
                     data,
+                    cluster_algorithm=cluster_algorithm,
                     min_cluster_size=min_cluster_size,
-                    min_samples=min_samples
+                    min_samples=min_samples,
+                    xi=xi,
                 )
 
                 summaries = build_cluster_summaries(data)
@@ -686,27 +767,49 @@ def scored_genes_view(request):
                 cluster_on = bool(settings.get("cluster-mode", False))
 
             if cluster_on:
-                min_cluster_size = int(settings.get("hdbscan-min-cluster-size", 5))
-                min_samples_raw = settings.get("hdbscan-min-samples", None)
-                min_samples = int(min_samples_raw) if (min_samples_raw not in [None, "", "null"]) else None
+                cluster_algorithm = (settings.get("cluster-algorithm") or "hdbscan").lower()
 
-                graph_data = add_hdbscan_clusters_on_embedding(
-                    graph_data,
-                    min_cluster_size=min_cluster_size,
-                    min_samples=min_samples
+                if cluster_algorithm == "hdbscan":
+                    min_cluster_size_raw = settings.get("hdbscan-min-cluster-size", 5)
+                    min_samples_raw = settings.get("hdbscan-min-samples", None)
+                    xi = 0.05
+                elif cluster_algorithm == "optics":
+                    min_cluster_size_raw = settings.get("optics-min-cluster-size", None)
+                    min_samples_raw = settings.get("optics-min-samples", 5)
+                    xi = float(settings.get("optics-xi", 0.05))
+                else:
+                    return JsonResponse({"error": f"Unsupported cluster algorithm: {cluster_algorithm}"}, status=400)
+
+                min_cluster_size = (
+                    int(min_cluster_size_raw)
+                    if (min_cluster_size_raw not in [None, "", "null"])
+                    else None
+                )
+                min_samples = (
+                    int(min_samples_raw)
+                    if (min_samples_raw not in [None, "", "null"])
+                    else None
                 )
 
-                summaries = build_cluster_summaries(graph_data)
+                data = add_clusters_on_embedding(
+                    data,
+                    cluster_algorithm=cluster_algorithm,
+                    min_cluster_size=min_cluster_size,
+                    min_samples=min_samples,
+                    xi=xi,
+                )
+
+                summaries = build_cluster_summaries(data)
                 name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
 
-                for p in graph_data:
+                for p in data:
                     try:
                         cid = int(p.get("clusterID", -1))
                     except Exception:
                         cid = -1
                     p["clusterLabel"] = "" if cid == -1 else name_by_id.get(cid, "Unknown pathway")
             else:
-                for p in graph_data:
+                for p in data:
                     p["clusterID"] = -1
                     p["clusterLabel"] = ""
 
