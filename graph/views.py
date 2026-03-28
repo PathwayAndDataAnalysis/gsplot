@@ -27,7 +27,7 @@ from .dataReduction import (
     filter_gene_sets_by_significance,
     calculate_distance_matrix,
     parse_scored_genes_raw,
-    run_blitzgsea_signless,
+    run_blitzgsea_bidirectional,
 )
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
@@ -198,10 +198,10 @@ def gene_input_view(request):
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
 
-            analysis_cache_key = f"{key_hash}|gene_sets_with_p"
-            sig_genes_cache_key = f"{key_hash}|sig_genes"
-            insig_genes_cache_key = f"{key_hash}|insig_genes"
-            filtered_cache_key = f"{key_hash}|filtered_sets"
+            analysis_cache_key = f"analysis:thresholded:{key_hash}"
+            sig_genes_cache_key = f"inputs:thresholded:{key_hash}:sig_genes"
+            insig_genes_cache_key = f"inputs:thresholded:{key_hash}:insig_genes"
+            filtered_cache_key = f"filtered:thresholded:{key_hash}"
 
             gene_sets_with_p = cache.get(analysis_cache_key)
             sig_genes = []
@@ -262,17 +262,19 @@ def gene_input_view(request):
                 filtered = cache.get(filtered_cache_key) or []
 
             # Convert thresholds to float if provided
-            thr_key = ''
-            if p_thr:
+            thr_key = ""
+            if p_thr not in [None, ""]:
                 p_thr = float(p_thr)
-                thr_key = f'p-thresholded-{p_thr}'
-            if fdr_thr:
+                fdr_thr = None
+                thr_key = f"p-thresholded-{p_thr}"
+            elif fdr_thr not in [None, ""]:
                 fdr_thr = float(fdr_thr)
-                thr_key = f'fdr-thresholded-{fdr_thr}'
+                p_thr = None
+                thr_key = f"fdr-thresholded-{fdr_thr}"
 
             print("thr_key = " + thr_key)
 
-            threshold_cache_key = f"{key_hash}|{thr_key}"
+            threshold_cache_key = f"threshold:thresholded:{key_hash}:{thr_key}"
             fisher_result_filtered = cache.get(threshold_cache_key)
             if fisher_result_filtered is None:
                 print("filtering gene sets")
@@ -302,7 +304,7 @@ def gene_input_view(request):
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
             print("building weights done")
 
-            dist_key = f"{key_hash}|{thr_key}|{distance_type}|rescaled_v1"
+            dist_key = f"distance:thresholded:{key_hash}:{thr_key}:{distance_type}:rescaled"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -428,9 +430,9 @@ def gene_input_view2(request):
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
 
-            analysis_cache_key = f"{key_hash}|gene_sets_with_p"
-            ranked_genes_cache_key = f"{key_hash}|ranked_genes"
-            filtered_cache_key = f"{key_hash}|filtered_sets"
+            analysis_cache_key = f"analysis:ranked:{key_hash}"
+            ranked_genes_cache_key = f"inputs:ranked:{key_hash}:ranked_genes"
+            filtered_cache_key = f"filtered:ranked:{key_hash}"
 
             gene_sets_with_p = cache.get(analysis_cache_key)
             ranked_genes = []
@@ -468,6 +470,11 @@ def gene_input_view2(request):
                 )
                 print(len(gene_sets_data))
 
+                if not filtered:
+                    return JsonResponse({
+                        "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
+                    }, status=400)
+
                 gene_sets_with_p = calculate_pvals(filtered, ranked_genes)
                 cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
                 cache.set(ranked_genes_cache_key, ranked_genes, timeout=cache_timeout)
@@ -477,17 +484,19 @@ def gene_input_view2(request):
                 filtered = cache.get(filtered_cache_key) or []
 
             # Convert thresholds to float if provided
-            thr_key = ''
-            if p_thr:
+            thr_key = ""
+            if p_thr not in [None, ""]:
                 p_thr = float(p_thr)
-                thr_key = f'p-thresholded-{p_thr}'
-            if fdr_thr:
+                fdr_thr = None
+                thr_key = f"p-thresholded-{p_thr}"
+            elif fdr_thr not in [None, ""]:
                 fdr_thr = float(fdr_thr)
-                thr_key = f'fdr-thresholded-{fdr_thr}'
+                p_thr = None
+                thr_key = f"fdr-thresholded-{fdr_thr}"
 
             print("thr_key = " + thr_key)
 
-            threshold_cache_key = f"{key_hash}|{thr_key}"
+            threshold_cache_key = f"threshold:ranked:{key_hash}:{thr_key}"
             result_filtered = cache.get(threshold_cache_key)
             if result_filtered is None:
                 print("filtering gene sets")
@@ -520,7 +529,7 @@ def gene_input_view2(request):
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
             print("weights built")
 
-            dist_key = f"{key_hash}|{thr_key}|{distance_type}|rescaled_v1"
+            dist_key = f"distance:ranked:{key_hash}:{thr_key}:{distance_type}:rescaled"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -638,11 +647,15 @@ def scored_genes_view(request):
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode("utf-8")).hexdigest()
 
-            analysis_cache_key = f"{key_hash}|gene_sets_with_p"
+            analysis_cache_key = f"analysis:scored:{key_hash}"
+            scored_genes_cache_key = f"inputs:scored:{key_hash}:scored_genes"
+            user_weights_cache_key = f"weights:scored:{key_hash}"
+            filtered_cache_key = f"filtered:scored:{key_hash}"
+
             gene_sets_with_p = cache.get(analysis_cache_key)
             filtered = []
             scored_genes = []
-            user_weights = None
+            user_weights = {}
 
             if gene_sets_with_p is None:
                 if not scored_genes_raw.strip():
@@ -687,36 +700,54 @@ def scored_genes_view(request):
                         "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
                     }, status=400)
 
-                print("running signless BlitzGSEA")
-                gene_sets_with_p = run_blitzgsea_signless(filtered, scored_genes)
-                print("signless BlitzGSEA done")
+                print("running bidirectional BlitzGSEA")
+                gene_sets_with_p = run_blitzgsea_bidirectional(filtered, scored_genes)
+                preview = sorted(
+                    gene_sets_with_p.items(),
+                    key=lambda item: item[1][1]
+                )[:10]
+
+                print("Top 10 scored gene sets by p-value:")
+                for name, (genes, p_raw, q_val) in preview:
+                    print(name, "p =", p_raw, "q =", q_val)
+                print("bidirectional BlitzGSEA done")
+
+                if not gene_sets_with_p:
+                    return JsonResponse({
+                        "error": "BlitzGSEA returned no enrichment results for the selected gene sets."
+                    }, status=400)
 
                 cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
-                cache.set(f"{key_hash}|scored_genes", scored_genes, timeout=cache_timeout)
-                cache.set(f"{key_hash}|user_weights", user_weights, timeout=cache_timeout)
-                cache.set(f"{key_hash}|filtered_sets", filtered, timeout=cache_timeout)
+                cache.set(scored_genes_cache_key, scored_genes, timeout=cache_timeout)
+                cache.set(user_weights_cache_key, user_weights, timeout=cache_timeout)
+                cache.set(filtered_cache_key, filtered, timeout=cache_timeout)
+
             else:
-                scored_genes = cache.get(f"{key_hash}|scored_genes") or []
-                user_weights = cache.get(f"{key_hash}|user_weights") or {}
-                filtered = cache.get(f"{key_hash}|filtered_sets") or []
+                scored_genes = cache.get(scored_genes_cache_key) or []
+                user_weights = cache.get(user_weights_cache_key) or {}
+                filtered = cache.get(filtered_cache_key) or []
 
             # Convert thresholds to float if provided
             thr_key = ""
-            if p_thr:
+            if p_thr not in [None, ""]:
                 p_thr = float(p_thr)
+                fdr_thr = None
                 thr_key = f"p-thresholded-{p_thr}"
-            if fdr_thr:
+            elif fdr_thr not in [None, ""]:
                 fdr_thr = float(fdr_thr)
+                p_thr = None
                 thr_key = f"fdr-thresholded-{fdr_thr}"
 
             print("thr_key = " + thr_key)
 
-            result_filtered = cache.get(f"{key_hash}|{thr_key}")
+            threshold_cache_key = f"threshold:scored:{key_hash}:{thr_key}"
+            result_filtered = cache.get(threshold_cache_key)
+
             if result_filtered is None:
                 print("filtering gene sets")
                 result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_thr, fdr_thr)
                 print("filtering gene sets done")
-                cache.set(f"{key_hash}|{thr_key}", result_filtered, timeout=cache_timeout)
+                cache.set(threshold_cache_key, result_filtered, timeout=cache_timeout)
 
             if result_filtered is None:
                 return JsonResponse({
@@ -739,7 +770,7 @@ def scored_genes_view(request):
             if distance_type in ["jaccard_weighted", "overlap_weighted"] and not user_weights:
                 user_weights = build_weights_from_scored_genes(scored_genes)
 
-            dist_key = f"{key_hash}|{thr_key}|{distance_type}|rescaled_v1|scored"
+            dist_key = f"distance:scored:{key_hash}:{thr_key}:{distance_type}:rescaled"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -791,25 +822,25 @@ def scored_genes_view(request):
                     else None
                 )
 
-                data = add_clusters_on_embedding(
-                    data,
+                graph_data = add_clusters_on_embedding(
+                    graph_data,
                     cluster_algorithm=cluster_algorithm,
                     min_cluster_size=min_cluster_size,
                     min_samples=min_samples,
                     xi=xi,
                 )
 
-                summaries = build_cluster_summaries(data)
+                summaries = build_cluster_summaries(graph_data)
                 name_by_id = label_clusters_with_llm(summaries, cache_obj=cache)
 
-                for p in data:
+                for p in graph_data:
                     try:
                         cid = int(p.get("clusterID", -1))
                     except Exception:
                         cid = -1
                     p["clusterLabel"] = "" if cid == -1 else name_by_id.get(cid, "Unknown pathway")
             else:
-                for p in data:
+                for p in graph_data:
                     p["clusterID"] = -1
                     p["clusterLabel"] = ""
 
