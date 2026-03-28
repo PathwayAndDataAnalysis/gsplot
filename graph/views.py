@@ -27,7 +27,7 @@ from .dataReduction import (
     filter_gene_sets_by_significance,
     calculate_distance_matrix,
     parse_scored_genes_raw,
-    run_blitzgsea_bidirectional,
+    run_blitzgsea_signless,
 )
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
@@ -647,10 +647,10 @@ def scored_genes_view(request):
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode("utf-8")).hexdigest()
 
-            analysis_cache_key = f"analysis:scored:{key_hash}"
-            scored_genes_cache_key = f"inputs:scored:{key_hash}:scored_genes"
-            user_weights_cache_key = f"weights:scored:{key_hash}"
-            filtered_cache_key = f"filtered:scored:{key_hash}"
+            analysis_cache_key = f"analysis:scored_signless:{key_hash}"
+            scored_genes_cache_key = f"inputs:scored_signless:{key_hash}:scored_genes"
+            user_weights_cache_key = f"weights:scored_signless:{key_hash}"
+            filtered_cache_key = f"filtered:scored_signless:{key_hash}"
 
             gene_sets_with_p = cache.get(analysis_cache_key)
             filtered = []
@@ -700,8 +700,9 @@ def scored_genes_view(request):
                         "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
                     }, status=400)
 
-                print("running bidirectional BlitzGSEA")
-                gene_sets_with_p = run_blitzgsea_bidirectional(filtered, scored_genes)
+                print("running signless BlitzGSEA")
+                gene_sets_with_p = run_blitzgsea_signless(filtered, scored_genes)
+
                 preview = sorted(
                     gene_sets_with_p.items(),
                     key=lambda item: item[1][1]
@@ -710,7 +711,14 @@ def scored_genes_view(request):
                 print("Top 10 scored gene sets by p-value:")
                 for name, (genes, p_raw, q_val) in preview:
                     print(name, "p =", p_raw, "q =", q_val)
-                print("bidirectional BlitzGSEA done")
+
+                print("Number of filtered gene sets before BlitzGSEA =", len(filtered))
+                print("Number of gene sets with p/q =", len(gene_sets_with_p))
+
+                all_q = sorted([v[2] for v in gene_sets_with_p.values()])[:10]
+                print("Top 10 q-values:", all_q)
+
+                print("signless BlitzGSEA done")
 
                 if not gene_sets_with_p:
                     return JsonResponse({
@@ -740,7 +748,7 @@ def scored_genes_view(request):
 
             print("thr_key = " + thr_key)
 
-            threshold_cache_key = f"threshold:scored:{key_hash}:{thr_key}"
+            threshold_cache_key = f"threshold:scored_signless:{key_hash}:{thr_key}"
             result_filtered = cache.get(threshold_cache_key)
 
             if result_filtered is None:
@@ -770,7 +778,7 @@ def scored_genes_view(request):
             if distance_type in ["jaccard_weighted", "overlap_weighted"] and not user_weights:
                 user_weights = build_weights_from_scored_genes(scored_genes)
 
-            dist_key = f"distance:scored:{key_hash}:{thr_key}:{distance_type}:rescaled"
+            dist_key = f"distance:scored_signless:{key_hash}:{thr_key}:{distance_type}:rescaled"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
