@@ -40,9 +40,12 @@ clearLocalStorageExceptSettings()
 
 // Ensure default tab and id
 LoadInput();
-currentActiveGeneInputTabId = 'scored-genes';
-localStorage.setItem("single-list", JSON.stringify(false));
-localStorage.setItem("gene-input-mode", "scored-genes");
+
+if (!localStorage.getItem("gene-input-mode")) {
+  currentActiveGeneInputTabId = "scored-genes";
+  localStorage.setItem("single-list", JSON.stringify(false));
+  localStorage.setItem("gene-input-mode", "scored-genes");
+}
 
 // This becomes a refrence to the iframe once it has loaded
 let frame;
