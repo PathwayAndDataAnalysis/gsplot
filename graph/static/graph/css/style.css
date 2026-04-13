@@ -326,18 +326,19 @@ tbody th {
 /* Styles for the new tabbed gene input section */
 .gene-input-tabs {
   display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 20px; /* Space between tabs and content */
 }
 
 .gene-input-tab-button {
-  padding: 10px 15px;
+  padding: 10px 16px;
   cursor: pointer;
   border: 1px solid #ccc;
   border-bottom: none; /* Make border appear seamless with content box */
   background-color: #f0f0f0;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
-  margin-right: 5px; /* Space between tabs */
   transition: background-color 0.2s ease; /* Smooth transition for hover/active */
 }
 
@@ -357,6 +358,100 @@ tbody th {
   border: 1px solid #ccc;
   border-radius: 8px;
   background-color: #fff;
+}
+
+.gene-input-intro {
+  margin: 0 0 18px 0;
+  color: #55606d;
+  max-width: 760px;
+}
+
+.gene-input-panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e7edf3;
+}
+
+.gene-input-panel-header h3 {
+  margin: 0 0 6px 0;
+}
+
+.gene-input-panel-header p {
+  margin: 0;
+  color: #5f6d7a;
+}
+
+.test-mode-group {
+  min-width: 250px;
+  padding: 14px 16px;
+  border: 1px solid #d7e3ef;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #f8fbfe 0%, #eef5fb 100%);
+}
+
+.test-mode-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4f657a;
+}
+
+.test-mode-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.test-mode-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.test-mode-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.test-mode-option span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 9px 12px;
+  border: 1px solid #bfd0df;
+  border-radius: 999px;
+  background-color: #ffffff;
+  color: #466077;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.test-mode-option input[type="radio"]:checked + span {
+  background-color: #77a5c2;
+  color: #ffffff;
+  border-color: #77a5c2;
+  box-shadow: 0 8px 18px rgba(119, 165, 194, 0.28);
+}
+
+.gene-input-helper {
+  color: gray;
+  margin-top: 10px;
+}
+
+.gene-input-status {
+  margin-top: 8px;
+  color: gray;
 }
 
 /* --- Core Flexbox Styles for Side-by-Side Text Areas --- */
@@ -407,6 +502,18 @@ tbody th {
 
 .gene-input-column button:hover {
   background-color: #666;
+}
+
+@media (max-width: 900px) {
+  .gene-input-panel-header {
+    flex-direction: column;
+  }
+
+  .test-mode-group {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
 }
 .param-group {
     border: 1px solid #ddd;

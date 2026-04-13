@@ -1,15 +1,14 @@
 import math
 try:
-    import blitzgsea as blitz
+    import gseapy as gp
 except ImportError:
-    blitz = None
+    gp = None
 import pandas as pd
 import umap.umap_ as umap
 import numpy as np
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
-from scipy.stats import norm
-
+from scipy.stats import mannwhitneyu
 from sklearn.manifold import Isomap, TSNE
 
 DISTANCE_RESCALING_CAP = 100.0
@@ -93,8 +92,8 @@ def build_weights_from_sets(sig_genes, insig_genes):
 def parse_scored_genes_raw(scored_genes_raw):
     """
     Parse raw uploaded scored-genes text into:
-    1) scored_genes: ordered list of {"gene": ..., "score": abs_score}
-    2) user_weights: dict {gene: abs_score}
+    1) scored_genes: ordered list of {"gene": ..., "score": raw_signed_score}
+    2) user_weights: dict {gene: abs(score)} for distance weighting
 
     Expected input: two columns, no header.
     Prefer tab-delimited, but also allow generic whitespace split.
@@ -112,11 +111,9 @@ def parse_scored_genes_raw(scored_genes_raw):
         if not line:
             continue
 
-        # Try tab first
         if "\t" in line:
             parts = [p.strip() for p in line.split("\t") if p.strip()]
         else:
-            # fallback for plain .txt separated by spaces
             parts = line.split()
 
         if len(parts) < 2:
@@ -132,7 +129,7 @@ def parse_scored_genes_raw(scored_genes_raw):
             continue
 
         try:
-            score = abs(float(score_raw))
+            score = float(score_raw)   # keep raw signed score
         except ValueError:
             raise ValueError(
                 f"Invalid score at line {line_no} for gene '{gene}'. "
@@ -157,16 +154,18 @@ def parse_scored_genes_raw(scored_genes_raw):
     if not scored_genes:
         return [], {}
 
-    # Sort by absolute change from most changed to least changed
+    # Sort by raw signed score: highest positive at top, most negative at bottom
     scored_genes.sort(key=lambda x: x["score"], reverse=True)
 
-    user_weights = {row["gene"]: row["score"] for row in scored_genes}
+    # Keep magnitude-only weights for distance calculations
+    user_weights = {row["gene"]: abs(float(row["score"])) for row in scored_genes}
     return scored_genes, user_weights
+
 
 def build_weights_from_scored_genes(scored_genes):
     """
-    scored_genes: list of {"gene": ..., "score": ...}
-    Returns natural score-based weights for weighted distances.
+    scored_genes: list of {"gene": ..., "score": raw_signed_score}
+    Returns magnitude-only weights for weighted distances.
     """
     if not scored_genes:
         return {}
@@ -177,56 +176,95 @@ def build_weights_from_scored_genes(scored_genes):
         if row.get("gene") and np.isfinite(float(row["score"]))
     }
 
-def run_blitzgsea_signless(filtered, scored_genes):
-    if blitz is None:
+
+def run_gseapy(filtered, scored_genes, tail_mode="both"):
+    """
+    Run GSEApy prerank on raw signed scores.
+
+    tail_mode:
+      - "positive": one-sided positive tail using ES sign
+      - "negative": one-sided negative tail using ES sign
+      - "both": keep original two-sided p-value
+    """
+    if gp is None:
         raise RuntimeError(
-            "blitzgsea is not installed on the server. "
-            "Install it with: pip install blitzgsea"
+            "gseapy is not installed on the server. "
+            "Install it with: pip install gseapy"
         )
 
     if not filtered or not scored_genes:
         return {}
 
-    signature = pd.DataFrame(
-        [(row["gene"], float(abs(row["score"]))) for row in scored_genes],
-        columns=[0, 1]
+    if tail_mode not in {"positive", "negative", "both"}:
+        raise ValueError(f"Unknown tail_mode: {tail_mode}")
+
+    # Build prerank input from raw signed scores
+    rnk = pd.DataFrame(
+        [(row["gene"], float(row["score"])) for row in scored_genes],
+        columns=["gene", "score"]
     )
 
-    library = {
+    # Keep current in-memory library shape
+    gene_sets = {
         geneset["gene_set_name"]: list(geneset["matched_genes"])
         for geneset in filtered
     }
 
-    result = blitz.gsea(signature, library)
+    # Break exact ties very slightly without changing meaningful ordering
+    rnk = rnk.copy()
+    rnk["tie_breaker"] = np.arange(len(rnk), dtype=float) * 1e-12
+    rnk["score"] = rnk["score"] + rnk["tie_breaker"]
+    rnk = rnk[["gene", "score"]]
 
+    pre_res = gp.prerank(
+        rnk=rnk,
+        gene_sets=gene_sets,
+        threads=1,
+        permutation_num=2000,
+        min_size=1,
+        max_size=100000,
+        seed=1,
+        outdir=None,
+        no_plot=True,
+        verbose=False,
+    )
+
+    result = pre_res.res2d
     if result is None or len(result) == 0:
         return {}
 
+    # Normalize column names across GSEApy versions
     cols_lower = {str(c).strip().lower(): c for c in result.columns}
 
     term_col = None
-    for candidate in ["term", "geneset", "gene_set", "name", "pathway"]:
+    for candidate in ["term", "name", "pathway"]:
         if candidate in cols_lower:
             term_col = cols_lower[candidate]
             break
 
-    use_index_for_term = term_col is None
+    es_col = None
+    for candidate in ["es"]:
+        if candidate in cols_lower:
+            es_col = cols_lower[candidate]
+            break
 
     p_col = None
-    for candidate in ["pval", "p_value", "p-value", "pvalue", "p"]:
+    for candidate in ["pval", "p-value", "p value", "nom p-val", "nom_p_val"]:
         if candidate in cols_lower:
             p_col = cols_lower[candidate]
             break
 
-    q_col = None
-    for candidate in ["fdr", "qval", "q_value", "q-value", "padj", "adj_pval"]:
-        if candidate in cols_lower:
-            q_col = cols_lower[candidate]
-            break
+    if term_col is None:
+        term_col = result.columns[0]
+
+    if es_col is None:
+        raise ValueError(
+            f"Could not find ES column in GSEApy result. Columns: {list(result.columns)}"
+        )
 
     if p_col is None:
         raise ValueError(
-            f"Could not find p-value column in BlitzGSEA result. Columns: {list(result.columns)}"
+            f"Could not find p-value column in GSEApy result. Columns: {list(result.columns)}"
         )
 
     matched_by_name = {
@@ -234,30 +272,39 @@ def run_blitzgsea_signless(filtered, scored_genes):
         for geneset in filtered
     }
 
-    gene_sets_with_p = {}
-
-    if q_col is not None:
-        for idx, row in result.iterrows():
-            set_name = str(idx if use_index_for_term else row[term_col])
-            if set_name not in matched_by_name:
-                continue
-
-            p_raw = float(row[p_col])
-            q_val = float(row[q_col])
-            gene_string = matched_by_name[set_name]
-            gene_sets_with_p[set_name] = (gene_string, p_raw, q_val)
-
-        return gene_sets_with_p
-
     tmp = {}
-    for idx, row in result.iterrows():
-        set_name = str(idx if use_index_for_term else row[term_col])
+    for _, row in result.iterrows():
+        set_name = str(row[term_col])
         if set_name not in matched_by_name:
             continue
 
-        p_raw = float(row[p_col])
+        es_val = float(row[es_col])
+        p_two_sided = float(row[p_col])
+
+        # Clamp just in case
+        p_two_sided = max(0.0, min(1.0, p_two_sided))
+
+        if tail_mode == "both":
+            p_used = p_two_sided
+
+        elif tail_mode == "positive":
+            if es_val > 0:
+                p_used = p_two_sided / 2.0
+            elif es_val < 0:
+                p_used = 1.0 - (p_two_sided / 2.0)
+            else:
+                p_used = 1.0
+
+        elif tail_mode == "negative":
+            if es_val < 0:
+                p_used = p_two_sided / 2.0
+            elif es_val > 0:
+                p_used = 1.0 - (p_two_sided / 2.0)
+            else:
+                p_used = 1.0
+
         gene_string = matched_by_name[set_name]
-        tmp[set_name] = (gene_string, p_raw)
+        tmp[set_name] = (gene_string, p_used)
 
     return add_q_values(tmp)
 
@@ -363,28 +410,33 @@ def weighted_overlap_coef(user_weights, set1, set2):
     return dist
 
 
-def run_fishers_test(filtered_genes, sig_genes, insig_genes):
+def run_fishers_test(filtered_genes, sig_genes, insig_genes, tail_mode='positive'):
     sig_set = set(sig_genes)
     insig_set = set(insig_genes)
 
-    reject_count = 0
-    total = len(filtered_genes)
+    if tail_mode == 'positive':
+        alternative = 'greater'
+    elif tail_mode == 'negative':
+        alternative = 'less'
+    elif tail_mode == 'both':
+        alternative = 'two-sided'
+    else:
+        raise ValueError(f"Unknown tail_mode: {tail_mode}")
 
     gene_sets_for_umap = {}
 
     for geneset in filtered_genes:
         gene_set = geneset['matched_genes']
         set_name = geneset['gene_set_name']
-        set_gene_set = set(geneset['matched_genes'])
+        set_gene_set = set(gene_set)
 
-        a = len(sig_set & set_gene_set)    # sig & in gene set
-        b = len(sig_set) - a          # sig & not in gene set
-        c = len(insig_set & set_gene_set)  # insig & in gene set
-        d = len(insig_set) - c        # insig & not gene set
+        a = len(sig_set & set_gene_set)
+        b = len(sig_set) - a
+        c = len(insig_set & set_gene_set)
+        d = len(insig_set) - c
 
         table = [[a, b], [c, d]]
-
-        _, p_value = fisher_exact(table, alternative='greater')
+        _, p_value = fisher_exact(table, alternative=alternative)
 
         gene_string = ' '.join(str(gene) for gene in gene_set)
         gene_sets_for_umap[set_name] = (gene_string, p_value)
@@ -425,29 +477,40 @@ def filter_gene_sets_by_significance(gene_sets_with_p, pval_thr, fdr_thr):
     return filtered_gene_sets, pval_thr, fdr_thr
 
 
-def calculate_pvals(filtered, ranked_genes):
+def calculate_pvals(filtered, ranked_genes, tail_mode='positive'):
     n = len(ranked_genes)
-    ranks = dict()
-    gene_sets_with_p = {}
+    rank_map = {}
 
-    for i in range(n):
-        rank = i + 1
-        gene = ranked_genes[i]
-        norm_rank = (rank-0.5)/n
-        ranks[gene] = norm_rank
+    # smaller number = closer to top
+    for i, gene in enumerate(ranked_genes):
+        rank_map[gene] = i + 1
+
+    all_rank_values = list(rank_map.values())
+    gene_sets_with_p = {}
 
     for geneset in filtered:
         gene_set = geneset['matched_genes']
         set_name = geneset['gene_set_name']
 
-        gene_n = len(gene_set)
-        total_w = 0
-        for gene in gene_set:
-            total_w += ranks[gene]
-        geneset_mw = total_w/gene_n
-        sd = math.sqrt(((n + 1) * (n - gene_n)) / (12 * (n**2) * gene_n))
-        # Calculate CDF for a normal distribution with mean 76 and std dev 2.5 at x = 80
-        p_value = norm.cdf(geneset_mw, loc=0.5, scale=sd)
+        gene_set_members = set(gene_set)
+        
+        inside_ranks = [rank_map[gene] for gene in gene_set if gene in rank_map]
+        outside_ranks = [rank_map[gene] for gene in ranked_genes if gene not in gene_set_members]
+
+        if not inside_ranks or not outside_ranks:
+            continue
+
+        # top = positive = smaller ranks
+        if tail_mode == 'positive':
+            alt = 'less'
+        elif tail_mode == 'negative':
+            alt = 'greater'
+        elif tail_mode == 'both':
+            alt = 'two-sided'
+        else:
+            raise ValueError(f"Unknown tail_mode: {tail_mode}")
+
+        _, p_value = mannwhitneyu(inside_ranks, outside_ranks, alternative=alt)
 
         gene_string = ' '.join(str(gene) for gene in gene_set)
         gene_sets_with_p[set_name] = (gene_string, p_value)

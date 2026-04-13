@@ -16,6 +16,11 @@ let hasUnsavedSettings = false;
 let settingsNeedApply = false;
 let allTablesContainer2 = document.getElementById("selected-points-container");
 let parsedScoredGenes = [];
+const inputTestModeStorageKeys = {
+  "scored-genes": "gene-test-mode-scored",
+  "two-textareas": "gene-test-mode-thresholded",
+  "single-textarea": "gene-test-mode-input",
+};
 
 const uploadContainer = document.getElementById("upload-container"); // Container for the upload file button
 const selectedPoints = document.getElementById("selected-section"); // Container for selected points below graph
@@ -46,6 +51,8 @@ if (!localStorage.getItem("gene-input-mode")) {
   localStorage.setItem("single-list", JSON.stringify(false));
   localStorage.setItem("gene-input-mode", "scored-genes");
 }
+
+initializeInputTestModes();
 
 // This becomes a refrence to the iframe once it has loaded
 let frame;
@@ -165,6 +172,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
 
   const inputMode = currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "scored-genes";
   const singleList = inputMode === "single-textarea";
+  const selectedTestMode = getInputTestMode(inputMode);
 
   const minInput = document.getElementById("min-member-input");
   let minMembers = 5;
@@ -215,6 +223,8 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   localStorage.setItem("gene-input-mode", inputMode);
   localStorage.setItem("minMembers", minMembers);
   localStorage.setItem("species", species);
+  localStorage.setItem("gene-test-mode-current", selectedTestMode);
+  localStorage.setItem("gene-test-mode-current-input", inputMode);
 
   if (inputMode === "scored-genes") {
     localStorage.setItem("scoredGenesRaw", scoredGenesRaw);
@@ -337,6 +347,43 @@ function showGeneInputTab(tabId, event = null) {
     displayGenesContainer.style.display = "none";
   }
 
+  syncCurrentInputTestMode(tabId);
+
+}
+
+function initializeInputTestModes() {
+  document.querySelectorAll(".test-mode-group").forEach((group) => {
+    const modeKey = group.dataset.modeKey;
+    const storageKey = `gene-test-mode-${modeKey}`;
+    const savedMode = localStorage.getItem(storageKey) || "positive";
+    const matchingInput = group.querySelector(`input[type="radio"][value="${savedMode}"]`);
+    if (matchingInput) {
+      matchingInput.checked = true;
+    }
+
+    group.querySelectorAll('input[type="radio"]').forEach((radio) => {
+      radio.addEventListener("change", () => {
+        if (radio.checked) {
+          localStorage.setItem(storageKey, radio.value);
+          syncCurrentInputTestMode(currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "scored-genes");
+        }
+      });
+    });
+  });
+}
+
+function getInputTestMode(tabId) {
+  const storageKey = inputTestModeStorageKeys[tabId];
+  if (!storageKey) {
+    return "positive";
+  }
+  return localStorage.getItem(storageKey) || "positive";
+}
+
+function syncCurrentInputTestMode(tabId) {
+  const selectedMode = getInputTestMode(tabId);
+  localStorage.setItem("gene-test-mode-current", selectedMode);
+  localStorage.setItem("gene-test-mode-current-input", tabId);
 }
 
 function parseScoredGenesFileContent(content) {
@@ -529,6 +576,11 @@ function clearLocalStorageExceptSettings() {
   const settingsBackup = localStorage.getItem("settings");
   const listBackup = localStorage.getItem("single-list");
   const modeBackup = localStorage.getItem("gene-input-mode");
+  const scoredTestModeBackup = localStorage.getItem("gene-test-mode-scored");
+  const thresholdedTestModeBackup = localStorage.getItem("gene-test-mode-thresholded");
+  const inputTestModeBackup = localStorage.getItem("gene-test-mode-input");
+  const currentTestModeBackup = localStorage.getItem("gene-test-mode-current");
+  const currentTestModeInputBackup = localStorage.getItem("gene-test-mode-current-input");
   localStorage.clear();
   if (settingsBackup) {
     if (listBackup !== null) {
@@ -538,6 +590,21 @@ function clearLocalStorageExceptSettings() {
       localStorage.setItem("gene-input-mode", modeBackup);
     }
     localStorage.setItem("settings", settingsBackup);
+  }
+  if (scoredTestModeBackup !== null) {
+    localStorage.setItem("gene-test-mode-scored", scoredTestModeBackup);
+  }
+  if (thresholdedTestModeBackup !== null) {
+    localStorage.setItem("gene-test-mode-thresholded", thresholdedTestModeBackup);
+  }
+  if (inputTestModeBackup !== null) {
+    localStorage.setItem("gene-test-mode-input", inputTestModeBackup);
+  }
+  if (currentTestModeBackup !== null) {
+    localStorage.setItem("gene-test-mode-current", currentTestModeBackup);
+  }
+  if (currentTestModeInputBackup !== null) {
+    localStorage.setItem("gene-test-mode-current-input", currentTestModeInputBackup);
   }
   localStorage.setItem("selected", "[]");
 

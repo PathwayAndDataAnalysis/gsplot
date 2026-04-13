@@ -158,6 +158,35 @@ function displayValues(settings) {
     }
   }
 
+  // Restore reduction UI too
+  const reduction = settings.reduction || defaultUmap;
+
+  if (algorithmSelect) {
+    algorithmSelect.value = reduction.mode || "umap";
+  }
+
+  if (reduction.mode === "umap") {
+    const nn = document.getElementById("umapNNeighbors");
+    const seed = document.getElementById("umapRandomState");
+    const minDist = document.getElementById("umapMinDist");
+
+    if (nn) nn.value = reduction.n_neighbors ?? 15;
+    if (seed) seed.value = reduction.seed ?? 0;
+    if (minDist) minDist.value = reduction.min_dist ?? 0.1;
+  } else if (reduction.mode === "tsne") {
+    const perplexity = document.getElementById("tsnePerplexity");
+    const earlyEx = document.getElementById("tsneEarlyExaggeration");
+    const maxIter = document.getElementById("tsneNIters");
+
+    if (perplexity) perplexity.value = reduction.perplexity ?? 15.0;
+    if (earlyEx) earlyEx.value = reduction.early_ex ?? 12.0;
+    if (maxIter) maxIter.value = reduction.max_iter ?? 1000;
+  } else if (reduction.mode === "isomap") {
+    const nn = document.getElementById("isomapNNeighbors");
+    if (nn) nn.value = reduction.n_neighbors ?? 5;
+  }
+
+  toggleAlgorithmParams();
   toggleClusterParamsVisibility();
   toggleClusterAlgorithmParams();
 }
@@ -179,26 +208,31 @@ function getReduction() { // get input based on user input on sidebar
   }
   return setReduction
 }
-function getReductionDiff(setting1, setting2) { // compare to find potential differences to then update the graph
-  const reduction1 = setting1['reduction']
-  const reduction2 = setting2['reduction']
-  const selectedAlgorithm = setting1['mode'];
-  if (reduction1['mode'] !== reduction2['mode']) return true
-  if (selectedAlgorithm === 'umap') {
+
+function getReductionDiff(setting1, setting2) {
+  const reduction1 = setting1["reduction"] || {};
+  const reduction2 = setting2["reduction"] || {};
+  const selectedAlgorithm = reduction1["mode"];
+
+  if (reduction1["mode"] !== reduction2["mode"]) return true;
+
+  if (selectedAlgorithm === "umap") {
     return (
-      reduction1['n_neighbors'] !== reduction2['n_neighbors'] ||
-      reduction1['seed'] !== reduction2['seed'] ||
-      reduction1['min_dist'] !== reduction2['min_dist']
-    )
-  } else if (selectedAlgorithm === 'tsne') {
+      reduction1["n_neighbors"] !== reduction2["n_neighbors"] ||
+      reduction1["seed"] !== reduction2["seed"] ||
+      reduction1["min_dist"] !== reduction2["min_dist"]
+    );
+  } else if (selectedAlgorithm === "tsne") {
     return (
-      reduction1['perplexity'] !== reduction2['perplexity'] ||
-      reduction1['early_ex'] !== reduction2['early_ex'] ||
-      reduction1['max_iter'] !== reduction2['max_iter']
-    )
-  } else if (selectedAlgorithm === 'isomap') {
-    return (reduction1['n_neighbors'] !== reduction2['n_neighbors'])
+      reduction1["perplexity"] !== reduction2["perplexity"] ||
+      reduction1["early_ex"] !== reduction2["early_ex"] ||
+      reduction1["max_iter"] !== reduction2["max_iter"]
+    );
+  } else if (selectedAlgorithm === "isomap") {
+    return reduction1["n_neighbors"] !== reduction2["n_neighbors"];
   }
+
+  return false;
 }
 
 function updateSettings(suppressToast = false) {
@@ -694,36 +728,43 @@ function updateThresholdInputs() {
   const pWrapper = document.getElementById("pvalue-wrapper");
   const fWrapper = document.getElementById("fdr-wrapper");
 
+  const storedAppliedP = localStorage.getItem("p-value");
+  const storedAppliedFDR = localStorage.getItem("fdr");
+  const storedComputedP = localStorage.getItem("computed-p-value");
+  const storedComputedFDR = localStorage.getItem("computed-fdr");
+
   if (selectedType === "pvalue") {
-    // Restore p-value from computed if available
-    const storedComputedP = localStorage.getItem("computed-p-value");
-    if (storedComputedP !== null) {
+    if (storedAppliedP !== null) {
+      pInput.value = storedAppliedP;
+    } else if (storedComputedP !== null) {
       pInput.value = storedComputedP;
     } else if (lastPValue !== "") {
       pInput.value = lastPValue;
+    } else {
+      pInput.value = "0.05";
     }
 
-    pInput.removeAttribute("readonly");
-
-    // Save current fdr, then clear display
     lastFDR = fdrInput.value;
+
+    pInput.removeAttribute("readonly");
     fdrInput.setAttribute("readonly", true);
 
     pWrapper.classList.remove("grayed-out");
     fWrapper.classList.add("grayed-out");
   } else {
-    // Restore fdr from computed if available
-    const storedComputedFDR = localStorage.getItem("computed-fdr");
-    if (storedComputedFDR !== null) {
+    if (storedAppliedFDR !== null) {
+      fdrInput.value = storedAppliedFDR;
+    } else if (storedComputedFDR !== null) {
       fdrInput.value = storedComputedFDR;
     } else if (lastFDR !== "") {
       fdrInput.value = lastFDR;
+    } else {
+      fdrInput.value = "0.05";
     }
 
-    fdrInput.removeAttribute("readonly");
-
-    // Save current p-value, then clear display
     lastPValue = pInput.value;
+
+    fdrInput.removeAttribute("readonly");
     pInput.setAttribute("readonly", true);
 
     fWrapper.classList.remove("grayed-out");

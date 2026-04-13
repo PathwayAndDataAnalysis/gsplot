@@ -27,7 +27,7 @@ from .dataReduction import (
     filter_gene_sets_by_significance,
     calculate_distance_matrix,
     parse_scored_genes_raw,
-    run_blitzgsea_signless,
+    run_gseapy,
 )
 from .gene_set_utils import get_selected_gene_sets_with_relevant_members
 from django.shortcuts import render
@@ -186,6 +186,10 @@ def gene_input_view(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
             settings = data.get("settings")
+            tail_mode = (data.get("tail_mode") or "positive").lower()
+
+            if tail_mode not in {"positive", "negative", "both"}:
+                return JsonResponse({"error": f"Invalid tail_mode: {tail_mode}"}, status=400)
 
             cache_key_data = {
                 "sig_genes": sig_input,
@@ -193,7 +197,8 @@ def gene_input_view(request):
                 "sel_gene_sets": selected_gene_sets,
                 "min_members": min_members,
                 "species": species,
-                "custom_data": custom_data
+                "custom_data": custom_data,
+                "tail_mode": tail_mode,
             }
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
@@ -250,7 +255,7 @@ def gene_input_view(request):
 
                 # Run Fisher's test analysis
                 print("running fishers test")
-                gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes)
+                gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes, tail_mode=tail_mode)
                 print("fisher test done")
                 cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
                 cache.set(sig_genes_cache_key, sig_genes, timeout=cache_timeout)
@@ -419,13 +424,18 @@ def gene_input_view2(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")  # Fetch custom data if user provides it
             settings = data.get("settings")
+            tail_mode = (data.get("tail_mode") or "positive").lower()
+
+            if tail_mode not in {"positive", "negative", "both"}:
+                return JsonResponse({"error": f"Invalid tail_mode: {tail_mode}"}, status=400)
 
             cache_key_data = {
                 "ranked_genes": genes_input,
                 "sel_gene_sets": selected_gene_sets,
                 "min_members": min_members,
                 "species": species,
-                "custom_data": custom_data
+                "custom_data": custom_data,
+                "tail_mode": tail_mode,
             }
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
@@ -475,7 +485,20 @@ def gene_input_view2(request):
                         "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
                     }, status=400)
 
-                gene_sets_with_p = calculate_pvals(filtered, ranked_genes)
+                gene_sets_with_p = calculate_pvals(filtered, ranked_genes, tail_mode=tail_mode)
+
+                preview = sorted(
+                    gene_sets_with_p.items(),
+                    key=lambda item: item[1][1]
+                )[:10]
+
+                print("Top 10 ranked gene sets by p-value:")
+                for name, (genes, p_raw, q_val) in preview:
+                    print(name, "p =", p_raw, "q =", q_val)
+
+                print("Number of filtered gene sets before ranked process =", len(filtered))
+                print("Number of gene sets with p/q =", len(gene_sets_with_p))
+
                 cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
                 cache.set(ranked_genes_cache_key, ranked_genes, timeout=cache_timeout)
                 cache.set(filtered_cache_key, filtered, timeout=cache_timeout)
@@ -637,20 +660,26 @@ def scored_genes_view(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")
             settings = data.get("settings")
+            tail_mode = (data.get("tail_mode") or "positive").lower()
+
+            if tail_mode not in {"positive", "negative", "both"}:
+                return JsonResponse({"error": f"Invalid tail_mode: {tail_mode}"}, status=400)
+
             cache_key_data = {
                 "scored_genes_raw": scored_genes_raw,
                 "sel_gene_sets": selected_gene_sets,
                 "min_members": min_members,
                 "species": species,
                 "custom_data": custom_data,
+                "tail_mode": tail_mode,
             }
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode("utf-8")).hexdigest()
 
-            analysis_cache_key = f"analysis:scored_signless:{key_hash}"
-            scored_genes_cache_key = f"inputs:scored_signless:{key_hash}:scored_genes"
-            user_weights_cache_key = f"weights:scored_signless:{key_hash}"
-            filtered_cache_key = f"filtered:scored_signless:{key_hash}"
+            analysis_cache_key = f"analysis:scored:{key_hash}"
+            scored_genes_cache_key = f"inputs:scored:{key_hash}:scored_genes"
+            user_weights_cache_key = f"weights:scored:{key_hash}"
+            filtered_cache_key = f"filtered:scored:{key_hash}"
 
             gene_sets_with_p = cache.get(analysis_cache_key)
             filtered = []
@@ -700,8 +729,8 @@ def scored_genes_view(request):
                         "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
                     }, status=400)
 
-                print("running signless BlitzGSEA")
-                gene_sets_with_p = run_blitzgsea_signless(filtered, scored_genes)
+                print("running GSEApy prerank")
+                gene_sets_with_p = run_gseapy(filtered, scored_genes, tail_mode=tail_mode)
 
                 preview = sorted(
                     gene_sets_with_p.items(),
@@ -712,17 +741,17 @@ def scored_genes_view(request):
                 for name, (genes, p_raw, q_val) in preview:
                     print(name, "p =", p_raw, "q =", q_val)
 
-                print("Number of filtered gene sets before BlitzGSEA =", len(filtered))
+                print("Number of filtered gene sets before GSEAPY =", len(filtered))
                 print("Number of gene sets with p/q =", len(gene_sets_with_p))
 
                 all_q = sorted([v[2] for v in gene_sets_with_p.values()])[:10]
                 print("Top 10 q-values:", all_q)
 
-                print("signless BlitzGSEA done")
+                print("GSEApy done")
 
                 if not gene_sets_with_p:
                     return JsonResponse({
-                        "error": "BlitzGSEA returned no enrichment results for the selected gene sets."
+                        "error": "GSEApy returned no enrichment results for the selected gene sets."
                     }, status=400)
 
                 cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
@@ -748,7 +777,7 @@ def scored_genes_view(request):
 
             print("thr_key = " + thr_key)
 
-            threshold_cache_key = f"threshold:scored_signless:{key_hash}:{thr_key}"
+            threshold_cache_key = f"threshold:scored:{key_hash}:{thr_key}"
             result_filtered = cache.get(threshold_cache_key)
 
             if result_filtered is None:
@@ -778,7 +807,7 @@ def scored_genes_view(request):
             if distance_type in ["jaccard_weighted", "overlap_weighted"] and not user_weights:
                 user_weights = build_weights_from_scored_genes(scored_genes)
 
-            dist_key = f"distance:scored_signless:{key_hash}:{thr_key}:{distance_type}:rescaled"
+            dist_key = f"distance:scored:{key_hash}:{thr_key}:{distance_type}:rescaled"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -872,32 +901,84 @@ def preview_threshold(request):
     try:
         data = json.loads(request.body)
 
+        mode = (data.get("mode") or "").lower()
+        tail_mode = (data.get("tail_mode") or "positive").lower()
+
+        if tail_mode not in {"positive", "negative", "both"}:
+            return JsonResponse({"error": f"Invalid tail_mode: {tail_mode}"}, status=400)
+
         p_val = data.get("p_val")
         fdr = data.get("fdr")
-        ranked_genes = data.get("ranked_genes", [])
-        sig_genes = data.get("sig_genes", [])
-        insig_genes = data.get("insig_genes", [])
 
-        p_val = float(p_val) if p_val else None
-        fdr = float(fdr) if fdr else None
+        p_val = float(p_val) if p_val not in [None, ""] else None
+        fdr = float(fdr) if fdr not in [None, ""] else None
 
-        if ranked_genes:
-            filtered = [{"matched_genes": [g], "gene_set_name": f"Gene {i}"} for i, g in enumerate(ranked_genes)]
-            gene_sets_with_p = calculate_pvals(filtered, ranked_genes)
-        elif sig_genes or insig_genes:
+        # ---------- Ranked mode ----------
+        if mode == "ranked":
+            ranked_genes = data.get("ranked_genes", [])
+            if not ranked_genes:
+                return JsonResponse({"error": "Missing ranked_genes input"}, status=400)
+
+            filtered = [
+                {"matched_genes": [g], "gene_set_name": f"Gene {i}"}
+                for i, g in enumerate(ranked_genes)
+            ]
+
+            gene_sets_with_p = calculate_pvals(
+                filtered,
+                ranked_genes,
+                tail_mode=tail_mode
+            )
+
+        # ---------- Thresholded mode ----------
+        elif mode == "thresholded":
+            sig_genes = data.get("sig_genes", [])
+            insig_genes = data.get("insig_genes", [])
+
+            if not (sig_genes or insig_genes):
+                return JsonResponse({"error": "Missing sig_genes / insig_genes input"}, status=400)
+
             filtered = [{
                 "matched_genes": list(set(sig_genes + insig_genes)),
                 "gene_set_name": "combined"
             }]
-            gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes)
+
+            gene_sets_with_p = run_fishers_test(
+                filtered,
+                sig_genes,
+                insig_genes,
+                tail_mode=tail_mode
+            )
+
+        # ---------- Scored mode ----------
+        elif mode == "scored":
+            scored_genes_raw = data.get("scored_genes_raw", "")
+            if not scored_genes_raw or not scored_genes_raw.strip():
+                return JsonResponse({"error": "Missing scored_genes_raw input"}, status=400)
+
+            scored_genes, _ = parse_scored_genes_raw(scored_genes_raw)
+
+            if not scored_genes:
+                return JsonResponse({"error": "No valid scored genes were found."}, status=400)
+
+            filtered = [
+                {"matched_genes": [row["gene"]], "gene_set_name": f"Gene {i}"}
+                for i, row in enumerate(scored_genes)
+            ]
+
+            gene_sets_with_p = run_gseapy(filtered, scored_genes, tail_mode=tail_mode)
+
         else:
-            return JsonResponse({"error": "Missing gene input"}, status=400)
+            return JsonResponse({
+                "error": "Invalid mode. Expected one of: ranked, thresholded, scored"
+            }, status=400)
 
         result_filtered = filter_gene_sets_by_significance(gene_sets_with_p, p_val, fdr)
+
         if result_filtered is None:
             return JsonResponse({
                 "error": "No gene sets passed the selected threshold. "
-                "Please choose another collection or increase the p-value/FDR threshold."
+                         "Please choose another collection or increase the p-value/FDR threshold."
             }, status=400)
 
         _, computed_p, computed_fdr = result_filtered
