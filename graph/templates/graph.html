@@ -787,6 +787,44 @@
         });
       }
 
+      function formatQValueTick(qValue) {
+        if (!Number.isFinite(qValue)) return "";
+        if (qValue === 0) return "0";
+        if (qValue < 0.001 || qValue >= 1000) {
+          return qValue.toExponential(2);
+        }
+        if (qValue < 0.01) {
+          return qValue.toFixed(4);
+        }
+        if (qValue < 0.1) {
+          return qValue.toFixed(3);
+        }
+        return qValue.toFixed(2);
+      }
+
+      function getQValueColorScale(qValues) {
+        const safeQValues = qValues.map((qValue) => Math.max(Number(qValue), 1e-10));
+        const logQValues = safeQValues.map((qValue) => -Math.log10(qValue));
+        const minLogQ = Math.min(...logQValues);
+        const maxLogQ = Math.max(...logQValues);
+        const minQValue = Math.min(...safeQValues);
+        const maxQValue = Math.max(...safeQValues);
+
+        const tickQValues = Array.from(new Set([minQValue, maxQValue])).sort((a, b) => a - b);
+        const tickLogQValues = tickQValues.map((qValue) => -Math.log10(qValue));
+        const tickLabels = tickQValues.map((qValue) => formatQValueTick(qValue));
+
+        return {
+          logQValues,
+          minLogQ,
+          maxLogQ,
+          minQValue,
+          maxQValue,
+          tickLogQValues,
+          tickLabels,
+        };
+      }
+
       // Generates the data for each point based on settings
       function makeTrace(data, settings) {
         // Sizes & outline logic stays the same
@@ -796,10 +834,8 @@
         const clusterMode = !!settings["cluster-mode"];
 
         // Default (non-cluster) mode uses -log10(qValue) continuous scale
-        const qVals = data["qValue"];
-        const logPvals = qVals.map((p) => -Math.log10(Math.max(p, 1e-10)));
-        const minLogP = Math.min(...logPvals);
-        const maxLogP = Math.max(...logPvals);
+        const qValues = data["qValue"];
+        const qValueColorScale = getQValueColorScale(qValues);
 
         const markerBase = {
           size: size,
@@ -822,15 +858,18 @@
         } else {
           marker = {
             ...markerBase,
-            color: logPvals,
-            cmin: minLogP,
-            cmax: maxLogP,
+            color: qValueColorScale.logQValues,
+            cmin: qValueColorScale.minLogQ,
+            cmax: qValueColorScale.maxLogQ,
             colorscale: [
               [0.0, settings["insignificant-color"]],
               [1.0, settings["significant-color"]],
             ],
             colorbar: {
-              title: { text: "Double Click To Edit", side: "right" },
+              title: { text: "Q-Value", side: "right" },
+              tickmode: "array",
+              tickvals: qValueColorScale.tickLogQValues,
+              ticktext: qValueColorScale.tickLabels,
             },
             opacity: 1.0,
             showscale: true,
@@ -844,7 +883,7 @@
           type: "scatter",
           text: data["setName"],
           customdata: data["qValue"].map((qValue, index) => [qValue, data["pointNumber"][index]]),
-          hovertemplate: "Name: %{text}<br>P-Value: %{customdata[0]}<extra></extra>",
+          hovertemplate: "Name: %{text}<br>Q-Value: %{customdata[0]}<extra></extra>",
           marker: marker,
         };
 
@@ -930,10 +969,8 @@
 
         // The following are arrays of information of each displayed point needed for plotly.restyle
         let borderColor = firstPoint.data.marker.line.color.slice();
-        const pVals = firstPoint.data.customdata.map(d => d[0]);
-        const logColors = pVals.map(p => -Math.log10(Math.max(p, 1e-10)));
-        const minLogP = Math.min(...logColors);
-        const maxLogP = Math.max(...logColors);
+        const qValues = firstPoint.data.customdata.map((d) => d[0]);
+        const qValueColorScale = getQValueColorScale(qValues);
         let outlineWidths = firstPoint.data.marker.line.width.slice();
         let sizes = firstPoint.data.marker.size.slice();
 
@@ -1019,14 +1056,19 @@
           // normal mode
           update = {
             marker: {
-              color: logColors,
+              color: qValueColorScale.logQValues,
               colorscale: [
                 [0.0, settings["insignificant-color"]],
                 [1.0, settings["significant-color"]],
               ],
-              colorbar: firstPoint.data.marker.colorbar,
-              cmin: minLogP,
-              cmax: maxLogP,
+              colorbar: {
+                ...firstPoint.data.marker.colorbar,
+                tickmode: "array",
+                tickvals: qValueColorScale.tickLogQValues,
+                ticktext: qValueColorScale.tickLabels,
+              },
+              cmin: qValueColorScale.minLogQ,
+              cmax: qValueColorScale.maxLogQ,
               size: sizes,
               opacity: 1.0,
               line: {
