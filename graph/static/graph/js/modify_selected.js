@@ -19,7 +19,6 @@ function updateContent() {
   // Get selected items
   let selecteditems = localStorage.getItem("selected");
   let showSigOnly = document.getElementById("show-sig-only")?.checked;
-  let isSingleListMode = JSON.parse(localStorage.getItem("single-list"));
 
 
   // If nothing is selected then set empty list into local storage
@@ -51,7 +50,7 @@ function updateContent() {
 
   // Display sets with the molecules in the intersection bolded
   for (let i = 0; i < selecteditems.length; i++) {
-    tableCreator(selecteditems[i], intersection, showSigOnly && !isSingleListMode);
+    tableCreator(selecteditems[i], intersection, showSigOnly);
   }
 }
 
@@ -63,7 +62,7 @@ window.addEventListener("storage", function (e) {
 });
 
 // Generate HTML table object of molecules
-function tableCreator(selectedPoint, intersection, filterSig) {
+function tableCreator(selectedPoint, intersection, displayGenesToggleOn) {
   // Create table container div and table inside of it
   const tableContainer = document.createElement("div");
   tableContainer.classList.add("table-container");
@@ -97,9 +96,18 @@ function tableCreator(selectedPoint, intersection, filterSig) {
   const moleculesHeader = document.createElement("th");
   moleculesHeader.textContent = "Molecules";
   const molecules = document.createElement("td");
-  let moleculeList = selectedPoint["molecules"].split(" ");
+  const displayMode = selectedPoint["displayMode"] || "thresholded";
+  const useDisplayGenes =
+    displayGenesToggleOn &&
+    (displayMode === "ranked" || displayMode === "scored");
 
-  if (filterSig) {
+  const sourceMolecules = useDisplayGenes
+    ? (selectedPoint["displayMolecules"] || selectedPoint["molecules"] || "")
+    : (selectedPoint["molecules"] || "");
+
+  let moleculeList = sourceMolecules.split(" ").filter(Boolean);
+
+  if (displayGenesToggleOn && displayMode === "thresholded") {
     const sigGenes = selectedPoint["sigGenes"] || [];
     moleculeList = moleculeList.filter(g => sigGenes.includes(g));
   }
@@ -120,7 +128,7 @@ function tableCreator(selectedPoint, intersection, filterSig) {
   // Debug
   console.log("Selected Point:", selectedPoint);
   console.log("Intersection:", intersection);
-  console.log("FilterSig:", filterSig);
+  console.log("DisplayGenesToggleOn:", displayGenesToggleOn);
   console.log("sigGenes in point:", selectedPoint["sigGenes"]);
 }
 

@@ -1,4 +1,5 @@
 import math
+import re
 try:
     import gseapy as gp
 except ImportError:
@@ -177,6 +178,89 @@ def build_weights_from_scored_genes(scored_genes):
     }
 
 
+def split_gene_string(gene_string):
+    if not gene_string:
+        return []
+    return [gene.strip() for gene in str(gene_string).split() if gene.strip()]
+
+
+def join_gene_list(genes):
+    return " ".join(str(gene).strip() for gene in genes if str(gene).strip())
+
+
+def order_genes_by_reference(genes, reference_genes, reverse=False):
+    reference_index = {gene: idx for idx, gene in enumerate(reference_genes)}
+    present = []
+    remainder = []
+
+    for gene in genes:
+        if gene in reference_index:
+            present.append(gene)
+        else:
+            remainder.append(gene)
+
+    present.sort(key=lambda gene: reference_index[gene], reverse=reverse)
+    return present + remainder
+
+
+def infer_ranked_direction(mean_rank, tail_mode):
+    if tail_mode == "positive":
+        return "positive"
+    if tail_mode == "negative":
+        return "negative"
+    if mean_rank < 0.5:
+        return "positive"
+    if mean_rank > 0.5:
+        return "negative"
+    return "neutral"
+
+
+def annotate_ranked_gene_sets(filtered, ranked_genes, tail_mode="positive"):
+    if not filtered or not ranked_genes:
+        return
+
+    n = len(ranked_genes)
+    if n == 0:
+        return
+
+    ranks = {
+        gene: (i + 1 - 0.5) / n
+        for i, gene in enumerate(ranked_genes)
+    }
+
+    for geneset in filtered:
+        matched_genes = list(geneset.get("matched_genes") or [])
+        inside_ranks = [ranks[gene] for gene in matched_genes if gene in ranks]
+
+        if inside_ranks:
+            mean_rank = sum(inside_ranks) / len(inside_ranks)
+            direction = infer_ranked_direction(mean_rank, tail_mode)
+        else:
+            mean_rank = None
+            direction = "neutral"
+
+        reverse = direction == "negative"
+        ordered_genes = order_genes_by_reference(matched_genes, ranked_genes, reverse=reverse)
+
+        geneset["display_direction"] = direction
+        geneset["mean_rank"] = mean_rank
+        geneset["ordered_matched_genes"] = ordered_genes
+
+
+def parse_leading_edge_genes(raw_value):
+    if raw_value is None:
+        return []
+
+    if isinstance(raw_value, (list, tuple, set)):
+        return [str(gene).strip() for gene in raw_value if str(gene).strip()]
+
+    text = str(raw_value).strip()
+    if not text:
+        return []
+
+    return [gene.strip() for gene in re.split(r"[;,\s]+", text) if gene.strip()]
+
+
 def run_gseapy(filtered, scored_genes, tail_mode="both"):
     """
     Run GSEApy prerank on raw signed scores.
@@ -268,9 +352,25 @@ def run_gseapy(filtered, scored_genes, tail_mode="both"):
         )
 
     matched_by_name = {
-        geneset["gene_set_name"]: " ".join(str(g) for g in geneset["matched_genes"])
+        geneset["gene_set_name"]: join_gene_list(geneset["matched_genes"])
         for geneset in filtered
     }
+    filtered_by_name = {
+        geneset["gene_set_name"]: geneset
+        for geneset in filtered
+    }
+
+    leading_edge_col = None
+    for candidate in [
+        "lead_genes",
+        "ledge_genes",
+        "leading_edge",
+        "leading edge",
+        "lead genes",
+    ]:
+        if candidate in cols_lower:
+            leading_edge_col = cols_lower[candidate]
+            break
 
     tmp = {}
     for _, row in result.iterrows():
@@ -305,6 +405,14 @@ def run_gseapy(filtered, scored_genes, tail_mode="both"):
 
         gene_string = matched_by_name[set_name]
         tmp[set_name] = (gene_string, p_used)
+
+        geneset = filtered_by_name.get(set_name)
+        if geneset is not None:
+            geneset["gsea_es"] = es_val
+            if leading_edge_col is not None:
+                geneset["leading_edge_genes"] = parse_leading_edge_genes(row[leading_edge_col])
+            else:
+                geneset["leading_edge_genes"] = []
 
     return add_q_values(tmp)
 

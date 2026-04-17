@@ -22,7 +22,10 @@ from .dataReduction import (
     build_weights_from_ranked_list,
     build_weights_from_sets,
     build_weights_from_scored_genes,
+    annotate_ranked_gene_sets,
     calculate_pvals,
+    join_gene_list,
+    order_genes_by_reference,
     run_fishers_test,
     filter_gene_sets_by_significance,
     calculate_distance_matrix,
@@ -36,6 +39,97 @@ from django.shortcuts import render
 # When someone goes to the website root (/), it shows the homepage (base.html).
 def home(request):
     return render(request, 'base.html')
+
+
+def build_thresholded_display_meta(signif_gene_sets):
+    meta = {}
+    for set_name, (gene_string, _, _) in signif_gene_sets.items():
+        meta[set_name] = {
+            "fullMolecules": gene_string,
+            "displayMolecules": gene_string,
+            "leadingEdgeMolecules": "",
+            "direction": "neutral",
+            "displayMode": "thresholded",
+        }
+    return meta
+
+
+def build_ranked_display_meta(filtered, signif_gene_sets):
+    meta = {}
+    for geneset in filtered:
+        set_name = geneset.get("gene_set_name")
+        if set_name not in signif_gene_sets:
+            continue
+
+        full_molecules = signif_gene_sets[set_name][0]
+        display_molecules = join_gene_list(
+            geneset.get("ordered_matched_genes") or geneset.get("matched_genes") or []
+        )
+        meta[set_name] = {
+            "fullMolecules": full_molecules,
+            "displayMolecules": display_molecules or full_molecules,
+            "leadingEdgeMolecules": "",
+            "direction": geneset.get("display_direction", "neutral"),
+            "displayMode": "ranked",
+        }
+    return meta
+
+
+def build_scored_display_meta(filtered, signif_gene_sets, scored_genes, tail_mode):
+    scored_gene_order = [row["gene"] for row in scored_genes]
+    meta = {}
+
+    for geneset in filtered:
+        set_name = geneset.get("gene_set_name")
+        if set_name not in signif_gene_sets:
+            continue
+
+        full_molecules = signif_gene_sets[set_name][0]
+        full_gene_list = geneset.get("matched_genes") or []
+        es_val = float(geneset.get("gsea_es", 0.0) or 0.0)
+
+        if tail_mode == "positive":
+            direction = "positive"
+        elif tail_mode == "negative":
+            direction = "negative"
+        elif es_val < 0:
+            direction = "negative"
+        elif es_val > 0:
+            direction = "positive"
+        else:
+            direction = "neutral"
+
+        reverse = direction == "negative"
+        leading_edge = geneset.get("leading_edge_genes") or []
+        ordered_leading_edge = order_genes_by_reference(leading_edge, scored_gene_order, reverse=reverse)
+
+        if ordered_leading_edge:
+            display_genes = ordered_leading_edge
+        else:
+            display_genes = order_genes_by_reference(full_gene_list, scored_gene_order, reverse=reverse)
+
+        meta[set_name] = {
+            "fullMolecules": full_molecules,
+            "displayMolecules": join_gene_list(display_genes) or full_molecules,
+            "leadingEdgeMolecules": join_gene_list(ordered_leading_edge),
+            "direction": direction,
+            "displayMode": "scored",
+        }
+
+    return meta
+
+
+def attach_display_meta(graph_data, display_meta):
+    for point in graph_data:
+        set_name = point.get("setName")
+        meta = display_meta.get(set_name, {})
+        full_molecules = meta.get("fullMolecules", point.get("molecules", ""))
+        point["molecules"] = full_molecules
+        point["fullMolecules"] = full_molecules
+        point["displayMolecules"] = meta.get("displayMolecules", full_molecules)
+        point["direction"] = meta.get("direction", "neutral")
+        point["displayMode"] = meta.get("displayMode", "thresholded")
+        point["leadingEdgeMolecules"] = meta.get("leadingEdgeMolecules", "")
 
 def add_clusters_on_embedding(
     points,
@@ -327,6 +421,7 @@ def gene_input_view(request):
 
             # Return result as JSON
             data = json.loads(mapped_result)  # or skip if already a Python object
+            attach_display_meta(data, build_thresholded_display_meta(signif_gene_sets))
 
             # Only run HDBSCAN + LLM if cluster-mode is ON
             cluster_on = False
@@ -481,6 +576,7 @@ def gene_input_view2(request):
                     }, status=400)
 
                 gene_sets_with_p = calculate_pvals(filtered, ranked_genes, tail_mode=tail_mode)
+                annotate_ranked_gene_sets(filtered, ranked_genes, tail_mode=tail_mode)
 
                 preview = sorted(
                     gene_sets_with_p.items(),
@@ -500,6 +596,8 @@ def gene_input_view2(request):
             else:
                 ranked_genes = cache.get(ranked_genes_cache_key) or []
                 filtered = cache.get(filtered_cache_key) or []
+
+            annotate_ranked_gene_sets(filtered, ranked_genes, tail_mode=tail_mode)
 
             # Convert thresholds to float if provided
             thr_key = ""
@@ -571,6 +669,7 @@ def gene_input_view2(request):
             # Return result as JSON
             print("loding result into json")
             data = json.loads(mapped_result)  # or skip if already a Python object
+            attach_display_meta(data, build_ranked_display_meta(filtered, signif_gene_sets))
             print("returning teh response")
 
             # Only run HDBSCAN + LLM if cluster-mode is ON
@@ -824,6 +923,10 @@ def scored_genes_view(request):
             print("completed umap")
 
             graph_data = json.loads(mapped_result)
+            attach_display_meta(
+                graph_data,
+                build_scored_display_meta(filtered, signif_gene_sets, scored_genes, tail_mode),
+            )
 
             cluster_on = False
             if isinstance(settings, dict):

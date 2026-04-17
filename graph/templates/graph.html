@@ -60,11 +60,23 @@
         "setName",
         "setSize",
         "molecules",
+        "displayMolecules",
+        "fullMolecules",
+        "direction",
+        "displayMode",
+        "leadingEdgeMolecules",
         "color",
         "pointNumber",
         "clusterID",
         "clusterLabel"
       ];
+
+      function hasCompleteDataShape(data) {
+        if (!data || typeof data !== "object") {
+          return false;
+        }
+        return dataKeys.every((key) => Array.isArray(data[key]));
+      }
 
       // Get refrences to graph div and loading spinner
       const myPlot = document.getElementById("plot-container");
@@ -94,6 +106,11 @@
         localStorage.setItem("reset", JSON.stringify(true));
 
         const hasGeneInput = sigGenes.trim() || insigGenes.trim();
+
+        const existingData = getLocalStorage("data");
+        if (!hasCompleteDataShape(existingData)) {
+          localStorage.removeItem("data");
+        }
 
         if (getLocalStorage("data") === null) {
           showSpinner();
@@ -1008,6 +1025,11 @@
             pointNumber: pointNumber,
             qValue: fullGraphData["qValue"][pointNumber],
             molecules: fullGraphData["molecules"][pointNumber],
+            displayMolecules: fullGraphData["displayMolecules"][pointNumber],
+            fullMolecules: fullGraphData["fullMolecules"][pointNumber],
+            direction: fullGraphData["direction"][pointNumber],
+            displayMode: fullGraphData["displayMode"][pointNumber],
+            leadingEdgeMolecules: fullGraphData["leadingEdgeMolecules"][pointNumber],
             setName: fullGraphData["setName"][pointNumber],
             sigGenes: (localStorage.getItem("sigGenes") || "").split(/[\s,]+/).filter(Boolean)
           };

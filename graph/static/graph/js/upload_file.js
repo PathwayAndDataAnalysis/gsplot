@@ -339,15 +339,43 @@ function showGeneInputTab(tabId, event = null) {
       buttons[0].classList.add('active');
     }
   }
-  const displayGenesContainer = document.getElementById("display-genes-container");
-  if (tabId === "two-textareas") {
-    displayGenesContainer.style.display = "block";
-  } else {
-    displayGenesContainer.style.display = "none";
-  }
+  updateDisplayGenesSetting(tabId);
 
   syncCurrentInputTestMode(tabId);
 
+}
+
+function updateDisplayGenesSetting(tabId) {
+  const displayGenesContainer = document.getElementById("display-genes-container");
+  const displayGenesLabel = document.getElementById("display-genes-label");
+  const displayGenesTooltip = document.getElementById("display-genes-tooltip");
+
+  if (!displayGenesContainer || !displayGenesLabel || !displayGenesTooltip) {
+    return;
+  }
+
+  displayGenesContainer.style.display = "block";
+
+  if (tabId === "single-textarea") {
+    displayGenesLabel.textContent = "Show genes in enrichment order";
+    displayGenesTooltip.innerHTML =
+      "For a single selected point, show the matched genes in enrichment order.<br>" +
+      "Multi-select overlap still uses the full matched gene set.";
+    return;
+  }
+
+  if (tabId === "scored-genes") {
+    displayGenesLabel.textContent = "Show leading-edge genes";
+    displayGenesTooltip.innerHTML =
+      "For a single selected point, show leading-edge genes when available.<br>" +
+      "Multi-select overlap still uses the full matched gene set.";
+    return;
+  }
+
+  displayGenesLabel.textContent = "Show significant genes only";
+  displayGenesTooltip.innerHTML =
+    "This option filters the selected point(s) to show only significant genes.<br>" +
+    "Only available when you use thresholded genes.";
 }
 
 function initializeInputTestModes() {

@@ -47,7 +47,7 @@
   </div>
 
   <div id="manual-gene-input" style="margin-top: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 8px">
-    <h2>Manual Gene Input</h2>
+    <h2>Gene Input</h2>
     <p class="gene-input-intro">
       Choose an input style. Scored and ranked inputs let you choose whether to run a positive test, negative test, or both.
     </p>
@@ -296,16 +296,17 @@
           Display Genes
           <span class="tooltip-container">
             <i class="tooltip-icon">i</i>
-            <span class="tooltip-text">
+            <span class="tooltip-text" id="display-genes-tooltip">
               This option filters the selected point(s) to show only significant genes.<br>
               Only available when you use thresholded genes.
             </span>
           </span>
         </h4>
 
-        <div class="option" style="align-items: center;">
-          <label for="show-sig-only" style="margin-right: 10px;">Show significant genes only</label>
-          <label class="toggle-switch">
+        <div class="option" style="align-items: flex-start; justify-content: space-between; gap: 12px;">
+          <label for="show-sig-only" id="display-genes-label"
+            style="margin-right: 0; flex: 1; white-space: normal; overflow-wrap: anywhere;">Show significant genes only</label>
+          <label class="toggle-switch" style="flex-shrink: 0;">
             <input type="checkbox" id="show-sig-only">
             <span class="toggle-slider"></span>
           </label>
