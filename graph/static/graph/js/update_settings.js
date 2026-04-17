@@ -1,6 +1,7 @@
 const defaultSettings = {
   "insignificant-color": "#CDCDCD",
   "significant-color": "#000000",
+  "negative-significant-color": "#2166ac",
   "selected-color": "#6bfc03",
   "fixed-size": true,
   "dynamic-size": false,
@@ -95,6 +96,7 @@ function main() {
   updateThresholdInputs(); // Call on load
   toggleClusterParamsVisibility();
   toggleClusterAlgorithmParams();
+  refreshDirectionColorControls();
 
   const clusterEl = document.getElementById("cluster-mode");
   if (clusterEl) {
@@ -189,6 +191,36 @@ function displayValues(settings) {
   toggleAlgorithmParams();
   toggleClusterParamsVisibility();
   toggleClusterAlgorithmParams();
+  refreshDirectionColorControls();
+}
+
+function getCurrentDirectionalMode() {
+  const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
+  const testModeMap = {
+    "scored-genes": localStorage.getItem("gene-test-mode-scored") || "positive",
+    "single-textarea": localStorage.getItem("gene-test-mode-input") || "positive",
+  };
+
+  return {
+    inputMode,
+    testMode: testModeMap[inputMode] || "positive",
+  };
+}
+
+function refreshDirectionColorControls() {
+  const wrapper = document.getElementById("negative-significant-color-wrapper");
+  const positiveLabel = document.getElementById("significant-color-label");
+  if (!wrapper || !positiveLabel) {
+    return;
+  }
+
+  const { inputMode, testMode } = getCurrentDirectionalMode();
+  const useDirectionalColors =
+    (inputMode === "scored-genes" || inputMode === "single-textarea") &&
+    testMode === "both";
+
+  wrapper.style.display = useDirectionalColors ? "flex" : "none";
+  positiveLabel.textContent = useDirectionalColors ? "Most Positive:" : "Most Significant:";
 }
 
 function getReduction() { // get input based on user input on sidebar
@@ -399,6 +431,7 @@ function updateSettings(suppressToast = false) {
 function detectFrontendOnlyChanges() {
   const current = {
     sigColor: document.getElementById("significant-color")?.value,
+    negSigColor: document.getElementById("negative-significant-color")?.value,
     insigColor: document.getElementById("insignificant-color")?.value,
     selectedColor: document.getElementById("selected-color")?.value,
     fixed: document.getElementById("fixed-size")?.checked,
@@ -718,7 +751,8 @@ window.update_settings = {
     return newSettings;
   },
   updateSettings: updateSettings, // Expose the updateSettings function
-  displayValues: displayValues
+  displayValues: displayValues,
+  refreshDirectionColorControls: refreshDirectionColorControls,
 };
 
 function updateThresholdInputs() {

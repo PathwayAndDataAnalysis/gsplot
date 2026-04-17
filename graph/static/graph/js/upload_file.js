@@ -340,6 +340,7 @@ function showGeneInputTab(tabId, event = null) {
     }
   }
   updateDisplayGenesSetting(tabId);
+  window.update_settings?.refreshDirectionColorControls?.();
 
   syncCurrentInputTestMode(tabId);
 
@@ -393,6 +394,7 @@ function initializeInputTestModes() {
         if (radio.checked) {
           localStorage.setItem(storageKey, radio.value);
           syncCurrentInputTestMode(currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "scored-genes");
+          window.update_settings?.refreshDirectionColorControls?.();
         }
       });
     });

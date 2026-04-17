@@ -840,6 +840,46 @@
         };
       }
 
+      function shouldUseDirectionalColors(data) {
+        const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
+        const tailMode = localStorage.getItem("gene-test-mode-current") || "positive";
+        const displayModes = data["displayMode"] || [];
+
+        return (
+          (inputMode === "scored-genes" || inputMode === "single-textarea") &&
+          tailMode === "both" &&
+          displayModes.some((mode) => mode === "ranked" || mode === "scored")
+        );
+      }
+
+      function getDirectionalColorScale(data, settings) {
+        const qValueColorScale = getQValueColorScale(data["qValue"]);
+        const signedLogQValues = qValueColorScale.logQValues.map((value, index) => {
+          const direction = data["direction"]?.[index] || "neutral";
+          if (direction === "negative") return -value;
+          if (direction === "positive") return value;
+          return 0;
+        });
+
+        const maxAbsLogQ = Math.max(...signedLogQValues.map((value) => Math.abs(value)), 0);
+
+        return {
+          signedLogQValues,
+          maxAbsLogQ,
+          colorscale: [
+            [0.0, settings["negative-significant-color"]],
+            [0.5, settings["insignificant-color"]],
+            [1.0, settings["significant-color"]],
+          ],
+          colorbar: {
+            title: { text: "Enrichment (Q-Value)", side: "right" },
+            tickmode: "array",
+            tickvals: [-maxAbsLogQ, 0, maxAbsLogQ],
+            ticktext: ["Negative", "Neutral", "Positive"],
+          },
+        };
+      }
+
       // Generates the data for each point based on settings
       function makeTrace(data, settings) {
         // Sizes & outline logic stays the same
@@ -851,6 +891,10 @@
         // Default (non-cluster) mode uses -log10(qValue) continuous scale
         const qValues = data["qValue"];
         const qValueColorScale = getQValueColorScale(qValues);
+        const useDirectionalColors = shouldUseDirectionalColors(data);
+        const directionalColorScale = useDirectionalColors
+          ? getDirectionalColorScale(data, settings)
+          : null;
 
         const markerBase = {
           size: size,
@@ -873,19 +917,23 @@
         } else {
           marker = {
             ...markerBase,
-            color: qValueColorScale.logQValues,
-            cmin: qValueColorScale.minLogQ,
-            cmax: qValueColorScale.maxLogQ,
-            colorscale: [
-              [0.0, settings["insignificant-color"]],
-              [1.0, settings["significant-color"]],
-            ],
-            colorbar: {
-              title: { text: "Q-Value", side: "right" },
-              tickmode: "array",
-              tickvals: qValueColorScale.tickLogQValues,
-              ticktext: qValueColorScale.tickLabels,
-            },
+            color: useDirectionalColors ? directionalColorScale.signedLogQValues : qValueColorScale.logQValues,
+            cmin: useDirectionalColors ? -directionalColorScale.maxAbsLogQ : qValueColorScale.minLogQ,
+            cmax: useDirectionalColors ? directionalColorScale.maxAbsLogQ : qValueColorScale.maxLogQ,
+            colorscale: useDirectionalColors
+              ? directionalColorScale.colorscale
+              : [
+                [0.0, settings["insignificant-color"]],
+                [1.0, settings["significant-color"]],
+              ],
+            colorbar: useDirectionalColors
+              ? directionalColorScale.colorbar
+              : {
+                title: { text: "Q-Value", side: "right" },
+                tickmode: "array",
+                tickvals: qValueColorScale.tickLogQValues,
+                ticktext: qValueColorScale.tickLabels,
+              },
             opacity: 1.0,
             showscale: true,
           };
@@ -986,6 +1034,7 @@
         let borderColor = firstPoint.data.marker.line.color.slice();
         const qValues = firstPoint.data.customdata.map((d) => d[0]);
         const qValueColorScale = getQValueColorScale(qValues);
+        const displayedIndices = event.points.map((point) => point.customdata[1]);
         let outlineWidths = firstPoint.data.marker.line.width.slice();
         let sizes = firstPoint.data.marker.size.slice();
 
@@ -1074,22 +1123,43 @@
             },
           };
         } else {
+          const displayedDirections = firstPoint.data.x.map((_, index) => {
+            const pointNumber = firstPoint.data.customdata[index][1];
+            return fullGraphData["direction"]?.[pointNumber] || "neutral";
+          });
+          const useDirectionalColors = shouldUseDirectionalColors({
+            displayMode: firstPoint.data.x.map((_, index) => {
+              const pointNumber = firstPoint.data.customdata[index][1];
+              return fullGraphData["displayMode"]?.[pointNumber];
+            }),
+          });
+          const directionalColorScale = useDirectionalColors
+            ? getDirectionalColorScale({
+              qValue: qValues,
+              direction: displayedDirections,
+            }, settings)
+            : null;
+
           // normal mode
           update = {
             marker: {
-              color: qValueColorScale.logQValues,
-              colorscale: [
-                [0.0, settings["insignificant-color"]],
-                [1.0, settings["significant-color"]],
-              ],
-              colorbar: {
-                ...firstPoint.data.marker.colorbar,
-                tickmode: "array",
-                tickvals: qValueColorScale.tickLogQValues,
-                ticktext: qValueColorScale.tickLabels,
-              },
-              cmin: qValueColorScale.minLogQ,
-              cmax: qValueColorScale.maxLogQ,
+              color: useDirectionalColors ? directionalColorScale.signedLogQValues : qValueColorScale.logQValues,
+              colorscale: useDirectionalColors
+                ? directionalColorScale.colorscale
+                : [
+                  [0.0, settings["insignificant-color"]],
+                  [1.0, settings["significant-color"]],
+                ],
+              colorbar: useDirectionalColors
+                ? directionalColorScale.colorbar
+                : {
+                  ...firstPoint.data.marker.colorbar,
+                  tickmode: "array",
+                  tickvals: qValueColorScale.tickLogQValues,
+                  ticktext: qValueColorScale.tickLabels,
+                },
+              cmin: useDirectionalColors ? -directionalColorScale.maxAbsLogQ : qValueColorScale.minLogQ,
+              cmax: useDirectionalColors ? directionalColorScale.maxAbsLogQ : qValueColorScale.maxLogQ,
               size: sizes,
               opacity: 1.0,
               line: {

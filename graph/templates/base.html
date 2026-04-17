@@ -49,7 +49,7 @@
   <div id="manual-gene-input" style="margin-top: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 8px">
     <h2>Gene Input</h2>
     <p class="gene-input-intro">
-      Choose an input style. Scored and ranked inputs let you choose whether to run a positive test, negative test, or both.
+      Choose an input style. Scored and ranked inputs let you choose whether to run a positive test, negative test, or two-sided test.
     </p>
 
     <div class="gene-input-tabs">
@@ -79,7 +79,7 @@
             </label>
             <label class="test-mode-option">
               <input type="radio" name="test-mode-scored" value="both" />
-              <span>Both</span>
+              <span>Two-Sided</span>
             </label>
           </div>
         </div>
@@ -123,7 +123,7 @@
       <div class="gene-input-panel-header">
         <div>
           <h3>Ranked Genes</h3>
-          <p>Paste a single ranked gene list and choose whether it should be interpreted as positive, negative, or both.</p>
+          <p>Paste a single ranked gene list and choose whether it should be interpreted as positive, negative, or two-sided test.</p>
         </div>
         <div class="test-mode-group" data-mode-key="input">
           <span class="test-mode-label">Directional Hypotheses</span>
@@ -138,7 +138,7 @@
             </label>
             <label class="test-mode-option">
               <input type="radio" name="test-mode-input" value="both" />
-              <span>Both</span>
+              <span>Two-Sided</span>
             </label>
           </div>
         </div>
@@ -201,8 +201,12 @@
           <input type="color" id="insignificant-color" name="insignificant-color" />
         </div>
         <div class="option">
-          <label for="significant-color">Most Significant:</label>
+          <label for="significant-color" id="significant-color-label">Most Significant:</label>
           <input type="color" id="significant-color" name="significant-color" />
+        </div>
+        <div class="option" id="negative-significant-color-wrapper" style="display: none;">
+          <label for="negative-significant-color">Most Negative:</label>
+          <input type="color" id="negative-significant-color" name="negative-significant-color" />
         </div>
         <div class="option">
           <label for="selected-color">Selected:</label>
