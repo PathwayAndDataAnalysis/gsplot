@@ -81,18 +81,39 @@ function tableCreator(selectedPoint, intersection, displayGenesToggleOn) {
   // tableBody has the rows of the data
   const tableBody = document.createElement("tbody");
 
-  // Create second row in table containing the q-value
+  // Create second row in table containing the p-value
   const secondRow = document.createElement("tr");
-  const qValueHeader = document.createElement("th");
-  qValueHeader.textContent = "P-Value";
-  const qValue = document.createElement("td");
-  qValue.textContent = selectedPoint["qValue"]; // Apply Q-Value
-  secondRow.appendChild(qValueHeader);
-  secondRow.appendChild(qValue);
+  const pValueHeader = document.createElement("th");
+  pValueHeader.textContent = "P-Value";
+  const pValue = document.createElement("td");
+  pValue.textContent = selectedPoint["pValue"];
+  secondRow.appendChild(pValueHeader);
+  secondRow.appendChild(pValue);
   tableBody.appendChild(secondRow);
 
-  // Creates 3rd row contianing molecules
+  // Create third row in table containing the q-value
   const thirdRow = document.createElement("tr");
+  const qValueHeader = document.createElement("th");
+  qValueHeader.textContent = "Q-Value";
+  const qValue = document.createElement("td");
+  qValue.textContent = selectedPoint["qValue"];
+  thirdRow.appendChild(qValueHeader);
+  thirdRow.appendChild(qValue);
+  tableBody.appendChild(thirdRow);
+
+  // Create fourth row showing enrichment direction
+  const fourthRow = document.createElement("tr");
+  const directionHeader = document.createElement("th");
+  directionHeader.textContent = "Enrichment";
+  const directionValue = document.createElement("td");
+  const direction = selectedPoint["direction"] || "neutral";
+  directionValue.textContent = direction.charAt(0).toUpperCase() + direction.slice(1);
+  fourthRow.appendChild(directionHeader);
+  fourthRow.appendChild(directionValue);
+  tableBody.appendChild(fourthRow);
+
+  // Creates molecules row
+  const moleculesRow = document.createElement("tr");
   const moleculesHeader = document.createElement("th");
   moleculesHeader.textContent = "Molecules";
   const molecules = document.createElement("td");
@@ -116,9 +137,9 @@ function tableCreator(selectedPoint, intersection, displayGenesToggleOn) {
     moleculeList.join(" "),
     intersection
   );
-  thirdRow.appendChild(moleculesHeader);
-  thirdRow.appendChild(molecules);
-  tableBody.appendChild(thirdRow);
+  moleculesRow.appendChild(moleculesHeader);
+  moleculesRow.appendChild(molecules);
+  tableBody.appendChild(moleculesRow);
 
   // Append table body to table, then table to table container, then table container to all table contianer
   table.appendChild(tableBody);
