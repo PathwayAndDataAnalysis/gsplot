@@ -8,7 +8,7 @@ import umap.umap_ as umap
 import numpy as np
 from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
-from scipy.stats import mannwhitneyu
+from scipy.stats import norm
 from sklearn.manifold import Isomap, TSNE
 
 DISTANCE_RESCALING_CAP = 100.0
@@ -410,33 +410,28 @@ def weighted_overlap_coef(user_weights, set1, set2):
     return dist
 
 
-def run_fishers_test(filtered_genes, sig_genes, insig_genes, tail_mode='positive'):
+def run_fishers_test(filtered_genes, sig_genes, insig_genes):
     sig_set = set(sig_genes)
     insig_set = set(insig_genes)
 
-    if tail_mode == 'positive':
-        alternative = 'greater'
-    elif tail_mode == 'negative':
-        alternative = 'less'
-    elif tail_mode == 'both':
-        alternative = 'two-sided'
-    else:
-        raise ValueError(f"Unknown tail_mode: {tail_mode}")
+    reject_count = 0
+    total = len(filtered_genes)
 
     gene_sets_for_umap = {}
 
     for geneset in filtered_genes:
         gene_set = geneset['matched_genes']
         set_name = geneset['gene_set_name']
-        set_gene_set = set(gene_set)
+        set_gene_set = set(geneset['matched_genes'])
 
-        a = len(sig_set & set_gene_set)
-        b = len(sig_set) - a
-        c = len(insig_set & set_gene_set)
-        d = len(insig_set) - c
+        a = len(sig_set & set_gene_set)    # sig & in gene set
+        b = len(sig_set) - a          # sig & not in gene set
+        c = len(insig_set & set_gene_set)  # insig & in gene set
+        d = len(insig_set) - c        # insig & not gene set
 
         table = [[a, b], [c, d]]
-        _, p_value = fisher_exact(table, alternative=alternative)
+
+        _, p_value = fisher_exact(table, alternative='greater')
 
         gene_string = ' '.join(str(gene) for gene in gene_set)
         gene_sets_for_umap[set_name] = (gene_string, p_value)
@@ -478,39 +473,57 @@ def filter_gene_sets_by_significance(gene_sets_with_p, pval_thr, fdr_thr):
 
 
 def calculate_pvals(filtered, ranked_genes, tail_mode='positive'):
+    if tail_mode not in {'positive', 'negative', 'both'}:
+        raise ValueError(f"Unknown tail_mode: {tail_mode}")
+
     n = len(ranked_genes)
-    rank_map = {}
+    if n == 0:
+        return {}
 
-    # smaller number = closer to top
-    for i, gene in enumerate(ranked_genes):
-        rank_map[gene] = i + 1
-
-    all_rank_values = list(rank_map.values())
+    ranks = {}
     gene_sets_with_p = {}
+
+    # normalized rank: top is near 0, bottom is near 1
+    for i, gene in enumerate(ranked_genes):
+        rank = i + 1
+        norm_rank = (rank - 0.5) / n
+        ranks[gene] = norm_rank
 
     for geneset in filtered:
         gene_set = geneset['matched_genes']
         set_name = geneset['gene_set_name']
 
-        gene_set_members = set(gene_set)
-        
-        inside_ranks = [rank_map[gene] for gene in gene_set if gene in rank_map]
-        outside_ranks = [rank_map[gene] for gene in ranked_genes if gene not in gene_set_members]
-
-        if not inside_ranks or not outside_ranks:
+        inside_ranks = [ranks[gene] for gene in gene_set if gene in ranks]
+        if not inside_ranks:
             continue
 
-        # top = positive = smaller ranks
-        if tail_mode == 'positive':
-            alt = 'less'
-        elif tail_mode == 'negative':
-            alt = 'greater'
-        elif tail_mode == 'both':
-            alt = 'two-sided'
-        else:
-            raise ValueError(f"Unknown tail_mode: {tail_mode}")
+        gene_n = len(inside_ranks)
+        mean_rank = sum(inside_ranks) / gene_n
 
-        _, p_value = mannwhitneyu(inside_ranks, outside_ranks, alternative=alt)
+        # calculate sd
+        sd = math.sqrt(((n + 1) * (n - gene_n)) / (12 * (n**2) * gene_n))
+
+        # handle weird edge cases
+        if sd <= 0 or not np.isfinite(sd):
+            continue
+
+        if tail_mode == 'positive':
+            # top enrichment = smaller mean rank
+            p_value = norm.cdf(mean_rank, loc=0.5, scale=sd)
+
+        elif tail_mode == 'negative':
+            # bottom enrichment = larger mean rank
+            p_value = 1.0 - norm.cdf(mean_rank, loc=0.5, scale=sd)
+
+        elif tail_mode == 'both':
+            # two-sided distance from center
+            z = abs((mean_rank - 0.5) / sd)
+            p_value = 2.0 * (1.0 - norm.cdf(z))
+
+        # clamp just in case
+        p_value = max(0.0, min(1.0, p_value))
+
+        print(f"Ranked mode p-value for {set_name}: {p_value}")
 
         gene_string = ' '.join(str(gene) for gene in gene_set)
         gene_sets_with_p[set_name] = (gene_string, p_value)

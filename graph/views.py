@@ -186,10 +186,6 @@ def gene_input_view(request):
             species = data.get("species", "human")
             custom_data = data.get("custom_data")   # Fetch custom data if user provides it
             settings = data.get("settings")
-            tail_mode = (data.get("tail_mode") or "positive").lower()
-
-            if tail_mode not in {"positive", "negative", "both"}:
-                return JsonResponse({"error": f"Invalid tail_mode: {tail_mode}"}, status=400)
 
             cache_key_data = {
                 "sig_genes": sig_input,
@@ -198,7 +194,6 @@ def gene_input_view(request):
                 "min_members": min_members,
                 "species": species,
                 "custom_data": custom_data,
-                "tail_mode": tail_mode,
             }
             serialized_data = json.dumps(cache_key_data, separators=(",", ":"))
             key_hash = hashlib.md5(serialized_data.encode('utf-8')).hexdigest()
@@ -255,7 +250,7 @@ def gene_input_view(request):
 
                 # Run Fisher's test analysis
                 print("running fishers test")
-                gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes, tail_mode=tail_mode)
+                gene_sets_with_p = run_fishers_test(filtered, sig_genes, insig_genes)
                 print("fisher test done")
                 cache.set(analysis_cache_key, gene_sets_with_p, timeout=cache_timeout - 50)
                 cache.set(sig_genes_cache_key, sig_genes, timeout=cache_timeout)
@@ -946,8 +941,7 @@ def preview_threshold(request):
             gene_sets_with_p = run_fishers_test(
                 filtered,
                 sig_genes,
-                insig_genes,
-                tail_mode=tail_mode
+                insig_genes
             )
 
         # ---------- Scored mode ----------

@@ -505,7 +505,6 @@
           console.log("Seen")
           const sigGenes = localStorage.getItem("sigGenes") || "";
           const insigGenes = localStorage.getItem("insigGenes") || "";
-          const tailMode = localStorage.getItem("gene-test-mode-thresholded") || "positive";
           const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
           const minMembers = localStorage.getItem("minMembers")
           const pVal = localStorage.getItem("p-value")
@@ -546,7 +545,6 @@
               fdr_thr: fdr,
               species: species,
               custom_data: customGeneSets,
-              tail_mode: tailMode,
               settings: settings,
               distance_type: distanceType,
             }),

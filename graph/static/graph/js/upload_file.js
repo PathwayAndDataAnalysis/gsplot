@@ -18,7 +18,6 @@ let allTablesContainer2 = document.getElementById("selected-points-container");
 let parsedScoredGenes = [];
 const inputTestModeStorageKeys = {
   "scored-genes": "gene-test-mode-scored",
-  "two-textareas": "gene-test-mode-thresholded",
   "single-textarea": "gene-test-mode-input",
 };
 
@@ -577,7 +576,6 @@ function clearLocalStorageExceptSettings() {
   const listBackup = localStorage.getItem("single-list");
   const modeBackup = localStorage.getItem("gene-input-mode");
   const scoredTestModeBackup = localStorage.getItem("gene-test-mode-scored");
-  const thresholdedTestModeBackup = localStorage.getItem("gene-test-mode-thresholded");
   const inputTestModeBackup = localStorage.getItem("gene-test-mode-input");
   const currentTestModeBackup = localStorage.getItem("gene-test-mode-current");
   const currentTestModeInputBackup = localStorage.getItem("gene-test-mode-current-input");
@@ -594,9 +592,6 @@ function clearLocalStorageExceptSettings() {
   if (scoredTestModeBackup !== null) {
     localStorage.setItem("gene-test-mode-scored", scoredTestModeBackup);
   }
-  if (thresholdedTestModeBackup !== null) {
-    localStorage.setItem("gene-test-mode-thresholded", thresholdedTestModeBackup);
-  }
   if (inputTestModeBackup !== null) {
     localStorage.setItem("gene-test-mode-input", inputTestModeBackup);
   }
@@ -606,6 +601,7 @@ function clearLocalStorageExceptSettings() {
   if (currentTestModeInputBackup !== null) {
     localStorage.setItem("gene-test-mode-current-input", currentTestModeInputBackup);
   }
+  localStorage.removeItem("gene-test-mode-thresholded");
   localStorage.setItem("selected", "[]");
 
 }
