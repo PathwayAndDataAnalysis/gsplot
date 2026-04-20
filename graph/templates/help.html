@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gene Set Plot</title>
+    <title>Gene Set Plot Help</title>
     {% load static %}
     <link
       rel="stylesheet"
@@ -29,6 +29,7 @@
         <a class="nav-button" href="/about">About</a>
       </div>
     </nav>
+
     <div id="help-button-container">
       <button
         class="rounded-button"
@@ -42,7 +43,7 @@
         id="tools-help"
         onclick="openSection(event, 'tools-content-container')"
       >
-        Tools
+        Graph
       </button>
       <button
         class="rounded-button"
@@ -52,341 +53,361 @@
         Settings
       </button>
     </div>
+
     <div id="help-content-container">
       <div id="format-content-container">
-        <h2 class="center-text">How to Format Input Data:</h2>
+        <h2 class="center-text">Start an Analysis</h2>
         <div class="format-instructions">
+          <p>
+            Gene Set Plot visualizes gene set enrichment results from genes you provide.
+            Begin on the Input page, choose one input style, choose a gene set dataset,
+            select one or more gene set collections, then click Submit.
+          </p>
+
+          <h3>1. Choose an input style</h3>
           <ul>
             <li>
-              All data should be saved as a tab seperated value (.tsv) file.
-            </li>
-            <li>The top line of the file should be a header line.</li>
-            <li>
-              There should be three columns of data on each line with the
-              following headers:
-            </li>
-            <ul>
-              <li>Name - The name of the gene set.</li>
-              <li>
-                Molecules - Molecules in the set that were enriched, each
-                seperated by a space.
-              </li>
-              <li>
-                Value - The p-value, q-value, or whatever metric the sets are
-                evaluated by.
-              </li>
-            </ul>
-            <li>
-              The order of these columns does not matter, but each line of data
-              must match the order of the header.
+              <b>Scored Genes:</b> Upload a <code>.tsv</code> or <code>.txt</code>
+              file with exactly two columns and no header: gene name and numeric score.
+              Use this when each gene has a statistic such as log fold change,
+              correlation, or model score.
             </li>
             <li>
-              Click
-              <a href="{% static 'graph/data/example_data.tsv' %}" download
-                >here</a
-              >
-              to download an example data file.
+              <b>Thresholded Genes:</b> Paste significant genes and optional
+              insignificant/background genes into separate boxes. Genes may be separated
+              by commas, spaces, or new lines.
             </li>
             <li>
-              This is what the first three lines of a data file might look like:
+              <b>Ranked Genes:</b> Paste one ordered gene list. Genes may be separated
+              by commas, spaces, or new lines.
             </li>
           </ul>
+
+          <h3>2. Pick a directional hypothesis</h3>
+          <ul>
+            <li>
+              Scored and ranked inputs support <b>Positive</b>, <b>Negative</b>, and
+              <b>Two-Sided</b> tests.
+            </li>
+            <li>
+              Positive tests look for gene sets enriched near the positive or top end
+              of the input. Negative tests look near the negative or bottom end.
+              Two-sided tests keep both directions and color positive and negative
+              enrichment separately.
+            </li>
+          </ul>
+
+          <h3>3. Choose gene set data</h3>
+          <ul>
+            <li>
+              Use <b>Human (MSigDB)</b> or <b>Mouse (MSigDB)</b> for built-in
+              collections.
+            </li>
+            <li>
+              Choose <b>Upload your own</b> to provide a custom gene set JSON file.
+              MSigDB-like JSON files are shown as a selectable collection tree. Flat
+              custom files are loaded as one custom dataset.
+            </li>
+          </ul>
+
+          <h3>4. Select collections</h3>
+          <ul>
+            <li>
+              Click a collection node to expand or collapse it. Hold <b>Ctrl</b> on
+              Windows/Linux or <b>Cmd</b> on macOS while clicking to select collections.
+            </li>
+            <li>
+              Use <b>Select All</b> to select all top-level collections, or
+              <b>Clear All</b> to reset your selections.
+            </li>
+            <li>
+              Set the minimum relevant members per gene set. The default and recommended
+              minimum is 5.
+            </li>
+          </ul>
+
+          <h3>Scored gene file example</h3>
           <div class="flex-center">
             <div class="example-data">
-              <pre><code>Name	Molecules	Value
-GO_PODOSOME_ASSEMBLY	DBNL BIN2 SRC MSN ASAP1 ARHGEF2	0.074073679
-GO_PROFILIN_BINDING	VASP CTTN WIPF1 HTT DBN1	0.2582822646196803</code></pre>
+              <pre><code>TP53	2.84
+MYC	1.91
+STAT1	-1.32
+CXCL10	-2.20</code></pre>
             </div>
           </div>
         </div>
       </div>
+
       <div id="tools-content-container">
         <div class="tabs">
           <button
             id="defaultTab"
             class="tablinks"
-            onclick="openTool(event, 'screenshot')"
+            onclick="openTool(event, 'workflow')"
           >
-            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m500 450c-83 0-150-67-150-150 0-83 67-150 150-150 83 0 150 67 150 150 0 83-67 150-150 150z m400 150h-120c-16 0-34 13-39 29l-31 93c-6 15-23 28-40 28h-340c-16 0-34-13-39-28l-31-94c-6-15-23-28-40-28h-120c-55 0-100-45-100-100v-450c0-55 45-100 100-100h800c55 0 100 45 100 100v450c0 55-45 100-100 100z m-400-550c-138 0-250 112-250 250 0 138 112 250 250 250 138 0 250-112 250-250 0-138-112-250-250-250z m365 380c-19 0-35 16-35 35 0 19 16 35 35 35 19 0 35-16 35-35 0-19-16-35-35-35z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
+            Workflow
           </button>
-          <button class="tablinks" onclick="openTool(event, 'zoom')">
-            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m1000-25l-250 251c40 63 63 138 63 218 0 224-182 406-407 406-224 0-406-182-406-406s183-406 407-406c80 0 155 22 218 62l250-250 125 125z m-812 250l0 438 437 0 0-438-437 0z m62 375l313 0 0-312-313 0 0 312z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
+          <button class="tablinks" onclick="openTool(event, 'navigation')">
+            Navigate
           </button>
-          <button class="tablinks" onclick="openTool(event, 'pan')">
-            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m1000 350l-187 188 0-125-250 0 0 250 125 0-188 187-187-187 125 0 0-250-250 0 0 125-188-188 186-187 0 125 252 0 0-250-125 0 187-188 188 188-125 0 0 250 250 0 0-126 187 188z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
+          <button class="tablinks" onclick="openTool(event, 'selection')">
+            Select
           </button>
-          <button class="tablinks" onclick="openTool(event, 'box')">
-            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m0 850l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z m285 0l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z m-857-286l0-143 143 0 0 143-143 0z m857 0l0-143 143 0 0 143-143 0z m-857-285l0-143 143 0 0 143-143 0z m857 0l0-143 143 0 0 143-143 0z m-857-286l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z m285 0l0-143 143 0 0 143-143 0z m286 0l0-143 143 0 0 143-143 0z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
+          <button class="tablinks" onclick="openTool(event, 'labels')">
+            Labels
           </button>
-          <button class="tablinks" onclick="openTool(event, 'lasso')">
-            <svg viewBox="0 0 1031 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m1018 538c-36 207-290 336-568 286-277-48-473-256-436-463 10-57 36-108 76-151-13-66 11-137 68-183 34-28 75-41 114-42l-55-70 0 0c-2-1-3-2-4-3-10-14-8-34 5-45 14-11 34-8 45 4 1 1 2 3 2 5l0 0 113 140c16 11 31 24 45 40 4 3 6 7 8 11 48-3 100 0 151 9 278 48 473 255 436 462z m-624-379c-80 14-149 48-197 96 42 42 109 47 156 9 33-26 47-66 41-105z m-187-74c-19 16-33 37-39 60 50-32 109-55 174-68-42-25-95-24-135 8z m360 75c-34-7-69-9-102-8 8 62-16 128-68 170-73 59-175 54-244-5-9 20-16 40-20 61-28 159 121 317 333 354s407-60 434-217c28-159-121-318-333-355z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
-          </button>
-          <button class="tablinks" onclick="openTool(event, 'zoomIn')">
-            <svg viewBox="0 0 875 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m1 787l0-875 875 0 0 875-875 0z m687-500l-187 0 0-187-125 0 0 187-188 0 0 125 188 0 0 187 125 0 0-187 187 0 0-125z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
-          </button>
-          <button class="tablinks" onclick="openTool(event, 'zoomOut')">
-            <svg viewBox="0 0 875 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m0 788l0-876 875 0 0 876-875 0z m688-500l-500 0 0 125 500 0 0-125z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
-          </button>
-          <button class="tablinks" onclick="openTool(event, 'autoscale')">
-            <svg viewBox="0 0 1000 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m250 850l-187 0-63 0 0-62 0-188 63 0 0 188 187 0 0 62z m688 0l-188 0 0-62 188 0 0-188 62 0 0 188 0 62-62 0z m-875-938l0 188-63 0 0-188 0-62 63 0 187 0 0 62-187 0z m875 188l0-188-188 0 0-62 188 0 62 0 0 62 0 188-62 0z m-125 188l-1 0-93-94-156 156 156 156 92-93 2 0 0 250-250 0 0-2 93-92-156-156-156 156 94 92 0 2-250 0 0-250 0 0 93 93 157-156-157-156-93 94 0 0 0-250 250 0 0 0-94 93 156 157 156-157-93-93 0 0 250 0 0 250z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
-          </button>
-          <button class="tablinks" onclick="openTool(event, 'reset')">
-            <svg viewBox="0 0 928.6 1000" class="icon" height="4em" width="4em">
-              <path
-                d="m786 296v-267q0-15-11-26t-25-10h-214v214h-143v-214h-214q-15 0-25 10t-11 26v267q0 1 0 2t0 2l321 264 321-264q1-1 1-4z m124 39l-34-41q-5-5-12-6h-2q-7 0-12 3l-386 322-386-322q-7-4-13-4-7 2-12 7l-35 41q-4 5-3 13t6 12l401 334q18 15 42 15t43-15l136-114v109q0 8 5 13t13 5h107q8 0 13-5t5-13v-227l122-102q5-5 6-12t-4-13z"
-                transform="matrix(1 0 0 -1 0 850)"
-              ></path>
-            </svg>
+          <button class="tablinks" onclick="openTool(event, 'download')">
+            Export
           </button>
         </div>
         <div class="tab-content-outline">
-          <div id="screenshot" class="tabcontent">
-            <h3>Screenshot</h3>
+          <div id="workflow" class="tabcontent">
+            <h3>Graph workflow</h3>
             <ul>
               <li>
-                <b>On Selection:</b> A sreenshot of the current graph will be
-                taken and saved as a png.
+                After Submit, each point represents a gene set that passed the current
+                threshold. Nearby points have more similar matched gene sets under the
+                selected distance metric and reduction algorithm.
+              </li>
+              <li>
+                Hover over a point to see its gene set name and q-value.
+              </li>
+              <li>
+                Click the gear button in the top navigation to open or close the graph
+                settings panel.
+              </li>
+              <li>
+                Use <b>Input</b> in the navigation bar to clear the current graph and
+                start a new analysis.
               </li>
             </ul>
           </div>
-          <div id="zoom" class="tabcontent">
-            <h3>Zoom</h3>
+
+          <div id="navigation" class="tabcontent">
+            <h3>Navigate the Plotly graph</h3>
             <ul>
               <li>
-                <b>Click and Drag on Graph:</b> Zoom in on a selected area on
-                the graph.
+                Use the Plotly mode bar to download a plot image, zoom, pan, box select,
+                lasso select, autoscale, or reset the view.
               </li>
               <li>
-                <b>Click and Drag on Axis:</b> Zoom in on selected range on
-                UMAP-1 or UMAP-2.
+                In zoom mode, drag across the graph to zoom into a region. In pan mode,
+                drag to move across the embedding.
               </li>
               <li>
-                <b>Double Click on Graph:</b> Apply default zoom which fits all
-                points, even hidden ones.
+                Double-click the graph to return to the saved full-data view.
               </li>
-            </ul>
-          </div>
-          <div id="pan" class="tabcontent">
-            <h3>Pan</h3>
-            <ul>
-              <li><b>Click and Drag on Graph:</b> Pan accross graph.</li>
-              <li><b>Click and Drag on Axis:</b> Pan accross selected axis.</li>
               <li>
-                <b>Double Click on Graph:</b> Apply default zoom which fits all
-                points, even hidden ones.
+                Double-click the plot title, point labels, or colorbar title to edit
+                visible text directly on the graph.
               </li>
             </ul>
           </div>
-          <div id="box" class="tabcontent">
-            <h3>Box Select</h3>
+
+          <div id="selection" class="tabcontent">
+            <h3>Select and compare points</h3>
             <ul>
               <li>
-                <b>Click and Drag on Graph:</b> Select points in a box to
-                compare below graph.
-              </li>
-              <li><b>Double Click on Graph:</b> Exit selection mode.</li>
-            </ul>
-          </div>
-          <div id="lasso" class="tabcontent">
-            <h3>Lasso Select</h3>
-            <ul>
-              <li>
-                <b>Click and Drag on Graph:</b> Select points in a custom area
-                to compare below graph.
-              </li>
-              <li><b>Double Click on Graph:</b> Exit selection mode.</li>
-            </ul>
-          </div>
-          <div id="zoomIn" class="tabcontent">
-            <h3>Zoom In</h3>
-            <ul>
-              <li><b>On Selection:</b> Zoom into center of graph.</li>
-            </ul>
-          </div>
-          <div id="zoomOut" class="tabcontent">
-            <h3>Zoom Out</h3>
-            <ul>
-              <li><b>On Selection:</b> Zoom out of center of graph.</li>
-            </ul>
-          </div>
-          <div id="autoscale" class="tabcontent">
-            <h3>Autoscale</h3>
-            <ul>
-              <li>
-                <b>On Selection:</b> Scale graph to fit all points and labels on
-                screen
+                Click a point to add it to Selected Points. Click it again to remove it.
               </li>
               <li>
-                <b>Double Click on Graph:</b> Apply default zoom which fits all
-                points, even hidden ones.
+                Use box select or lasso select to select multiple points at once.
+              </li>
+              <li>
+                Selected Points shows the gene set name, p-value, q-value, enrichment
+                direction, and matched molecules for each selected point.
+              </li>
+              <li>
+                When multiple points are selected, genes shared by selected gene sets
+                are bolded in the Selected Points tables.
+              </li>
+              <li>
+                <b>Clear Selected</b> removes all current point selections.
               </li>
             </ul>
           </div>
-          <div id="reset" class="tabcontent">
-            <h3>Reset Scale</h3>
+
+          <div id="labels" class="tabcontent">
+            <h3>Labels and clustering</h3>
             <ul>
               <li>
-                <b>On Selection:</b> Apply default zoom which fits all points,
-                even hidden ones.
+                <b>Toggle Labels</b> shows or hides point labels for the currently
+                displayed gene sets.
+              </li>
+              <li>
+                If Cluster Labeling is enabled, cluster labels are added automatically
+                at the centers of detected clusters.
+              </li>
+              <li>
+                Point labels can be edited and moved on the graph. Cluster labels stay
+                tied to cluster mode and are regenerated when the graph is recomputed.
+              </li>
+            </ul>
+          </div>
+
+          <div id="download" class="tabcontent">
+            <h3>Export results</h3>
+            <ul>
+              <li>
+                Use the camera icon in the Plotly mode bar to download the current graph
+                as a PNG image.
+              </li>
+              <li>
+                Click <b>Download Result</b> below the graph to export
+                <code>analysis_results.tsv</code>. The file includes gene set name,
+                p-value, q-value, set size, and matched genes, sorted by p-value.
               </li>
             </ul>
           </div>
         </div>
       </div>
+
       <div id="settings-content-container">
-        <h2 class="center-text">Graph and Visual Settings</h2>
+        <h2 class="center-text">Graph and Analysis Settings</h2>
         <div class="graph-settings">
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'point-color-collapse')"
+            onclick="collapseSection(event, 'apply-collapse')"
           >
-            <h3>Point Color</h3>
+            <h3>Apply and Submit</h3>
           </button>
-          <div class="collapsible-content" id="point-color-collapse">
-            <ul>
-              <li>The color of all points is a gradient between two colors.</li>
-              <li>
-                A gene set's position on this gradient is determined based on
-                its p-value.
-              </li>
-              <li>
-                <b>Most Significant Color</b><i> (RGB):</i> Determines color for
-                most significant gene set.
-              </li>
-              <li>
-                <b>Least Significant Color</b><i> (RGB):</i> Determines color
-                for least significant gene set.
-              </li>
-              <li>
-                <b>Selected Color</b><i> (RGB):</i> Controls the color of the
-                outline placed around selected points on graph.
-              </li>
-            </ul>
-          </div>
-          <button
-            type="button"
-            class="collapsible"
-            onclick="collapseSection(event, 'q-value-collapse')"
-          >
-            <h3>Q-Value Range</h3>
-          </button>
-          <div id="q-value-collapse" class="collapsible-content">
+          <div class="collapsible-content" id="apply-collapse">
             <ul>
               <li>
-                This determines what points are displayed on the graph from the
-                data set based on p-value.
+                <b>Submit</b> validates the current input, selected collections, threshold,
+                and settings, then generates the graph.
               </li>
               <li>
-                <b>Maximum</b><i> (Float):</i> The largest p-value a displayed
-                point can have
+                <b>Apply</b> saves settings changes. If a graph already exists, Apply
+                updates the graph immediately when possible.
               </li>
               <li>
-                <b>Minimum</b><i> (Float):</i> the smallest p-value a displayed
-                point can have.
+                Color, size, selected-gene display, and label-related changes are fast
+                visual updates. Threshold, distance, reduction, and cluster computation
+                changes may rerun the analysis.
               </li>
-              <li>This also sets the range for the color gradient.</li>
-              <ul>
-                <li>
-                  Maximum sets the p-value for the least significant color.
-                </li>
-                <li>Minimum sets the p-value for most significant color.</li>
-              </ul>
             </ul>
           </div>
 
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'point-size-collapse')"
+            onclick="collapseSection(event, 'color-collapse')"
           >
-            <h3>Point Size</h3>
+            <h3>Point Color</h3>
           </button>
-          <div class="collapsible-content" id="point-size-collapse">
+          <div class="collapsible-content" id="color-collapse">
             <ul>
               <li>
-                <b>Fixed</b><i> (Float):</i> The size of every point is the
-                same, represents the length of its diamater in pixels.
+                In standard mode, points are colored by q-value. The least significant
+                color maps to larger q-values and the most significant color maps to
+                smaller q-values.
               </li>
               <li>
-                <b>Dynamic</b><i> (Float):</i> The size of each point is
-                determined by it's number of enriched molecules.
+                In two-sided scored or ranked analyses, the most positive and most
+                negative colors show enrichment direction, while the least significant
+                color is the neutral midpoint.
               </li>
-              <ul>
-                <li>
-                  The number of molecules is treated as the area, and can be
-                  scaled by any positive float.
-                </li>
-              </ul>
+              <li>
+                The selected color controls the outline color around selected points.
+              </li>
             </ul>
           </div>
-        </div>
-        <h2 class="center-text">UMAP Settings</h2>
-        <div class="umap-settings">
+
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'neighbors-collapse')"
+            onclick="collapseSection(event, 'size-collapse')"
           >
-            <h3>Neighbors</h3>
+            <h3>Point Size</h3>
           </button>
-          <div class="collapsible-content" id="neighbors-collapse">
+          <div class="collapsible-content" id="size-collapse">
             <ul>
-              <li>Input tye: <i>Integer</i></li>
               <li>
-                Sets the number of neighbors paramater used in UMAP calculation.
+                <b>Fixed:</b> every point uses the same marker diameter.
               </li>
               <li>
-                Smaller values result in smaller clusters on embedding, while
-                higher values produce larger clusters.
+                <b>Dynamic:</b> point size is based on the number of matched molecules in
+                the gene set. Increase the scalar to make differences more visible.
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'display-collapse')"
+          >
+            <h3>Display Genes</h3>
+          </button>
+          <div class="collapsible-content" id="display-collapse">
+            <ul>
+              <li>
+                For thresholded input, <b>Show significant genes only</b> limits selected
+                point tables to genes from the significant gene box.
               </li>
               <li>
-                Click
-                <a
-                  href="https://umap-learn.readthedocs.io/en/latest/parameters.html#n-neighbors"
-                  >here</a
-                >
-                for more information.
+                For ranked input, the same control shows matched genes in enrichment
+                order for a single selected point.
+              </li>
+              <li>
+                For scored input, the control shows leading-edge genes when they are
+                available.
+              </li>
+              <li>
+                Multi-select overlap comparisons still use the full matched gene set.
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'threshold-collapse')"
+          >
+            <h3>Thresholds</h3>
+          </button>
+          <div class="collapsible-content" id="threshold-collapse">
+            <ul>
+              <li>
+                Choose one threshold type: <b>FDR</b> or <b>P-Value</b>. Enter a value
+                only in the active field.
+              </li>
+              <li>
+                Thresholds filter which gene sets are included in the graph. Stricter
+                thresholds usually produce fewer points.
+              </li>
+              <li>
+                After an analysis, the inactive threshold field may be filled with the
+                corresponding computed value.
+              </li>
+            </ul>
+          </div>
+
+          <button
+            type="button"
+            class="collapsible"
+            onclick="collapseSection(event, 'reduction-collapse')"
+          >
+            <h3>Embedding Algorithm</h3>
+          </button>
+          <div class="collapsible-content" id="reduction-collapse">
+            <ul>
+              <li>
+                <b>UMAP:</b> default layout method. Number of Neighbors controls local
+                versus global structure, Minimum Distance controls how tightly points
+                can pack, and Random State sets reproducibility. A seed of 0 or blank
+                uses random initialization.
+              </li>
+              <li>
+                <b>t-SNE:</b> useful for local neighborhood structure. Perplexity
+                controls neighborhood scale, Early Exaggeration affects early cluster
+                separation, and Max Iterations controls optimization length.
+              </li>
+              <li>
+                <b>Isomap:</b> preserves graph geodesic structure. Number of Neighbors
+                controls the neighbor graph used for the embedding.
               </li>
             </ul>
           </div>
@@ -396,26 +417,21 @@ GO_PROFILIN_BINDING	VASP CTTN WIPF1 HTT DBN1	0.2582822646196803</code></pre>
             class="collapsible"
             onclick="collapseSection(event, 'distance-collapse')"
           >
-            <h3>Minimum Distance</h3>
+            <h3>Distance Metric</h3>
           </button>
           <div class="collapsible-content" id="distance-collapse">
             <ul>
-              <li>Input tye: <i>Float</i></li>
               <li>
-                Controls the minimum distance between points in the final
-                embedding.
+                <b>Jaccard Distance:</b> compares overlap relative to the union of two
+                gene sets.
               </li>
               <li>
-                Lower values means points and clusters will be closer together,
-                while larger values push them apart.
+                <b>Overlap Coeff:</b> compares overlap relative to the smaller gene set.
+                This can make subset-like relationships appear closer.
               </li>
               <li>
-                Click
-                <a
-                  href="https://umap-learn.readthedocs.io/en/latest/parameters.html#min-dist"
-                  >here</a
-                >
-                for more information.
+                <b>Weighted</b> metrics include available rank or score information.
+                <b>Plain</b> metrics use membership overlap only.
               </li>
             </ul>
           </div>
@@ -423,26 +439,105 @@ GO_PROFILIN_BINDING	VASP CTTN WIPF1 HTT DBN1	0.2582822646196803</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'seed-collapse')"
+            onclick="collapseSection(event, 'cluster-collapse')"
           >
-            <h3>Random Seed</h3>
+            <h3>Cluster Labeling</h3>
           </button>
-          <div class="collapsible-content" id="seed-collapse">
+          <div class="collapsible-content" id="cluster-collapse">
+            <p>
+              Turn on <b>Cluster mode</b> if you want the graph to color points by
+              detected clusters instead of by q-value. This also shows cluster labels on
+              the graph. Turn Cluster mode off to go back to q-value coloring.
+            </p>
+
+            <h4>HDBSCAN settings</h4>
+            <h5>Min Cluster Size</h5>
+            <p>
+              This sets the smallest number of nearby points that can be treated as a
+              cluster.
+            </p>
             <ul>
-              <li>Input tye: <i>Integer</i></li>
+              <li>Increase it if the graph shows too many tiny clusters or messy labels.</li>
               <li>
-                Sets the random state of UMAP to a set number for
-                reproducibility.
-              </li>
-              <li>
-                Click
-                <a
-                  href="https://umap-learn.readthedocs.io/en/latest/reproducibility.html#umap-reproducibility"
-                  >here</a
-                >
-                for more information.
+                Decrease it if the algorithm is missing small groups that look meaningful
+                to you.
               </li>
             </ul>
+
+            <h5>Min Samples</h5>
+            <p>
+              This controls how strict the algorithm is when deciding whether points
+              belong in a cluster.
+            </p>
+            <ul>
+              <li>Leave it blank to use the default behavior.</li>
+              <li>
+                Increase it if you want only denser, more reliable clusters to be
+                colored, with more isolated points shown as noise.
+              </li>
+              <li>
+                Decrease it if too many points are being marked as noise instead of
+                joining a cluster.
+              </li>
+            </ul>
+
+            <h5>Good starting approach for HDBSCAN</h5>
+            <p>
+              Start with Min Cluster Size close to the smallest group you would actually
+              want to interpret.
+            </p>
+            <ul>
+              <li>If the graph looks too broken up, increase Min Cluster Size.</li>
+              <li>If clusters disappear too easily, lower Min Samples or leave it blank.</li>
+            </ul>
+
+            <h4>OPTICS settings</h4>
+            <h5>Min Samples</h5>
+            <p>
+              This sets how many nearby points are needed before an area is considered
+              dense enough to form a cluster.
+            </p>
+            <ul>
+              <li>Increase it for fewer, larger, and more stable clusters.</li>
+              <li>Decrease it if you want to detect smaller or looser groups.</li>
+            </ul>
+
+            <h5>Min Cluster Size</h5>
+            <p>This sets the smallest cluster size OPTICS is allowed to keep.</p>
+            <ul>
+              <li>Leave it blank if you want OPTICS to use Min Samples automatically.</li>
+              <li>Increase it to hide very small clusters.</li>
+              <li>Decrease it to keep smaller visible groups.</li>
+            </ul>
+
+            <h5>Xi</h5>
+            <p>
+              This controls how easily OPTICS splits one region into separate clusters.
+            </p>
+            <ul>
+              <li>Lower Xi gives more clusters by splitting regions more easily.</li>
+              <li>
+                Higher Xi gives fewer clusters by merging nearby structure together.
+              </li>
+            </ul>
+
+            <h5>Good starting approach for OPTICS</h5>
+            <p>A common starting point is:</p>
+            <ul>
+              <li>Min Samples = 5</li>
+              <li>Xi = 0.05</li>
+            </ul>
+            <p>Then adjust based on what you want to see:</p>
+            <ul>
+              <li>If there are too many clusters, increase Min Samples or Xi.</li>
+              <li>If large regions are being merged too much, decrease Xi.</li>
+              <li>
+                If small groups are missing, decrease Min Samples or Min Cluster Size.
+              </li>
+            </ul>
+
+            <h4>Noise points</h4>
+            <p>Points that are not assigned to any cluster are shown in gray.</p>
           </div>
         </div>
       </div>
