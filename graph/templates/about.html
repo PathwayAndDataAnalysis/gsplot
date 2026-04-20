@@ -31,38 +31,109 @@
       </div>
     </nav>
     <div class="about-container">
-      <div class="bio-lab-container">
+      <section class="about-section">
+        <h1>About GSPlot</h1>
+        <p>
+          GSPlot is a web application for exploring Gene Set Enrichment Analysis
+          (GSEA) results in an interactive 2D map. It helps turn long ranked
+          result tables into a visual landscape where related pathways appear
+          near each other.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>Why We Built It</h2>
+        <p>
+          GSEA outputs can be difficult to interpret because many gene sets are
+          redundant, overlapping, and statistically similar. Reading one row at
+          a time can hide broader biological themes.
+        </p>
+        <p>
+          GSPlot was built to make those themes easier to find by combining
+          significance, similarity, and interactive exploration in one place.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>How GSPlot Helps</h2>
+        <ul>
+          <li>
+            Maps enriched gene sets into an interactive 2D view for faster
+            interpretation.
+          </li>
+          <li>
+            Supports filtering by significance so you can focus on the strongest
+            findings.
+          </li>
+          <li>
+            Helps identify related pathway groups and broader biological themes.
+          </li>
+          <li>
+            Makes it easier to move from long result tables to interpretable
+            summaries.
+          </li>
+        </ul>
+        <p>
+          For step-by-step usage instructions, see the <a href="/help">Help</a>
+          page.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>What You Can Do With It</h2>
+        <p>
+          Upload gene inputs, run enrichment against selected gene set
+          collections, and explore enriched pathways in an interactive graph.
+          Each point represents a gene set, and nearby points indicate more
+          similar biology.
+        </p>
+        <p>
+          You can inspect significance, compare selected pathways, and export
+          results for downstream analysis or reporting.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>Who GSPlot Is Designed For</h2>
+        <p>
+          GSPlot is designed for researchers, students, and analysts working
+          with functional genomics data who want a more interpretable and
+          exploratory way to review enrichment results.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>Who Developed GSPlot</h2>
+        <p>
+          GSPlot is being developed by <strong>Tien Le</strong>, with research
+          mentorship from <strong>Ozgun Babur</strong>.
+        </p>
+      </section>
+
+      <section class="about-section bio-lab-container">
         <div class="bio-lab-header">
-          <h1>Network Biology Labratory</h1>
-          <img src="{% static 'about/images/UMass_Boston_logo.png' %}" />
+          <h2>About the Network Biology Laboratory at UMass Boston</h2>
+          <img
+            src="{% static 'about/images/UMass_Boston_logo.png' %}"
+            alt="UMass Boston logo"
+          />
         </div>
-        <div>
-          <p>
-            The Network Biology Laboratory at the University of Massachusetts
-            Boston focuses on modeling and analyzing biological systems at the
-            molecular level. We develop methods and software tools to:
-          </p>
-          <ul>
-            <li>
-              Increase our understanding in biological molecular mechanisms.
-            </li>
-            <li>
-              Make causal bridges between existing knowledge and new experiment
-              results.
-            </li>
-            <li>
-              Efficient visualization of known and hypothesized relationships
-              between biological molecules.
-            </li>
-            <li>And more!</li>
-          </ul>
-          <p>
-            See our other projects and learn more by clicking
-            <a href="https://sites.google.com/view/umb-network-biology">here</a
-            >!
-          </p>
-        </div>
-      </div>
+        <p>
+          The Network Biology Laboratory at the University of Massachusetts
+          Boston studies complex molecular systems and develops computational
+          methods that connect biological knowledge with experimental data.
+        </p>
+      </section>
+
+      <section class="about-section">
+        <h2>Other Projects / Learn More</h2>
+        <p>
+          Explore additional projects from the lab:
+          <a href="https://sites.google.com/view/umb-network-biology"
+            >Network Biology Laboratory Website</a
+          >.
+        </p>
+      </section>
     </div>
   </body>
 </html>

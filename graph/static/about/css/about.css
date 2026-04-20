@@ -1,97 +1,79 @@
-li {
-  margin-top: 5px;
-  margin-bottom: 5px;
-}
-
-ul {
-  margin-top: 0px;
-  margin-bottom: 0px;
-}
-
 .about-container {
-  margin-top: 30px;
+  margin: 30px auto 60px;
+  max-width: 1050px;
+  padding: 0 20px;
   display: flex;
-  justify-content: center;
-  align-items: center;
   flex-direction: column;
-  row-gap: 25px;
+  row-gap: 18px;
 }
 
-.bio-lab-container h1 {
-  font-family: Lato, sans-serif;
-  text-align: center;
-  font-weight: normal;
+.about-section {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
+  padding: 20px 22px;
+}
+
+.about-section h1 {
+  margin: 0 0 8px;
   font-size: 2rem;
-  width: 200px;
+  font-weight: 600;
 }
 
-.bio-lab-container img {
-  max-width: 150px;
-  height: 150px;
+.about-section h2 {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.about-section p {
+  margin: 0 0 10px;
+  line-height: 1.6;
+}
+
+.about-section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.about-section li {
+  margin: 7px 0;
+  line-height: 1.45;
+}
+
+.about-section a {
+  color: #0156b3;
 }
 
 .bio-lab-header {
   display: flex;
-}
-
-.bio-lab-container {
-  padding: 15px;
-  border-radius: 5px;
-  background-color: white;
-  align-items: center;
-  display: flex;
-  column-gap: 100px;
   justify-content: space-between;
-  width: 900px;
-  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
-}
-
-.signature-header {
-  font-size: xx-large;
-}
-
-.signature-container {
-  display: flex;
-  flex-direction: column;
+  gap: 24px;
   align-items: center;
-  background-color: white;
-  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
-  padding: 15px;
-  border-radius: 5px;
-  width: 600px;
+  margin-bottom: 10px;
 }
 
-.signature-container p {
-  margin-top: 5px;
-  margin-bottom: 5px;
+.bio-lab-header img {
+  width: 120px;
+  height: auto;
 }
 
-.signature-content {
-  display: flex;
-}
-
-.signature-content img {
-  width: 200px;
-  height: 200px;
-  margin: 5px;
-}
-
-.headshot {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: x-large;
-}
-
-.about-me {
-  font-size: large;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.socials {
-  display: flex;
-  column-gap: 40px;
-  margin-top: 5px;
+@media (max-width: 800px) {
+  .about-container {
+    padding: 0 12px;
+  }
+  .about-section {
+    padding: 16px;
+  }
+  .about-section h1 {
+    font-size: 1.7rem;
+  }
+  .about-section h2 {
+    font-size: 1.2rem;
+  }
+  .bio-lab-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
 }
