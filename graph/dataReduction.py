@@ -631,8 +631,6 @@ def calculate_pvals(filtered, ranked_genes, tail_mode='positive'):
         # clamp just in case
         p_value = max(0.0, min(1.0, p_value))
 
-        print(f"Ranked mode p-value for {set_name}: {p_value}")
-
         gene_string = ' '.join(str(gene) for gene in gene_set)
         gene_sets_with_p[set_name] = (gene_string, p_value)
 

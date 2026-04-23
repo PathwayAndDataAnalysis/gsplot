@@ -73,8 +73,8 @@
               correlation, or model score.
             </li>
             <li>
-              <b>Thresholded Genes:</b> Paste significant genes and optional
-              insignificant/background genes into separate boxes. Genes may be separated
+              <b>Thresholded Genes:</b> Paste significant genes and
+              insignificant genes into separate boxes. Genes may be separated
               by commas, spaces, or new lines.
             </li>
             <li>
@@ -167,7 +167,7 @@ CXCL10	-2.20</code></pre>
               <li>
                 After Submit, each point represents a gene set that passed the current
                 threshold. Nearby points have more similar matched gene sets under the
-                selected distance metric and reduction algorithm.
+                selected distance metric and dimensionality reduction algorithm.
               </li>
               <li>
                 Hover over a point to see its gene set name and q-value.
@@ -276,7 +276,7 @@ CXCL10	-2.20</code></pre>
             <ul>
               <li>
                 <b>Submit</b> validates the current input, selected collections, threshold,
-                and settings, then generates the graph.
+                and settings, runs necessary analysis, then generates the graph.
               </li>
               <li>
                 <b>Apply</b> saves settings changes. If a graph already exists, Apply
