@@ -83,6 +83,28 @@
       const spinnerOverlay =
         window.parent.document.getElementById("loading-spinner");
 
+      function cloneJSON(value) {
+        if (value === null || value === undefined) {
+          return value;
+        }
+        return JSON.parse(JSON.stringify(value));
+      }
+
+      function getRuntimeInputData() {
+        if (window.parent?.getCachedInputData) {
+          return window.parent.getCachedInputData() || {};
+        }
+        return window.parent?.GSPRuntime?.inputData || {};
+      }
+
+      function getInputValue(key, fallback = "") {
+        const runtimeInput = getRuntimeInputData();
+        if (runtimeInput && runtimeInput[key] !== undefined && runtimeInput[key] !== null) {
+          return runtimeInput[key];
+        }
+        return fallback;
+      }
+
       // Start drawing
       // This runs when the page loads
       // If the data isn’t already saved, it fetches new UMAP data from backend.
@@ -93,23 +115,23 @@
         let settings = getLocalStorage("settings");
 
         // Check to see if there is already data saved, if not then fetch new data from backend
-        const sigGenes = localStorage.getItem("sigGenes") || "";
-        const insigGenes = localStorage.getItem("insigGenes") || "";
-        const rankedGenes = localStorage.getItem("rankedGenes") || "";
+        const sigGenes = getInputValue("sigGenes", "");
+        const insigGenes = getInputValue("insigGenes", "");
+        const rankedGenes = getInputValue("rankedGenes", "");
+        const scoredGenesRaw = getInputValue("scoredGenesRaw", "");
         const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
 
-        let singleList = false; // Default value if not found
-        const storedSingleList = localStorage.getItem("single-list");
-        if (storedSingleList !== null) {
-          singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
-        }
         localStorage.setItem("reset", JSON.stringify(true));
 
-        const hasGeneInput = sigGenes.trim() || insigGenes.trim();
+        const hasGeneInput =
+          sigGenes.trim() ||
+          insigGenes.trim() ||
+          rankedGenes.trim() ||
+          scoredGenesRaw.trim();
 
         const existingData = getLocalStorage("data");
         if (!hasCompleteDataShape(existingData)) {
-          localStorage.removeItem("data");
+          clearGraphDataCache();
         }
 
         if (getLocalStorage("data") === null) {
@@ -117,7 +139,7 @@
           try {
             if (inputMode === "scored-genes") {
               await getScoredGenesData(settings);
-            } else if (singleList == true) {
+            } else if (inputMode === "single-textarea") {
               await getGeneData(settings);
             } else {
               await getGeneInputData(settings);
@@ -406,7 +428,7 @@
 
       function getGeneData(settings) {
         return new Promise((resolve, reject) => {
-          const rankedGenes = localStorage.getItem("rankedGenes")
+          const rankedGenes = getInputValue("rankedGenes", "");
           const tailMode = localStorage.getItem("gene-test-mode-input") || "positive";
           const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
           const minMembers = localStorage.getItem("minMembers")
@@ -520,8 +542,8 @@
       function getGeneInputData(settings) {
         return new Promise((resolve, reject) => {
           console.log("Seen")
-          const sigGenes = localStorage.getItem("sigGenes") || "";
-          const insigGenes = localStorage.getItem("insigGenes") || "";
+          const sigGenes = getInputValue("sigGenes", "");
+          const insigGenes = getInputValue("insigGenes", "");
           const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
           const minMembers = localStorage.getItem("minMembers")
           const pVal = localStorage.getItem("p-value")
@@ -636,7 +658,7 @@
       function getScoredGenesData(settings) {
         return new Promise((resolve, reject) => {
           const selectedGeneSets = window?.parent?.GSP?.selectedGeneSets || window?.GSP?.selectedGeneSets || [];
-          const scoredGenesRaw = localStorage.getItem("scoredGenesRaw") || "";
+          const scoredGenesRaw = getInputValue("scoredGenesRaw", "");
           const tailMode = localStorage.getItem("gene-test-mode-scored") || "positive";
           const species = localStorage.getItem("species") || "human";
           const minMembers = parseInt(localStorage.getItem("minMembers") || "5", 10);
@@ -731,16 +753,11 @@
       // Get umap data once more and draw graph. Selected are cleared as new UMAP data doesn't carry over selected points since they are in new positions
       async function applyUmapChange(settings) {
         const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
-        let singleList = false; // Default value if not found
-        const storedSingleList = localStorage.getItem("single-list");
-        if (storedSingleList !== null) {
-          singleList = JSON.parse(storedSingleList); // Parse "true" to true, "false" to false
-        }
         showSpinner();
 
         if (inputMode === "scored-genes") {
           await getScoredGenesData(settings);
-        } else if (singleList == true) {
+        } else if (inputMode === "single-textarea") {
           await getGeneData(settings);
         } else {
           await getGeneInputData(settings);
@@ -1081,7 +1098,7 @@
             displayMode: fullGraphData["displayMode"][pointNumber],
             leadingEdgeMolecules: fullGraphData["leadingEdgeMolecules"][pointNumber],
             setName: fullGraphData["setName"][pointNumber],
-            sigGenes: (localStorage.getItem("sigGenes") || "").split(/[\s,]+/).filter(Boolean)
+            sigGenes: (getInputValue("sigGenes", "") || "").split(/[\s,]+/).filter(Boolean)
           };
 
           // If point needs to be unselected, and unselected is permitted
@@ -1344,6 +1361,12 @@
       }
 
       function getLocalStorage(key) {
+        if (key === "data") {
+          if (window.parent?.getCachedGraphData) {
+            return window.parent.getCachedGraphData();
+          }
+          return cloneJSON(window.parent?.GSPRuntime?.graphData || null);
+        }
         return JSON.parse(localStorage.getItem(key));
       }
 
@@ -1367,7 +1390,27 @@
       window.checkSettingsNeedApply = checkSettingsNeedApply;
 
       function setLocalStorage(key, value) {
+        if (key === "data") {
+          if (window.parent?.setCachedGraphData) {
+            window.parent.setCachedGraphData(value);
+            return;
+          }
+          window.parent.GSPRuntime = window.parent.GSPRuntime || {};
+          window.parent.GSPRuntime.graphData = cloneJSON(value);
+          return;
+        }
         localStorage.setItem(key, JSON.stringify(value));
+      }
+
+      function clearGraphDataCache() {
+        if (window.parent?.clearCachedGraphData) {
+          window.parent.clearCachedGraphData();
+          return;
+        }
+        if (window.parent?.GSPRuntime) {
+          window.parent.GSPRuntime.graphData = null;
+          window.parent.GSPRuntime.lastComputeFingerprint = null;
+        }
       }
 
       function showSpinner() {

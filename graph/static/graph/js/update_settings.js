@@ -56,6 +56,34 @@ const opticsOptionsContainer = document.getElementById("optics-options-container
 const fixedInput = document.getElementById("fixed-size-input-reveal");
 const dynamicInput = document.getElementById("dynamic-size-input-reveal");
 
+function cloneJSON(value) {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getRuntimeGraphData() {
+  if (window.getCachedGraphData) {
+    return window.getCachedGraphData();
+  }
+  return cloneJSON(window.GSPRuntime?.graphData || null);
+}
+
+function setRuntimeGraphData(data) {
+  if (window.setCachedGraphData) {
+    window.setCachedGraphData(data);
+    return;
+  }
+  window.GSPRuntime = window.GSPRuntime || {};
+  window.GSPRuntime.graphData = cloneJSON(data);
+}
+
+function hasRuntimeGraphData() {
+  const data = getRuntimeGraphData();
+  return !!(data && Array.isArray(data["X"]) && data["X"].length > 0);
+}
+
 main();
 
 function main() {
@@ -104,7 +132,7 @@ function main() {
       toggleClusterParamsVisibility();
 
       // Turning OFF can update visuals immediately (no backend)
-      const hasRendered = localStorage.getItem("data") !== null;
+      const hasRendered = hasRuntimeGraphData();
       if (!clusterEl.checked && hasRendered && frame?.updateGraphStyling) {
         frame.updateGraphStyling();
       }
@@ -353,15 +381,15 @@ function updateSettings(suppressToast = false) {
   // FORCE CLUSTER APPLY when:
   // - graph already rendered
   // - cluster-mode is ON
-  // - BUT current localStorage.data has no clusterID (or clusterID empty / all -1)
+  // - BUT current in-memory graph data has no clusterID (or clusterID empty / all -1)
   // This fixes: submit with cluster OFF, later turn ON and apply with same params => should still run HDBSCAN.
   // --------------------
-  const hasRendered = localStorage.getItem("data") !== null;
+  const hasRendered = hasRuntimeGraphData();
 
   let needClusterCompute = false;
   if (hasRendered && newSettings["cluster-mode"] === true) {
     try {
-      const d = JSON.parse(localStorage.getItem("data") || "{}");
+      const d = getRuntimeGraphData() || {};
       const cids = d.clusterID;
 
       if (!Array.isArray(cids) || cids.length === 0) {
@@ -413,7 +441,7 @@ function updateSettings(suppressToast = false) {
     toast.style.display = "block";
     toast.style.color = "#2ecc71";
 
-    const hasRendered = localStorage.getItem("data") !== null;
+    const hasRendered = hasRuntimeGraphData();
 
     if (hasRendered) {
       toast.textContent = "Settings applied! Graph will update...";
@@ -454,7 +482,7 @@ async function applyClusterOnly() {
   const settings = JSON.parse(localStorage.getItem("settings") || "{}");
   const clusterAlgorithm = settings["cluster-algorithm"] || "hdbscan";
 
-  const fullData = JSON.parse(localStorage.getItem("data") || "null");
+  const fullData = getRuntimeGraphData();
   if (!fullData || !Array.isArray(fullData["X"]) || fullData["X"].length < 4) {
     throw new Error("Missing graph data. Please click Submit once to generate the graph first.");
   }
@@ -496,7 +524,7 @@ async function applyClusterOnly() {
 
   fullData["clusterID"] = out.cluster_ids;
   fullData["clusterLabel"] = out.cluster_labels;
-  localStorage.setItem("data", JSON.stringify(fullData));
+  setRuntimeGraphData(fullData);
 
   localStorage.removeItem("camera");
   localStorage.removeItem("annotations");
@@ -511,7 +539,7 @@ async function applySettingsAndRender() {
   const loadingSpinner = document.getElementById("loading-spinner");
   loadingSpinner.style.display = "flex";
 
-  const backupData = localStorage.getItem("data");
+  const backupData = getRuntimeGraphData();
   const backupSettings = localStorage.getItem("settings");
   const backupPrevSettings = localStorage.getItem("previous_settings");
 
@@ -522,7 +550,7 @@ async function applySettingsAndRender() {
     const stylingOnly = localStorage.getItem("justStyling") === "true";
     localStorage.removeItem("justStyling");
 
-    const hasRendered = localStorage.getItem("data") !== null;
+    const hasRendered = hasRuntimeGraphData();
 
     const dataChange = isEmbeddingChanged(newSettings, oldSettings);
     const thresholdChange = isThresholdChanged(newSettings, oldSettings);
@@ -559,6 +587,10 @@ async function applySettingsAndRender() {
     ) {
       await applyClusterOnly();
       localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+      const fp = window.computeCurrentAnalysisFingerprint?.();
+      if (fp) {
+        window.setLastComputeFingerprint?.(fp);
+      }
       loadingSpinner.style.display = "none";
       return;
     }
@@ -567,6 +599,10 @@ async function applySettingsAndRender() {
     if (hasRendered && newSettings["cluster-mode"] === false && clusterChanged && !dataChange && !thresholdChange) {
       if (frame?.updateGraphStyling) frame.updateGraphStyling();
       localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+      const fp = window.computeCurrentAnalysisFingerprint?.();
+      if (fp) {
+        window.setLastComputeFingerprint?.(fp);
+      }
       loadingSpinner.style.display = "none";
       return;
     }
@@ -583,7 +619,7 @@ async function applySettingsAndRender() {
       await frame.getGeneInputData(newSettings);
     }
 
-    const fullData = JSON.parse(localStorage.getItem("data") || "null");
+    const fullData = getRuntimeGraphData();
     if (
       !fullData ||
       !Array.isArray(fullData["X"]) ||
@@ -602,13 +638,17 @@ async function applySettingsAndRender() {
     frame.graph();
 
     localStorage.setItem("previous_settings", JSON.stringify(newSettings));
+    const fp = window.computeCurrentAnalysisFingerprint?.();
+    if (fp) {
+      window.setLastComputeFingerprint?.(fp);
+    }
     loadingSpinner.style.display = "none";
   } catch (error) {
     // Roll back to backup if possible
     try {
-      const parsedBackup = JSON.parse(backupData || "null");
+      const parsedBackup = backupData;
       if (parsedBackup && Array.isArray(parsedBackup["X"]) && parsedBackup["X"].length >= 4) {
-        localStorage.setItem("data", backupData);
+        setRuntimeGraphData(backupData);
 
         if (backupSettings != null) localStorage.setItem("settings", backupSettings);
         if (backupPrevSettings != null) localStorage.setItem("previous_settings", backupPrevSettings);

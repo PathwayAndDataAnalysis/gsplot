@@ -28,6 +28,128 @@ const importNavButton = document.getElementById("nav-import"); // nav button in 
 const fileInput = document.getElementById("initial-file-input"); // Select file button
 
 const transitionDuration = 300;
+const INPUT_FINGERPRINT_KEY = "analysis-input-fingerprint";
+
+function cloneJSON(value) {
+  if (value === null || value === undefined) {
+    return value;
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
+function getRuntimeState() {
+  if (!window.GSPRuntime) {
+    window.GSPRuntime = {
+      graphData: null,
+      inputData: null,
+      lastComputeFingerprint: null,
+    };
+  }
+  return window.GSPRuntime;
+}
+
+function getCachedGraphData() {
+  return cloneJSON(getRuntimeState().graphData);
+}
+
+function setCachedGraphData(data) {
+  getRuntimeState().graphData = cloneJSON(data);
+}
+
+function clearCachedGraphData() {
+  const state = getRuntimeState();
+  state.graphData = null;
+  state.lastComputeFingerprint = null;
+}
+
+function hasCachedGraphData() {
+  const data = getRuntimeState().graphData;
+  return !!(data && Array.isArray(data.X) && data.X.length > 0);
+}
+
+function setCachedInputData(inputData) {
+  getRuntimeState().inputData = cloneJSON(inputData);
+}
+
+function getCachedInputData() {
+  return cloneJSON(getRuntimeState().inputData);
+}
+
+function setLastComputeFingerprint(fingerprint) {
+  getRuntimeState().lastComputeFingerprint = fingerprint;
+}
+
+function getLastComputeFingerprint() {
+  return getRuntimeState().lastComputeFingerprint;
+}
+
+function hashString(value) {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+function normalizeGeneSets(geneSets) {
+  return Array.from(new Set((geneSets || []).map((name) => String(name).trim()).filter(Boolean))).sort();
+}
+
+function buildAnalysisFingerprint(payload) {
+  const computeSettings = payload.settingsSnapshot || {};
+  const settingsForCompute = {
+    mode: computeSettings.mode,
+    reduction: computeSettings.reduction,
+    distance_type: computeSettings.distance_type,
+    cluster_mode: computeSettings["cluster-mode"],
+    cluster_algorithm: computeSettings["cluster-algorithm"],
+    hdbscan_min_cluster_size: computeSettings["hdbscan-min-cluster-size"],
+    hdbscan_min_samples: computeSettings["hdbscan-min-samples"],
+    optics_min_cluster_size: computeSettings["optics-min-cluster-size"],
+    optics_min_samples: computeSettings["optics-min-samples"],
+    optics_xi: computeSettings["optics-xi"],
+  };
+
+  const fingerprintPayload = {
+    inputMode: payload.inputMode,
+    species: payload.species,
+    minMembers: Number(payload.minMembers),
+    selectedTestMode: payload.selectedTestMode,
+    thresholdType: payload.thresholdType,
+    pValue: payload.pValue,
+    fdr: payload.fdr,
+    selectedGeneSets: normalizeGeneSets(payload.selectedGeneSets),
+    settingsHash: hashString(JSON.stringify(settingsForCompute)),
+    sigHash: hashString((payload.sigGenes || "").trim()),
+    insigHash: hashString((payload.insigGenes || "").trim()),
+    rankedHash: hashString((payload.rankedGenes || "").trim()),
+    scoredHash: hashString((payload.scoredGenesRaw || "").trim()),
+  };
+  return JSON.stringify(fingerprintPayload);
+}
+
+function computeCurrentAnalysisFingerprint() {
+  const inputPayload = getCachedInputData();
+  if (!inputPayload) {
+    return null;
+  }
+  const settingsSnapshot = JSON.parse(localStorage.getItem("settings") || "{}");
+  return buildAnalysisFingerprint({
+    ...inputPayload,
+    settingsSnapshot,
+  });
+}
+
+window.getCachedGraphData = getCachedGraphData;
+window.setCachedGraphData = setCachedGraphData;
+window.clearCachedGraphData = clearCachedGraphData;
+window.hasCachedGraphData = hasCachedGraphData;
+window.setCachedInputData = setCachedInputData;
+window.getCachedInputData = getCachedInputData;
+window.setLastComputeFingerprint = setLastComputeFingerprint;
+window.getLastComputeFingerprint = getLastComputeFingerprint;
+window.computeCurrentAnalysisFingerprint = computeCurrentAnalysisFingerprint;
 
 // Add this function to check settings
 function checkSettingsNeedApply() {
@@ -62,12 +184,13 @@ graph.onload = () => {
 
 // Entry point
 async function main() {
-  const hasData = localStorage.getItem("data") !== null;
+  const hasData = hasCachedGraphData();
+  const cachedInput = getCachedInputData() || {};
 
-  const sigGenes = (localStorage.getItem("sigGenes") || "").trim();
-  const insigGenes = (localStorage.getItem("insigGenes") || "").trim();
-  const rankedGenes = (localStorage.getItem("rankedGenes") || "").trim();
-  const scoredGenesRaw = (localStorage.getItem("scoredGenesRaw") || "").trim();
+  const sigGenes = (cachedInput.sigGenes || "").trim();
+  const insigGenes = (cachedInput.insigGenes || "").trim();
+  const rankedGenes = (cachedInput.rankedGenes || "").trim();
+  const scoredGenesRaw = (cachedInput.scoredGenesRaw || "").trim();
 
   const hasGeneInput =
     sigGenes !== "" ||
@@ -106,9 +229,10 @@ function importFile() {
   // Clear selected points and remove local storage
   localStorage.setItem("selected", "[]");
   localStorage.removeItem("camera");
-  localStorage.removeItem("data");
   localStorage.removeItem("annotations");
   localStorage.setItem("reset", JSON.stringify(true));
+  clearCachedGraphData();
+  setCachedInputData(null);
   clearPoints()
   // Show upload screen
   hideGraph();
@@ -163,7 +287,9 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
   const rankedGenes = document.getElementById("id_single_gene_list").value;
-  const scoredGenesRaw = localStorage.getItem("scoredGenesRaw") || "";
+  const scoredGenesRaw = parsedScoredGenes.length > 0
+    ? parsedScoredGenes.map((row) => `${row.gene}\t${row.score}`).join("\n")
+    : "";
   const species = document.getElementById("species-select").value;
   const pvThr = document.getElementById("pvalue-input").value;
   const fdrThr = document.getElementById("fdr-input").value;
@@ -226,24 +352,9 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   localStorage.setItem("gene-test-mode-current-input", inputMode);
 
   if (inputMode === "scored-genes") {
-    localStorage.setItem("scoredGenesRaw", scoredGenesRaw);
     clearInsignificantGenes();
     clearSignificantGenes();
     clearSingleGeneList();
-  } else if (singleList) {
-    if (rankedGenes !== "") {
-      localStorage.setItem("rankedGenes", rankedGenes);
-      localStorage.removeItem("scoredGenesRaw");
-      clearInsignificantGenes();
-      clearSignificantGenes();
-    } else {
-      alert("Please enter genes");
-      return;
-    }
-  } else {
-    localStorage.setItem("sigGenes", sigGenes.trim());
-    localStorage.setItem("insigGenes", insigGenes.trim());
-    localStorage.removeItem("scoredGenesRaw");
   }
 
   if (species === "custom") {
@@ -266,11 +377,42 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     localStorage.removeItem("p-value");
   }
 
+  const settingsSnapshot = JSON.parse(localStorage.getItem("settings") || "{}");
+  const inputPayload = {
+    inputMode,
+    selectedTestMode,
+    species,
+    minMembers,
+    sigGenes: sigGenes.trim(),
+    insigGenes: insigGenes.trim(),
+    rankedGenes: rankedGenes.trim(),
+    scoredGenesRaw: scoredGenesRaw.trim(),
+    selectedGeneSets: normalizeGeneSets(selectedGeneSets),
+    thresholdType,
+    pValue: thresholdType === "pvalue" ? parseFloat(pvThr) : null,
+    fdr: thresholdType === "fdr" ? parseFloat(fdrThr) : null,
+    settingsSnapshot,
+  };
+
+  setCachedInputData(inputPayload);
+  const analysisFingerprint = buildAnalysisFingerprint(inputPayload);
+  localStorage.setItem(INPUT_FINGERPRINT_KEY, analysisFingerprint);
+
   try {
     loadingSpinner.style.display = "flex";
 
-    // Check if we have existing data
-    const hasData = localStorage.getItem("data") !== null;
+    const hasData = hasCachedGraphData();
+    const previousFingerprint = getLastComputeFingerprint();
+
+    if (hasData && previousFingerprint === analysisFingerprint) {
+      await frame.graph();
+      hideUpload();
+      hideInput();
+      showGraph();
+      document.getElementById("submit-section-wrapper").style.display = "none";
+      loadingSpinner.style.display = "none";
+      return;
+    }
 
     if (!hasData) {
       // First time submission - need to generate the graph
@@ -282,9 +424,16 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       // Hide the submit button after first render
       document.getElementById("submit-section-wrapper").style.display = "none";
     } else {
-      // Subsequent submissions - just update the graph
-      await frame.applySettingsAndRender();
+      // Input/settings changed in this same session: recompute from scratch.
+      clearCachedGraphData();
+      localStorage.removeItem("camera");
+      localStorage.removeItem("annotations");
+      localStorage.setItem("selected", "[]");
+      localStorage.setItem("reset", JSON.stringify(true));
+      await frame.main();
     }
+
+    setLastComputeFingerprint(analysisFingerprint);
 
     loadingSpinner.style.display = "none";
 
@@ -473,7 +622,6 @@ function handleScoredGenesFileSelect(event) {
     try {
       const content = typeof reader.result === "string" ? reader.result : "";
       parsedScoredGenes = parseScoredGenesFileContent(content);
-      localStorage.setItem("scoredGenesRaw", content);
       if (statusEl) {
         statusEl.style.color = "green";
         statusEl.textContent = `${file.name}: ${parsedScoredGenes.length} scored genes loaded.`;
@@ -602,38 +750,23 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function clearLocalStorageExceptSettings() {
-  const settingsBackup = localStorage.getItem("settings");
-  const listBackup = localStorage.getItem("single-list");
-  const modeBackup = localStorage.getItem("gene-input-mode");
-  const scoredTestModeBackup = localStorage.getItem("gene-test-mode-scored");
-  const inputTestModeBackup = localStorage.getItem("gene-test-mode-input");
-  const currentTestModeBackup = localStorage.getItem("gene-test-mode-current");
-  const currentTestModeInputBackup = localStorage.getItem("gene-test-mode-current-input");
-  localStorage.clear();
-  if (settingsBackup) {
-    if (listBackup !== null) {
-      localStorage.setItem("single-list", listBackup);
-    }
-    if (modeBackup !== null) {
-      localStorage.setItem("gene-input-mode", modeBackup);
-    }
-    localStorage.setItem("settings", settingsBackup);
-  }
-  if (scoredTestModeBackup !== null) {
-    localStorage.setItem("gene-test-mode-scored", scoredTestModeBackup);
-  }
-  if (inputTestModeBackup !== null) {
-    localStorage.setItem("gene-test-mode-input", inputTestModeBackup);
-  }
-  if (currentTestModeBackup !== null) {
-    localStorage.setItem("gene-test-mode-current", currentTestModeBackup);
-  }
-  if (currentTestModeInputBackup !== null) {
-    localStorage.setItem("gene-test-mode-current-input", currentTestModeInputBackup);
-  }
-  localStorage.removeItem("gene-test-mode-thresholded");
+  const volatileKeys = [
+    "data",
+    "camera",
+    "annotations",
+    "selected",
+    "reset",
+    "scoredGenesRaw",
+    "rankedGenes",
+    "sigGenes",
+    "insigGenes",
+    "customGeneSetsData",
+    "gene-test-mode-thresholded",
+  ];
+  volatileKeys.forEach((key) => localStorage.removeItem(key));
+  clearCachedGraphData();
+  setCachedInputData(null);
   localStorage.setItem("selected", "[]");
-
 }
 
 document.addEventListener("DOMContentLoaded", () => {
