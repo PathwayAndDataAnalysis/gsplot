@@ -188,6 +188,44 @@ def _parse_cluster_mapping_json(raw_text: str) -> Dict[str, Any]:
 from google import genai
 from google.genai import types
 
+try:
+    from google.api_core import exceptions as gapi_exceptions
+except Exception:
+    gapi_exceptions = None
+
+def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
+    # Prefer official typed exceptions from Google API core.
+    if gapi_exceptions is not None:
+        if isinstance(exc, (gapi_exceptions.TooManyRequests, gapi_exceptions.ResourceExhausted)):
+            return True
+
+    # Fallback to structured status/code attributes when available.
+    status_candidates = [
+        getattr(exc, "status_code", None),
+        getattr(exc, "code", None),
+        getattr(getattr(exc, "response", None), "status_code", None),
+    ]
+    for code in status_candidates:
+        # HTTP 429
+        if code == 429 or str(code) == "429":
+            return True
+        # gRPC RESOURCE_EXHAUSTED often surfaces as code 8
+        if code == 8 or str(code) == "8":
+            return True
+        if str(code).upper() in {"RESOURCE_EXHAUSTED", "TOO_MANY_REQUESTS"}:
+            return True
+
+    # Last-resort compatibility fallback based on message text.
+    msg = str(exc).lower()
+    markers = [
+        "quota",
+        "rate limit",
+        "429",
+        "resource_exhausted",
+        "too many requests",
+    ]
+    return any(m in msg for m in markers)
+
 def label_clusters_with_llm(
     summaries: Dict[int, dict],
     cache_obj: Any = None,
@@ -244,25 +282,8 @@ def label_clusters_with_llm(
         model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         temperature = os.getenv("LLM_TEMPERATURE")
         max_out = int(os.getenv("LLM_MAX_TOKENS", "12000"))
-
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
-
-        cfg_kwargs = dict(
-            system_instruction=instructions,
-            response_mime_type="application/json",  
-            max_output_tokens=max_out,
-        )
-        if temperature is not None:
-            try:
-                cfg_kwargs["temperature"] = float(temperature)
-            except Exception:
-                pass
-
-        response = client.models.generate_content(
-            model=model,
-            contents=user_input,
-            config=types.GenerateContentConfig(**cfg_kwargs),
-        )
+        primary_key = os.getenv("GEMINI_API_KEY")
+        paid_key = os.getenv("GEMINI_PAID_API_KEY")
 
         def _extract_text(resp) -> str:
             # 1) preferred
@@ -278,35 +299,67 @@ def label_clusters_with_llm(
             except Exception:
                 return ""
 
-        text = _extract_text(response)
-        print("[LLM DEBUG] gemini text head:", text[:200])
-        print("[LLM DEBUG] gemini text startswith:", text.strip()[:1])
-        if not text:
-            raise ValueError("Gemini returned empty text (no JSON). Check prompt_feedback / finish_reason.")
+        def _generate_and_parse(client: genai.Client):
+            cfg_kwargs = dict(
+                system_instruction=instructions,
+                response_mime_type="application/json",
+                max_output_tokens=max_out,
+            )
+            if temperature is not None:
+                try:
+                    cfg_kwargs["temperature"] = float(temperature)
+                except Exception:
+                    pass
+
+            response = client.models.generate_content(
+                model=model,
+                contents=user_input,
+                config=types.GenerateContentConfig(**cfg_kwargs),
+            )
+
+            text = _extract_text(response)
+            print("[LLM DEBUG] gemini text head:", text[:200])
+            print("[LLM DEBUG] gemini text startswith:", text.strip()[:1])
+            if not text:
+                raise ValueError("Gemini returned empty text (no JSON). Check prompt_feedback / finish_reason.")
+
+            try:
+                parsed_local = _parse_cluster_mapping_json(text)
+                print("[LLM DEBUG] parsed type:", type(parsed_local))
+                return parsed_local
+            except Exception as parse_error:
+                print("LLM JSON parse failed, attempting repair:", type(parse_error).__name__, str(parse_error))
+                repair_prompt = (
+                    "Convert the following content into STRICT valid JSON only.\n"
+                    "Return a single JSON object mapping clusterID -> short_name.\n"
+                    "No markdown, no comments, no trailing commas.\n\n"
+                    f"Content:\n{text}"
+                )
+                repair_response = client.models.generate_content(
+                    model=model,
+                    contents=repair_prompt,
+                    config=types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        max_output_tokens=max_out,
+                    ),
+                )
+                repaired_text = _extract_text(repair_response)
+                print("[LLM DEBUG] repaired text head:", repaired_text[:200])
+                parsed_local = _parse_cluster_mapping_json(repaired_text)
+                print("[LLM DEBUG] repaired parsed type:", type(parsed_local))
+                return parsed_local
+
+        if not primary_key:
+            raise RuntimeError("GEMINI_API_KEY is not set")
 
         try:
-            parsed = _parse_cluster_mapping_json(text)
-            print("[LLM DEBUG] parsed type:", type(parsed))
-        except Exception as parse_error:
-            print("LLM JSON parse failed, attempting repair:", type(parse_error).__name__, str(parse_error))
-            repair_prompt = (
-                "Convert the following content into STRICT valid JSON only.\n"
-                "Return a single JSON object mapping clusterID -> short_name.\n"
-                "No markdown, no comments, no trailing commas.\n\n"
-                f"Content:\n{text}"
-            )
-            repair_response = client.models.generate_content(
-                model=model,
-                contents=repair_prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    max_output_tokens=max_out,
-                ),
-            )
-            repaired_text = _extract_text(repair_response)
-            print("[LLM DEBUG] repaired text head:", repaired_text[:200])
-            parsed = _parse_cluster_mapping_json(repaired_text)
-            print("[LLM DEBUG] repaired parsed type:", type(parsed))
+            parsed = _generate_and_parse(genai.Client(api_key=primary_key))
+        except Exception as e:
+            if paid_key and paid_key != primary_key and _is_quota_or_rate_limit_error(e):
+                print("[LLM DEBUG] primary Gemini key hit quota/rate limit, retrying with paid key")
+                parsed = _generate_and_parse(genai.Client(api_key=paid_key))
+            else:
+                raise
 
         name_by_id: Dict[int, str] = {}
         for k, v in parsed.items():
