@@ -487,8 +487,23 @@ async function applyClusterOnly() {
     throw new Error("Missing graph data. Please click Submit once to generate the graph first.");
   }
 
+  const totalPoints = fullData["X"].length;
+  const pointsForClustering = {
+    X: fullData["X"],
+    Y: fullData["Y"],
+    setName: Array.isArray(fullData["setName"])
+      ? fullData["setName"]
+      : new Array(totalPoints).fill(""),
+    molecules: Array.isArray(fullData["molecules"])
+      ? fullData["molecules"]
+      : new Array(totalPoints).fill(""),
+    pValue: Array.isArray(fullData["pValue"])
+      ? fullData["pValue"]
+      : new Array(totalPoints).fill(null),
+  };
+
   let payload = {
-    points: fullData,
+    points: pointsForClustering,
     cluster_algorithm: clusterAlgorithm,
   };
 

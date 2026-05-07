@@ -168,9 +168,9 @@ clearLocalStorageExceptSettings()
 LoadInput();
 
 if (!localStorage.getItem("gene-input-mode")) {
-  currentActiveGeneInputTabId = "scored-genes";
+  currentActiveGeneInputTabId = "single-textarea";
   localStorage.setItem("single-list", JSON.stringify(false));
-  localStorage.setItem("gene-input-mode", "scored-genes");
+  localStorage.setItem("gene-input-mode", "single-textarea");
 }
 
 initializeInputTestModes();
@@ -295,7 +295,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   const fdrThr = document.getElementById("fdr-input").value;
   const selectedGeneSets = window?.GSP?.selectedGeneSets || [];
 
-  const inputMode = currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "scored-genes";
+  const inputMode = currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "single-textarea";
   const singleList = inputMode === "single-textarea";
   const selectedTestMode = getInputTestMode(inputMode);
 
@@ -542,7 +542,7 @@ function initializeInputTestModes() {
       radio.addEventListener("change", () => {
         if (radio.checked) {
           localStorage.setItem(storageKey, radio.value);
-          syncCurrentInputTestMode(currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "scored-genes");
+          syncCurrentInputTestMode(currentActiveGeneInputTabId || localStorage.getItem("gene-input-mode") || "single-textarea");
           window.update_settings?.refreshDirectionColorControls?.();
         }
       });
@@ -658,7 +658,7 @@ function clearSingleGeneList() {
   document.getElementById('id_single_gene_list').value = '';
 }
 function LoadInput() {
-  const savedMode = localStorage.getItem("gene-input-mode") || "scored-genes";
+  const savedMode = localStorage.getItem("gene-input-mode") || "single-textarea";
   showGeneInputTab(savedMode);
 }
 

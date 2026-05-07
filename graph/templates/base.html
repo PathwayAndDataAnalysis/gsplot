@@ -53,14 +53,70 @@
     </p>
 
     <div class="gene-input-tabs">
-      <span class="gene-input-tab-button active" onclick="showGeneInputTab('scored-genes', event)">Scored
-        Genes</span>
+      <span class="gene-input-tab-button active" onclick="showGeneInputTab('single-textarea', event)">Ranked Genes</span>
       <span class="gene-input-tab-button" onclick="showGeneInputTab('two-textareas', event)">Thresholded
         Genes</span>
-      <span class="gene-input-tab-button" onclick="showGeneInputTab('single-textarea', event)">Ranked Genes</span>
+      <span class="gene-input-tab-button" onclick="showGeneInputTab('scored-genes', event)">Scored
+        Genes</span>
     </div>
 
-    <div id="scored-genes-content" class="gene-input-content">
+    <div id="single-textarea-content" class="gene-input-content">
+      <div class="gene-input-panel-header">
+        <div>
+          <h3>Ranked Genes</h3>
+          <p>Paste a single ranked gene list and choose whether it should be interpreted as positive, negative, or two-sided test.</p>
+        </div>
+        <div class="test-mode-group" data-mode-key="input">
+          <span class="test-mode-label">Directional Hypotheses</span>
+          <div class="test-mode-options">
+            <label class="test-mode-option">
+              <input type="radio" name="test-mode-input" value="positive" checked />
+              <span>Positive</span>
+            </label>
+            <label class="test-mode-option">
+              <input type="radio" name="test-mode-input" value="negative" />
+              <span>Negative</span>
+            </label>
+            <label class="test-mode-option">
+              <input type="radio" name="test-mode-input" value="both" />
+              <span>Two-Sided</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <label for="id_single_gene_list" style="font-weight: bold">Enter Gene List:</label><br />
+      <div class="gene-input-column">
+        <textarea id="id_single_gene_list" rows="10" cols="80"
+          placeholder="Enter all genes, comma or newline separated."></textarea>
+        <button onclick="clearSingleGeneList()">Clear</button>
+      </div>
+    </div>
+
+    <div id="two-textareas-content" class="gene-input-content" style="display: none;">
+      <div class="gene-input-panel-header">
+        <div>
+          <h3>Thresholded Genes</h3>
+          <p>Paste genes that are already separated by significance.</p>
+        </div>
+      </div>
+      <div class="gene-input-side-by-side">
+        <div class="gene-input-column">
+          <label for="id_significant_genes" style="font-weight: bold">Significant Genes:</label><br />
+          <textarea id="id_significant_genes" rows="5" cols="40"
+            placeholder="Enter significant genes, comma or newline separated"></textarea>
+          <button onclick="clearSignificantGenes()">Clear</button>
+        </div>
+
+        <div class="gene-input-column">
+          <label for="id_insignificant_genes" style="font-weight: bold">Insignificant Genes:</label><br />
+          <textarea id="id_insignificant_genes" rows="5" cols="40"
+            placeholder="Enter insignificant genes, comma or newline separated"></textarea>
+          <button onclick="clearInsignificantGenes()">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="scored-genes-content" class="gene-input-content" style="display: none;">
       <div class="gene-input-panel-header">
         <div>
           <h3>Scored Genes</h3>
@@ -92,62 +148,6 @@
         </p>
         <div id="scored-genes-file-status" class="gene-input-status"></div>
         <button onclick="clearScoredGenesFile()">Clear</button>
-      </div>
-    </div>
-
-    <div id="two-textareas-content" class="gene-input-content" style="display: none;">
-      <div class="gene-input-panel-header">
-        <div>
-          <h3>Thresholded Genes</h3>
-          <p>Paste genes that are already separated by significance.</p>
-        </div>
-      </div>
-      <div class="gene-input-side-by-side">
-        <div class="gene-input-column">
-          <label for="id_significant_genes" style="font-weight: bold">Significant Genes:</label><br />
-          <textarea id="id_significant_genes" rows="5" cols="40"
-            placeholder="Enter significant genes, comma or newline separated"></textarea>
-          <button onclick="clearSignificantGenes()">Clear</button>
-        </div>
-
-        <div class="gene-input-column">
-          <label for="id_insignificant_genes" style="font-weight: bold">Insignificant Genes:</label><br />
-          <textarea id="id_insignificant_genes" rows="5" cols="40"
-            placeholder="Enter insignificant genes, comma or newline separated"></textarea>
-          <button onclick="clearInsignificantGenes()">Clear</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="single-textarea-content" class="gene-input-content" style="display: none;">
-      <div class="gene-input-panel-header">
-        <div>
-          <h3>Ranked Genes</h3>
-          <p>Paste a single ranked gene list and choose whether it should be interpreted as positive, negative, or two-sided test.</p>
-        </div>
-        <div class="test-mode-group" data-mode-key="input">
-          <span class="test-mode-label">Directional Hypotheses</span>
-          <div class="test-mode-options">
-            <label class="test-mode-option">
-              <input type="radio" name="test-mode-input" value="positive" checked />
-              <span>Positive</span>
-            </label>
-            <label class="test-mode-option">
-              <input type="radio" name="test-mode-input" value="negative" />
-              <span>Negative</span>
-            </label>
-            <label class="test-mode-option">
-              <input type="radio" name="test-mode-input" value="both" />
-              <span>Two-Sided</span>
-            </label>
-          </div>
-        </div>
-      </div>
-      <label for="id_single_gene_list" style="font-weight: bold">Enter Gene List:</label><br />
-      <div class="gene-input-column">
-        <textarea id="id_single_gene_list" rows="10" cols="80"
-          placeholder="Enter all genes, comma or newline separated."></textarea>
-        <button onclick="clearSingleGeneList()">Clear</button>
       </div>
     </div>
   </div>
