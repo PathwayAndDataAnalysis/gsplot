@@ -499,12 +499,14 @@ function updateDisplayGenesSetting(tabId) {
   const displayGenesContainer = document.getElementById("display-genes-container");
   const displayGenesLabel = document.getElementById("display-genes-label");
   const displayGenesTooltip = document.getElementById("display-genes-tooltip");
+  const enrichmentOrderContainer = document.getElementById("enrichment-order-container");
 
-  if (!displayGenesContainer || !displayGenesLabel || !displayGenesTooltip) {
+  if (!displayGenesContainer || !displayGenesLabel || !displayGenesTooltip || !enrichmentOrderContainer) {
     return;
   }
 
   displayGenesContainer.style.display = "block";
+  enrichmentOrderContainer.style.display = "none";
 
   if (tabId === "single-textarea") {
     displayGenesLabel.textContent = "Show genes in enrichment order";
@@ -517,8 +519,10 @@ function updateDisplayGenesSetting(tabId) {
   if (tabId === "scored-genes") {
     displayGenesLabel.textContent = "Show leading-edge genes";
     displayGenesTooltip.innerHTML =
-      "For a single selected point, show leading-edge genes when available.<br>" +
+      "For a single selected point, show only leading-edge genes when available.<br>" +
+      "Use the second toggle to control enrichment-direction ordering separately.<br>" +
       "Multi-select overlap still uses the full matched gene set.";
+    enrichmentOrderContainer.style.display = "flex";
     return;
   }
 

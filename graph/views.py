@@ -48,6 +48,9 @@ def build_thresholded_display_meta(signif_gene_sets):
             "fullMolecules": gene_string,
             "displayMolecules": gene_string,
             "leadingEdgeMolecules": "",
+            "orderedFullMolecules": gene_string,
+            "leadingEdgeDefaultMolecules": "",
+            "leadingEdgeOrderedMolecules": "",
             "direction": "neutral",
             "displayMode": "thresholded",
         }
@@ -76,6 +79,9 @@ def build_ranked_display_meta(filtered, signif_gene_sets):
             "fullMolecules": full_molecules,
             "displayMolecules": display_molecules or full_molecules,
             "leadingEdgeMolecules": "",
+            "orderedFullMolecules": display_molecules or full_molecules,
+            "leadingEdgeDefaultMolecules": "",
+            "leadingEdgeOrderedMolecules": "",
             "direction": geneset.get("display_direction", "neutral"),
             "displayMode": "ranked",
         }
@@ -108,17 +114,17 @@ def build_scored_display_meta(filtered, signif_gene_sets, scored_genes, tail_mod
 
         reverse = direction == "negative"
         leading_edge = geneset.get("leading_edge_genes") or []
+        default_leading_edge = order_genes_by_reference(leading_edge, scored_gene_order, reverse=False)
         ordered_leading_edge = order_genes_by_reference(leading_edge, scored_gene_order, reverse=reverse)
-
-        if ordered_leading_edge:
-            display_genes = ordered_leading_edge
-        else:
-            display_genes = order_genes_by_reference(full_gene_list, scored_gene_order, reverse=reverse)
+        ordered_full_genes = order_genes_by_reference(full_gene_list, scored_gene_order, reverse=reverse)
 
         meta[set_name] = {
             "fullMolecules": full_molecules,
-            "displayMolecules": join_gene_list(display_genes) or full_molecules,
-            "leadingEdgeMolecules": join_gene_list(ordered_leading_edge),
+            "displayMolecules": join_gene_list(full_gene_list) or full_molecules,
+            "leadingEdgeMolecules": join_gene_list(default_leading_edge),
+            "orderedFullMolecules": join_gene_list(ordered_full_genes) or full_molecules,
+            "leadingEdgeDefaultMolecules": join_gene_list(default_leading_edge),
+            "leadingEdgeOrderedMolecules": join_gene_list(ordered_leading_edge),
             "direction": direction,
             "displayMode": "scored",
         }
@@ -164,6 +170,9 @@ def attach_display_meta(graph_data, display_meta):
         point["direction"] = meta.get("direction", "neutral")
         point["displayMode"] = meta.get("displayMode", "thresholded")
         point["leadingEdgeMolecules"] = meta.get("leadingEdgeMolecules", "")
+        point["orderedFullMolecules"] = meta.get("orderedFullMolecules", point["displayMolecules"])
+        point["leadingEdgeDefaultMolecules"] = meta.get("leadingEdgeDefaultMolecules", point["leadingEdgeMolecules"])
+        point["leadingEdgeOrderedMolecules"] = meta.get("leadingEdgeOrderedMolecules", point["leadingEdgeMolecules"])
 
 def add_clusters_on_embedding(
     points,

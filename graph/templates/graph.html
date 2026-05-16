@@ -65,6 +65,9 @@
         "direction",
         "displayMode",
         "leadingEdgeMolecules",
+        "orderedFullMolecules",
+        "leadingEdgeDefaultMolecules",
+        "leadingEdgeOrderedMolecules",
         "color",
         "pointNumber",
         "clusterID",
@@ -1097,6 +1100,9 @@
             direction: fullGraphData["direction"][pointNumber],
             displayMode: fullGraphData["displayMode"][pointNumber],
             leadingEdgeMolecules: fullGraphData["leadingEdgeMolecules"][pointNumber],
+            orderedFullMolecules: fullGraphData["orderedFullMolecules"][pointNumber],
+            leadingEdgeDefaultMolecules: fullGraphData["leadingEdgeDefaultMolecules"][pointNumber],
+            leadingEdgeOrderedMolecules: fullGraphData["leadingEdgeOrderedMolecules"][pointNumber],
             setName: fullGraphData["setName"][pointNumber],
             sigGenes: (getInputValue("sigGenes", "") || "").split(/[\s,]+/).filter(Boolean)
           };

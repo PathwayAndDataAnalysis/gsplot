@@ -19,6 +19,7 @@ function updateContent() {
   // Get selected items
   let selecteditems = localStorage.getItem("selected");
   let showSigOnly = document.getElementById("show-sig-only")?.checked;
+  const showEnrichmentOrder = document.getElementById("show-enrichment-order")?.checked;
 
 
   // If nothing is selected then set empty list into local storage
@@ -50,7 +51,7 @@ function updateContent() {
 
   // Display sets with the molecules in the intersection bolded
   for (let i = 0; i < selecteditems.length; i++) {
-    tableCreator(selecteditems[i], intersection, showSigOnly);
+    tableCreator(selecteditems[i], intersection, showSigOnly, showEnrichmentOrder);
   }
 }
 
@@ -62,7 +63,7 @@ window.addEventListener("storage", function (e) {
 });
 
 // Generate HTML table object of molecules
-function tableCreator(selectedPoint, intersection, displayGenesToggleOn) {
+function tableCreator(selectedPoint, intersection, displayGenesToggleOn, showEnrichmentOrder) {
   // Create table container div and table inside of it
   const tableContainer = document.createElement("div");
   tableContainer.classList.add("table-container");
@@ -118,13 +119,23 @@ function tableCreator(selectedPoint, intersection, displayGenesToggleOn) {
   moleculesHeader.textContent = "Molecules";
   const molecules = document.createElement("td");
   const displayMode = selectedPoint["displayMode"] || "thresholded";
-  const useDisplayGenes =
-    displayGenesToggleOn &&
-    (displayMode === "ranked" || displayMode === "scored");
+  let sourceMolecules = selectedPoint["molecules"] || "";
 
-  const sourceMolecules = useDisplayGenes
-    ? (selectedPoint["displayMolecules"] || selectedPoint["molecules"] || "")
-    : (selectedPoint["molecules"] || "");
+  if (displayMode === "ranked") {
+    sourceMolecules = displayGenesToggleOn
+      ? (selectedPoint["displayMolecules"] || selectedPoint["molecules"] || "")
+      : (selectedPoint["molecules"] || "");
+  } else if (displayMode === "scored") {
+    if (displayGenesToggleOn) {
+      sourceMolecules = showEnrichmentOrder
+        ? (selectedPoint["leadingEdgeOrderedMolecules"] || selectedPoint["leadingEdgeDefaultMolecules"] || "")
+        : (selectedPoint["leadingEdgeDefaultMolecules"] || "");
+    } else {
+      sourceMolecules = showEnrichmentOrder
+        ? (selectedPoint["orderedFullMolecules"] || selectedPoint["molecules"] || "")
+        : (selectedPoint["molecules"] || "");
+    }
+  }
 
   let moleculeList = sourceMolecules.split(" ").filter(Boolean);
 
@@ -199,4 +210,9 @@ function toggleLabels() {
 const sigToggle = document.getElementById("show-sig-only");
 if (sigToggle) {
   sigToggle.addEventListener("change", updateContent);
+}
+
+const enrichmentOrderToggle = document.getElementById("show-enrichment-order");
+if (enrichmentOrderToggle) {
+  enrichmentOrderToggle.addEventListener("change", updateContent);
 }

@@ -467,6 +467,7 @@ function detectFrontendOnlyChanges() {
     fixedSizeVal: document.getElementById("fixed-size-input")?.value,
     dynamicScalar: document.getElementById("dynamic-size-scalar")?.value,
     showSigOnly: document.getElementById("show-sig-only")?.checked,
+    showEnrichmentOrder: document.getElementById("show-enrichment-order")?.checked,
   };
 
   const previousRaw = localStorage.getItem("previous_styling");
