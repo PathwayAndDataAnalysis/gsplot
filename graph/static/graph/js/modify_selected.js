@@ -31,6 +31,9 @@ function updateContent() {
   }
 
   let intersection = new Set();
+  const visibleGenesByPoint = selecteditems.map((point) =>
+    getDisplayedMoleculeList(point, showSigOnly, showEnrichmentOrder)
+  );
 
   // Clear table
   allTablesContainer.innerHTML = "";
@@ -42,9 +45,9 @@ function updateContent() {
 
   // Compare all sets in selected items and find the shared molecules
   for (let i = 0; i < selecteditems.length; i++) {
-    let set1 = new Set(selecteditems[i]["molecules"].split(" "));
+    let set1 = new Set(visibleGenesByPoint[i]);
     for (let j = i + 1; j < selecteditems.length; j++) {
-      let set2 = new Set(selecteditems[j]["molecules"].split(" "));
+      let set2 = new Set(visibleGenesByPoint[j]);
       intersection = findIntersection(set1, set2, intersection);
     }
   }
@@ -119,30 +122,11 @@ function tableCreator(selectedPoint, intersection, displayGenesToggleOn, showEnr
   moleculesHeader.textContent = "Molecules";
   const molecules = document.createElement("td");
   const displayMode = selectedPoint["displayMode"] || "thresholded";
-  let sourceMolecules = selectedPoint["molecules"] || "";
-
-  if (displayMode === "ranked") {
-    sourceMolecules = displayGenesToggleOn
-      ? (selectedPoint["displayMolecules"] || selectedPoint["molecules"] || "")
-      : (selectedPoint["molecules"] || "");
-  } else if (displayMode === "scored") {
-    if (displayGenesToggleOn) {
-      sourceMolecules = showEnrichmentOrder
-        ? (selectedPoint["leadingEdgeOrderedMolecules"] || selectedPoint["leadingEdgeDefaultMolecules"] || "")
-        : (selectedPoint["leadingEdgeDefaultMolecules"] || "");
-    } else {
-      sourceMolecules = showEnrichmentOrder
-        ? (selectedPoint["orderedFullMolecules"] || selectedPoint["molecules"] || "")
-        : (selectedPoint["molecules"] || "");
-    }
-  }
-
-  let moleculeList = sourceMolecules.split(" ").filter(Boolean);
-
-  if (displayGenesToggleOn && displayMode === "thresholded") {
-    const sigGenes = selectedPoint["sigGenes"] || [];
-    moleculeList = moleculeList.filter(g => sigGenes.includes(g));
-  }
+  const moleculeList = getDisplayedMoleculeList(
+    selectedPoint,
+    displayGenesToggleOn,
+    showEnrichmentOrder
+  );
 
   molecules.innerHTML = boldSharedGenes(
     moleculeList.join(" "),
@@ -162,6 +146,34 @@ function tableCreator(selectedPoint, intersection, displayGenesToggleOn, showEnr
   console.log("Intersection:", intersection);
   console.log("DisplayGenesToggleOn:", displayGenesToggleOn);
   console.log("sigGenes in point:", selectedPoint["sigGenes"]);
+}
+
+function getDisplayedMoleculeList(selectedPoint, displayGenesToggleOn, showEnrichmentOrder) {
+  const displayMode = selectedPoint["displayMode"] || "thresholded";
+  let sourceMolecules = selectedPoint["molecules"] || "";
+
+  if (displayMode === "ranked") {
+    sourceMolecules = displayGenesToggleOn
+      ? (selectedPoint["displayMolecules"] || selectedPoint["molecules"] || "")
+      : (selectedPoint["molecules"] || "");
+  } else if (displayMode === "scored") {
+    if (displayGenesToggleOn) {
+      sourceMolecules = showEnrichmentOrder
+        ? (selectedPoint["leadingEdgeOrderedMolecules"] || selectedPoint["leadingEdgeDefaultMolecules"] || "")
+        : (selectedPoint["leadingEdgeDefaultMolecules"] || "");
+    } else {
+      sourceMolecules = showEnrichmentOrder
+        ? (selectedPoint["orderedFullMolecules"] || selectedPoint["molecules"] || "")
+        : (selectedPoint["molecules"] || "");
+    }
+  }
+
+  let moleculeList = sourceMolecules.split(" ").filter(Boolean);
+  if (displayGenesToggleOn && displayMode === "thresholded") {
+    const sigGenes = selectedPoint["sigGenes"] || [];
+    moleculeList = moleculeList.filter((g) => sigGenes.includes(g));
+  }
+  return moleculeList;
 }
 
 function displayPlaceholder() {
