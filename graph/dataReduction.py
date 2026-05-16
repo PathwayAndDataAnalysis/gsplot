@@ -336,23 +336,23 @@ def run_gseapy(filtered, scored_genes, tail_mode="both"):
         columns=["gene", "score"]
     )
 
-    # Keep current in-memory library shape
     gene_sets = {
         geneset["gene_set_name"]: list(geneset["matched_genes"])
         for geneset in filtered
     }
 
-    # Break exact ties very slightly without changing meaningful ordering
     rnk = rnk.copy()
     rnk["tie_breaker"] = np.arange(len(rnk), dtype=float) * 1e-12
     rnk["score"] = rnk["score"] + rnk["tie_breaker"]
     rnk = rnk[["gene", "score"]]
 
+    permutation_num = 1000
+
     pre_res = gp.prerank(
         rnk=rnk,
         gene_sets=gene_sets,
         threads=1,
-        permutation_num=1000,
+        permutation_num=permutation_num,
         min_size=1,
         max_size=100000,
         seed=1,
@@ -428,6 +428,10 @@ def run_gseapy(filtered, scored_genes, tail_mode="both"):
 
         es_val = float(row[es_col])
         p_two_sided = float(row[p_col])
+
+        # Prevent exact-zero p-values from GSEApy before tail conversion.
+        if p_two_sided == 0.0 and permutation_num > 0:
+            p_two_sided = 1.0 / float(permutation_num)
 
         # Clamp just in case
         p_two_sided = max(0.0, min(1.0, p_two_sided))
