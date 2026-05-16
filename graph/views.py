@@ -54,6 +54,13 @@ def build_thresholded_display_meta(signif_gene_sets):
     return meta
 
 
+def build_thresholded_directions_by_set(signif_gene_sets):
+    return {
+        set_name: "positive"
+        for set_name in signif_gene_sets.keys()
+    }
+
+
 def build_ranked_display_meta(filtered, signif_gene_sets):
     meta = {}
     for geneset in filtered:
@@ -117,6 +124,33 @@ def build_scored_display_meta(filtered, signif_gene_sets, scored_genes, tail_mod
         }
 
     return meta
+
+
+def build_ranked_directions_by_set(filtered, signif_gene_sets):
+    directions = {}
+    for geneset in filtered:
+        set_name = geneset.get("gene_set_name")
+        if set_name not in signif_gene_sets:
+            continue
+        directions[set_name] = geneset.get("display_direction", "neutral")
+    return directions
+
+
+def build_scored_directions_by_set(filtered, signif_gene_sets):
+    directions = {}
+    for geneset in filtered:
+        set_name = geneset.get("gene_set_name")
+        if set_name not in signif_gene_sets:
+            continue
+
+        es_val = float(geneset.get("gsea_es", 0.0) or 0.0)
+        if es_val > 0:
+            directions[set_name] = "positive"
+        elif es_val < 0:
+            directions[set_name] = "negative"
+        else:
+            directions[set_name] = "neutral"
+    return directions
 
 
 def attach_display_meta(graph_data, display_meta):
@@ -396,6 +430,9 @@ def gene_input_view(request):
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
             print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
+            directions_by_set = None
+            if distance_type in ["jaccard_weighted", "overlap_weighted"]:
+                directions_by_set = build_thresholded_directions_by_set(signif_gene_sets)
             print("building weights done")
 
             dist_key = f"distance:thresholded:{key_hash}:{thr_key}:{distance_type}:rescaled"
@@ -411,12 +448,24 @@ def gene_input_view(request):
 
             if distance_matrix is None:
                 print("generating distance matrix")
-                distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
+                distance_matrix = calculate_distance_matrix(
+                    signif_gene_sets,
+                    distance_type,
+                    user_weights,
+                    directions_by_set=directions_by_set,
+                )
                 print("distance matrix generated")
                 cache.set(dist_key, distance_matrix, timeout=cache_timeout)
 
             print("running umap")
-            mapped_result, _ = umap_reduction(signif_gene_sets, settings, user_weights, distance_type, distance_matrix)
+            mapped_result, _ = umap_reduction(
+                signif_gene_sets,
+                settings,
+                user_weights,
+                distance_type,
+                distance_matrix,
+                directions_by_set=directions_by_set,
+            )
             print("completed umap")
 
             # Return result as JSON
@@ -643,6 +692,7 @@ def gene_input_view2(request):
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
             print("building user_weights")
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
+            directions_by_set = build_ranked_directions_by_set(filtered, signif_gene_sets)
             print("weights built")
 
             dist_key = f"distance:ranked:{key_hash}:{thr_key}:{distance_type}:rescaled"
@@ -658,12 +708,24 @@ def gene_input_view2(request):
                     
             if distance_matrix is None:
                 print("generating distance matrix")
-                distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
+                distance_matrix = calculate_distance_matrix(
+                    signif_gene_sets,
+                    distance_type,
+                    user_weights,
+                    directions_by_set=directions_by_set,
+                )
                 print("distance matrix generated")
                 cache.set(dist_key, distance_matrix, timeout=cache_timeout)
 
             print("running reduction")
-            mapped_result, _ = umap_reduction(signif_gene_sets, settings, user_weights, distance_type, distance_matrix)
+            mapped_result, _ = umap_reduction(
+                signif_gene_sets,
+                settings,
+                user_weights,
+                distance_type,
+                distance_matrix,
+                directions_by_set=directions_by_set,
+            )
             print("completed reduction")
 
             # Return result as JSON
@@ -896,8 +958,9 @@ def scored_genes_view(request):
                 return JsonResponse({"error": str(e)}, status=400)
 
             distance_type = (data.get("distance_type") or "jaccard_weighted").lower()
+            directions_by_set = build_scored_directions_by_set(filtered, signif_gene_sets)
 
-            # For scored genes mode, weighted distances must use the natural score-based weights
+            # For scored genes mode, weighted distances use rank-based weights from score ordering
             if distance_type in ["jaccard_weighted", "overlap_weighted"] and not user_weights:
                 user_weights = build_weights_from_scored_genes(scored_genes)
 
@@ -914,12 +977,24 @@ def scored_genes_view(request):
 
             if distance_matrix is None:
                 print("generating distance matrix")
-                distance_matrix = calculate_distance_matrix(signif_gene_sets, distance_type, user_weights)
+                distance_matrix = calculate_distance_matrix(
+                    signif_gene_sets,
+                    distance_type,
+                    user_weights,
+                    directions_by_set=directions_by_set,
+                )
                 print("distance matrix generated")
                 cache.set(dist_key, distance_matrix, timeout=cache_timeout)
 
             print("running umap")
-            mapped_result, _ = umap_reduction(signif_gene_sets, settings, user_weights, distance_type, distance_matrix)
+            mapped_result, _ = umap_reduction(
+                signif_gene_sets,
+                settings,
+                user_weights,
+                distance_type,
+                distance_matrix,
+                directions_by_set=directions_by_set,
+            )
             print("completed umap")
 
             graph_data = json.loads(mapped_result)

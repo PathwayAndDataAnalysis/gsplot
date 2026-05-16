@@ -94,7 +94,7 @@ def parse_scored_genes_raw(scored_genes_raw):
     """
     Parse raw uploaded scored-genes text into:
     1) scored_genes: ordered list of {"gene": ..., "score": raw_signed_score}
-    2) user_weights: dict {gene: abs(score)} for distance weighting
+    2) user_weights: dict {gene: top-rank weight} for distance weighting
 
     Expected input: two columns, no header.
     Prefer tab-delimited, but also allow generic whitespace split.
@@ -158,24 +158,72 @@ def parse_scored_genes_raw(scored_genes_raw):
     # Sort by raw signed score: highest positive at top, most negative at bottom
     scored_genes.sort(key=lambda x: x["score"], reverse=True)
 
-    # Keep magnitude-only weights for distance calculations
-    user_weights = {row["gene"]: abs(float(row["score"])) for row in scored_genes}
+    # Weighted distances in scored mode are rank-based, same as ranked mode.
+    ranked_genes = [row["gene"] for row in scored_genes]
+    user_weights = build_weights_from_ranked_list(ranked_genes)
     return scored_genes, user_weights
 
 
 def build_weights_from_scored_genes(scored_genes):
     """
     scored_genes: list of {"gene": ..., "score": raw_signed_score}
-    Returns magnitude-only weights for weighted distances.
+    Returns top-rank weights for weighted distances.
     """
     if not scored_genes:
         return {}
 
-    return {
-        row["gene"].strip(): float(abs(row["score"]))
+    ranked_genes = [
+        row["gene"].strip()
         for row in scored_genes
         if row.get("gene") and np.isfinite(float(row["score"]))
+    ]
+    return build_weights_from_ranked_list(ranked_genes)
+
+
+def resolve_geneset_direction(direction_value):
+    direction = str(direction_value or "").strip().lower()
+    if direction in {"positive", "negative"}:
+        return direction
+    return "neutral"
+
+
+def get_pair_weight_direction(direction_a, direction_b):
+    a = resolve_geneset_direction(direction_a)
+    b = resolve_geneset_direction(direction_b)
+
+    if a == "positive" and b == "positive":
+        return "positive"
+    if a == "negative" and b == "negative":
+        return "negative"
+    return None
+
+
+def build_bottom_rank_weights(top_rank_weights):
+    return {
+        gene: (1.0 - float(weight))
+        for gene, weight in (top_rank_weights or {}).items()
     }
+
+
+def compute_pair_distance(distance_type, set1, set2, top_weights=None, bottom_weights=None, pair_direction=None):
+    use_weighted = distance_type in {"jaccard_weighted", "overlap_weighted"}
+
+    if use_weighted and pair_direction == "positive" and top_weights:
+        if distance_type == "jaccard_weighted":
+            return weighted_jaccard_distance(top_weights, set1, set2)
+        return weighted_overlap_coef(top_weights, set1, set2)
+
+    if use_weighted and pair_direction == "negative" and bottom_weights:
+        if distance_type == "jaccard_weighted":
+            return weighted_jaccard_distance(bottom_weights, set1, set2)
+        return weighted_overlap_coef(bottom_weights, set1, set2)
+
+    # Fallback for mixed/neutral directions or missing weights.
+    if distance_type in {"jaccard_weighted", "jaccard_plain"}:
+        return jaccard_distance(set1, set2)
+    if distance_type in {"overlap_weighted", "overlap_plain"}:
+        return overlap_coef(set1, set2)
+    raise ValueError(f"Unknown distance_type: {distance_type}")
 
 
 def split_gene_string(gene_string):
@@ -304,7 +352,7 @@ def run_gseapy(filtered, scored_genes, tail_mode="both"):
         rnk=rnk,
         gene_sets=gene_sets,
         threads=1,
-        permutation_num=2000,
+        permutation_num=1000,
         min_size=1,
         max_size=100000,
         seed=1,
@@ -505,9 +553,9 @@ def weighted_overlap_coef(user_weights, set1, set2):
         raise ValueError("One of the sets is empty in overlap coefficient calc.")
 
     common = set1.intersection(set2)
-    sum_common = sum(user_weights.get(gene) for gene in common)
-    sum1 = sum(user_weights.get(gene) for gene in set1)
-    sum2 = sum(user_weights.get(gene) for gene in set2)
+    sum_common = sum(user_weights.get(gene, 0.0) for gene in common)
+    sum1 = sum(user_weights.get(gene, 0.0) for gene in set1)
+    sum2 = sum(user_weights.get(gene, 0.0) for gene in set2)
     min_sum = min(sum1, sum2)
 
     if min_sum == 0:  # this can happen if all the member genes of a set are insignificant
@@ -637,7 +685,7 @@ def calculate_pvals(filtered, ranked_genes, tail_mode='positive'):
     return add_q_values(gene_sets_with_p)
 
 
-def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, distance_matrix):
+def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, distance_matrix, directions_by_set=None):
     if distance_type in ['jaccard_weighted', 'overlap_weighted'] and user_weights is None:
         raise ValueError("user_weights must be provided when using weighted option.")
 
@@ -670,20 +718,27 @@ def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, 
         if distance_matrix is None:
             print("Computing new distance matrix.")
             distance_matrix = np.zeros((n, n))
+            set_names = [row["Name"] for row in all_rows]
+            top_weights = user_weights or {}
+            bottom_weights = build_bottom_rank_weights(top_weights)
             for i in range(n):
                 set1 = molecule_sets[i]
                 for j in range(i + 1, n):
                     set2 = molecule_sets[j]
-                    if distance_type == 'jaccard_weighted' and user_weights:
-                        dist = weighted_jaccard_distance(user_weights, set1, set2)
-                    elif distance_type == "jaccard_plain":
-                        dist = jaccard_distance(set1, set2)
-                    elif distance_type == "overlap_weighted":
-                        dist = weighted_overlap_coef(user_weights, set1, set2)
-                    elif distance_type == "overlap_plain":
-                        dist = overlap_coef(set1, set2)
-                    else:
-                        raise ValueError(f"Unknown distance_type: {distance_type}")
+                    pair_direction = None
+                    if directions_by_set:
+                        pair_direction = get_pair_weight_direction(
+                            directions_by_set.get(set_names[i]),
+                            directions_by_set.get(set_names[j]),
+                        )
+                    dist = compute_pair_distance(
+                        distance_type=distance_type,
+                        set1=set1,
+                        set2=set2,
+                        top_weights=top_weights,
+                        bottom_weights=bottom_weights,
+                        pair_direction=pair_direction,
+                    )
                     scaled_dist = rescale_distance(dist)
                     distance_matrix[i, j] = scaled_dist
                     distance_matrix[j, i] = scaled_dist
@@ -718,10 +773,14 @@ def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, 
         raise e
 
 
-def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights):
+def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights, directions_by_set=None):
     n = len(sigif_gene_sets)
 
-    molecule_sets = [set(gene_string.split()) for _, (gene_string, _, _) in sigif_gene_sets.items()]
+    items = list(sigif_gene_sets.items())
+    set_names = [set_name for set_name, _ in items]
+    molecule_sets = [set(gene_string.split()) for _, (gene_string, _, _) in items]
+    top_weights = user_weights or {}
+    bottom_weights = build_bottom_rank_weights(top_weights)
 
     print("Computing new distance matrix.")
     distance_matrix = np.zeros((n, n))
@@ -729,16 +788,20 @@ def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights):
         set1 = molecule_sets[i]
         for j in range(i + 1, n):
             set2 = molecule_sets[j]
-            if distance_type == 'jaccard_weighted' and user_weights:
-                dist = weighted_jaccard_distance(user_weights, set1, set2)
-            elif distance_type == "jaccard_plain":
-                dist = jaccard_distance(set1, set2)
-            elif distance_type == "overlap_weighted":
-                dist = weighted_overlap_coef(user_weights, set1, set2)
-            elif distance_type == "overlap_plain":
-                dist = overlap_coef(set1, set2)
-            else:
-                raise ValueError(f"Unknown distance_type: {distance_type}")
+            pair_direction = None
+            if directions_by_set:
+                pair_direction = get_pair_weight_direction(
+                    directions_by_set.get(set_names[i]),
+                    directions_by_set.get(set_names[j]),
+                )
+            dist = compute_pair_distance(
+                distance_type=distance_type,
+                set1=set1,
+                set2=set2,
+                top_weights=top_weights,
+                bottom_weights=bottom_weights,
+                pair_direction=pair_direction,
+            )
             scaled_dist = rescale_distance(dist)
             distance_matrix[i, j] = scaled_dist
             distance_matrix[j, i] = scaled_dist
