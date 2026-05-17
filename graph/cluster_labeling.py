@@ -277,6 +277,8 @@ def label_clusters_with_llm(
         words = name.strip().split()
         return " ".join(words[:max_name_words]).strip()
 
+    llm_success = False
+
     try:
         # --- Gemini (Google GenAI SDK) settings ---
         model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
@@ -371,12 +373,13 @@ def label_clusters_with_llm(
                 name_by_id[cid] = _clip(v)
             else:
                 name_by_id[cid] = "Unknown pathway"
+        llm_success = True
 
     except Exception as e:
         print("LLM labeling FAILED:", type(e).__name__, str(e))
         name_by_id = {int(cid): f"Pathway {int(cid)}" for cid in summaries.keys()}
 
-    if cache_obj is not None:
+    if cache_obj is not None and llm_success:
         try:
             cache_obj.set(
                 cache_key,
