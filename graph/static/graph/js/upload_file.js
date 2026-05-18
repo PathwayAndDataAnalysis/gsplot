@@ -371,7 +371,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   if (species === "custom") {
     const customData = window?.GSP?.customGeneSets?.data || window?.GSP?.customGeneSets;
     if (!customData || typeof customData !== "object") {
-      alert("Custom data missing. Please reupload your JSON file.");
+      alert("Custom data missing. Please reupload your custom gene set file.");
       return;
     }
     window.GSP.customGeneSets = customData;

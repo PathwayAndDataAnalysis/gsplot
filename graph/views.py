@@ -1329,24 +1329,87 @@ def upload_custom_gene_sets(request):
         return JsonResponse({"error": "No file provided"}, status=400)
 
     try:
-        data = json.load(uploaded_file)
+        filename = (uploaded_file.name or "").lower()
+        ext = os.path.splitext(filename)[1]
 
-        # Format 1: MSigDB-style (has nested structure)
-        if isinstance(data, dict) and all(isinstance(v, dict) for v in data.values()):
-            return JsonResponse({
-                "treeType": "msigdb",
-                "data": data
-            })
+        def _normalize_genes(raw_genes):
+            if isinstance(raw_genes, list):
+                genes = [str(g).strip() for g in raw_genes if str(g).strip()]
+            elif isinstance(raw_genes, str):
+                genes = [g.strip() for g in raw_genes.replace(",", " ").split() if g.strip()]
+            else:
+                genes = []
+            # Preserve order while removing duplicates.
+            return list(dict.fromkeys(genes))
 
-        # Format 2: Flat list of {name, genes}
-        elif isinstance(data, list) and all("name" in gs and "genes" in gs for gs in data):
-            return JsonResponse({
-                "treeType": "flat",
-                "count": len(data)
-            })
+        def _parse_msigdb_style(raw_data):
+            if not isinstance(raw_data, dict):
+                raise ValueError("MSigDB-style file must be a JSON object keyed by gene set name.")
 
+            normalized = {}
+            for set_name, payload in raw_data.items():
+                if not isinstance(payload, dict):
+                    raise ValueError(f"Gene set '{set_name}' must be an object.")
+
+                normalized_payload = dict(payload)
+                genes = _normalize_genes(
+                    payload.get("geneSymbols", payload.get("genes", payload.get("members", [])))
+                )
+                normalized_payload["geneSymbols"] = genes
+
+                collection = (payload.get("collection") or "").strip()
+                subcollection = (payload.get("subcollection") or "").strip()
+                if subcollection:
+                    normalized_payload["subcollection"] = subcollection
+                if collection:
+                    normalized_payload["collection"] = collection
+
+                normalized[str(set_name)] = normalized_payload
+
+            return normalized
+
+        def _parse_gmt(file_obj):
+            text = file_obj.read().decode("utf-8-sig")
+            normalized = {}
+            default_collection = "Custom"
+
+            for line_number, raw_line in enumerate(text.splitlines(), start=1):
+                line = raw_line.strip()
+                if not line:
+                    continue
+                fields = line.split("\t")
+                if len(fields) < 3:
+                    fields = line.split()
+                if len(fields) < 3:
+                    raise ValueError(f"Invalid GMT format at line {line_number}: expected at least 3 fields.")
+
+                set_name = fields[0].strip()
+                description = fields[1].strip()
+                genes = _normalize_genes(fields[2:])
+                if not set_name or not genes:
+                    continue
+
+                normalized[set_name] = {
+                    "description": description,
+                    "exactSource": description,
+                    "collection": default_collection,
+                    "geneSymbols": genes,
+                }
+
+            if not normalized:
+                raise ValueError("No valid gene sets found in GMT file.")
+            return normalized
+
+        if ext == ".gmt":
+            data = _parse_gmt(uploaded_file)
         else:
-            raise ValueError("Unrecognized format")
+            raw_text = uploaded_file.read().decode("utf-8-sig")
+            data = _parse_msigdb_style(json.loads(raw_text))
+
+        return JsonResponse({
+            "treeType": "msigdb",
+            "data": data
+        })
 
     except Exception as e:
-        return JsonResponse({"error": f"Invalid JSON format: {str(e)}"}, status=400)
+        return JsonResponse({"error": f"Invalid custom gene set file: {str(e)}"}, status=400)

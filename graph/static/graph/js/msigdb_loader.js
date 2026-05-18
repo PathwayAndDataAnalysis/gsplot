@@ -389,8 +389,15 @@ function drawD3Tree(treeData) {
         }
       });
 
-      // Remove duplicates
-      const uniqueGeneSets = [...new Set(selectedGeneSets)];
+      // Remove duplicates by collection + name
+      const uniqueMap = new Map();
+      selectedGeneSets.forEach((gs) => {
+        const key = `${gs.collection || ""}:::${gs.name || ""}`;
+        if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, gs);
+        }
+      });
+      const uniqueGeneSets = Array.from(uniqueMap.values());
 
       window.selectedGeneSets = uniqueGeneSets;
       window.GSP = window.GSP || {};
@@ -427,6 +434,38 @@ function drawD3Tree(treeData) {
   }
 }
 
+function uploadAndRenderCustomGeneSets(file) {
+  if (!file) return Promise.resolve();
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return fetch("/api/upload_custom_gene_sets/", {
+    method: "POST",
+    body: formData
+  })
+    .then(res => res.json())
+    .then(data => {
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      if (data.treeType !== "msigdb" || !data.data) {
+        throw new Error("Unknown custom gene set format returned by server.");
+      }
+
+      window.selectedItems = new Set();
+      window.GSP = window.GSP || {};
+      window.GSP.selectedGeneSets = [];
+      localStorage.setItem("selected", "[]");
+      const label = document.getElementById("selected-group-label");
+      if (label) label.remove();
+
+      const treeData = buildSimpleTree(data.data);
+      drawD3Tree(treeData);
+      window.GSP.customGeneSets = { data: data.data };
+    });
+}
+
 // Load the tree based on dataset selection
 function handleSpeciesChange() {
   const species = document.getElementById("species-select").value;
@@ -450,46 +489,10 @@ function handleSpeciesChange() {
     const fileInput = document.getElementById("custom-json-input");
     if (fileInput && fileInput.files.length > 0) {
       const file = fileInput.files[0];
-      const formData = new FormData();
-      formData.append("file", file);
-
-      fetch("/api/upload_custom_gene_sets/", {
-        method: "POST",
-        body: formData
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.treeType === "msigdb") {
-            window.selectedItems = new Set();
-            window.GSP = window.GSP || {};
-            window.GSP.selectedGeneSets = [];
-            localStorage.setItem("selected", "[]");
-            const label = document.getElementById("selected-group-label");
-            if (label) label.remove();
-
-            const treeData = buildSimpleTree(data.data);
-            drawD3Tree(treeData);
-
-            window.GSP.customGeneSets = {
-              data: data.data
-            };
-          } else if (data.treeType === "flat") {
-            d3.select("#tree-container").select("svg").remove();
-            alert(`Successfully loaded ${data.count} gene sets. All will be used.`);
-            window.selectedItems = new Set();
-            window.GSP = window.GSP || {};
-            window.GSP.selectedGeneSets = [];
-            localStorage.setItem("selected", "[]");
-            const label = document.getElementById("selected-group-label");
-            if (label) label.remove();
-
-            window.GSP.customGeneSets = data;
-            localStorage.setItem("customGeneSetsData", JSON.stringify(data.data));
-          }
-        })
+      uploadAndRenderCustomGeneSets(file)
         .catch(error => {
           console.error("Error reloading custom gene sets:", error);
-          alert("Failed to re-load custom gene sets.");
+          alert("Failed to re-load custom gene sets. " + (error?.message || ""));
         });
     }
     return;
@@ -519,8 +522,14 @@ function buildSimpleTree(msigdb) {
   const root = { name: "Gene Set Collections", children: [] };
 
   for (const [setName, info] of Object.entries(msigdb)) {
-    const collection = info.collection || "";
-    const levels = collection.split(":");
+    const collection = String(info.collection || "").trim();
+    const subcollection = String(info.subcollection || "").trim();
+    const levels = collection
+      ? collection.split(":").map(s => s.trim()).filter(Boolean)
+      : ["Custom"];
+    if (subcollection) {
+      subcollection.split(":").map(s => s.trim()).filter(Boolean).forEach((level) => levels.push(level));
+    }
     const geneSetEntry = { name: setName, collection };
 
     let currentLevel = root;
@@ -562,56 +571,10 @@ document.addEventListener("DOMContentLoaded", () => {
       // Save the file in memory for cancel-recovery
       window.lastUploadedFile = file;
 
-      const formData = new FormData();
-      formData.append("file", file);
-
-      fetch("/api/upload_custom_gene_sets/", {
-        method: "POST",
-        body: formData
-      })
-        .then(res => res.json())
-        .then(data => {
-          if (data.treeType === "msigdb") {
-            // Reset selection state before drawing new tree
-            window.selectedItems = new Set();
-            window.GSP = window.GSP || {};
-            window.GSP.selectedGeneSets = [];
-            localStorage.setItem("selected", "[]");
-            const label = document.getElementById("selected-group-label");
-            if (label) label.remove();
-
-            const treeData = buildSimpleTree(data.data);
-            drawD3Tree(treeData);
-
-            // Save custom gene sets
-            window.GSP.customGeneSets = {
-              data: data.data
-            };
-
-          } else if (data.treeType === "flat") {
-            // Flat = not a tree, still should clear old tree
-            d3.select("#tree-container").select("svg").remove();
-
-            // Reset selection state
-            window.selectedItems = new Set();
-            window.GSP = window.GSP || {};
-            window.GSP.selectedGeneSets = [];
-            localStorage.setItem("selected", "[]");
-            const label = document.getElementById("selected-group-label");
-            if (label) label.remove();
-
-            alert(`Successfully loaded ${data.count} gene sets. All will be used.`);
-
-            // Store for later filtering step
-            window.GSP.customGeneSets = data;
-            localStorage.setItem("customGeneSetsData", JSON.stringify(data.data));
-          } else {
-            throw new Error("Unknown tree type");
-          }
-        })
+      uploadAndRenderCustomGeneSets(file)
         .catch(err => {
           console.error("Upload error:", err);
-          alert("Error: Invalid JSON format or upload failed.");
+          alert("Error: upload failed. " + (err?.message || ""));
         });
     });
   }
