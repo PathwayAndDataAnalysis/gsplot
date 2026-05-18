@@ -178,6 +178,22 @@ html {
   right: 0px;
 }
 
+/* Keep input/upload content visible when settings panel is open */
+#manual-gene-input,
+#species-selector,
+#tree-container,
+#upload-container {
+  margin-right: 0;
+  transition: margin-right 0.5s ease;
+}
+
+body.settings-open #manual-gene-input,
+body.settings-open #species-selector,
+body.settings-open #tree-container,
+body.settings-open #upload-container {
+  margin-right: 320px !important;
+}
+
 .settings-container h4 {
   margin: 15px 0 5px 0;
 }
@@ -513,6 +529,13 @@ tbody th {
     width: 100%;
     min-width: 0;
     box-sizing: border-box;
+  }
+
+  body.settings-open #manual-gene-input,
+  body.settings-open #species-selector,
+  body.settings-open #tree-container,
+  body.settings-open #upload-container {
+    margin-right: 0 !important;
   }
 }
 .param-group {

@@ -248,6 +248,7 @@ function importFile() {
 settingsButton.addEventListener("click", function () {
   settingsContainer.classList.toggle("visible");
   graph.classList.toggle("settings-open");
+  document.body.classList.toggle("settings-open", settingsContainer.classList.contains("visible"));
 });
 
 function convertToExpectedFormat(arrayOfObjects) {
