@@ -16,6 +16,7 @@ let hasUnsavedSettings = false;
 let settingsNeedApply = false;
 let allTablesContainer2 = document.getElementById("selected-points-container");
 let parsedScoredGenes = [];
+let parsedRankedGenes = [];
 const inputTestModeStorageKeys = {
   "scored-genes": "gene-test-mode-scored",
   "single-textarea": "gene-test-mode-input",
@@ -287,6 +288,11 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
   const sigGenes = document.getElementById("id_significant_genes").value;
   const insigGenes = document.getElementById("id_insignificant_genes").value;
   const rankedGenes = document.getElementById("id_single_gene_list").value;
+  const hasRankedTextInput = rankedGenes.trim().length > 0;
+  const hasRankedFileInput = parsedRankedGenes.length > 0;
+  const rankedGenesRaw = rankedGenes.trim()
+    ? rankedGenes
+    : (parsedRankedGenes.length > 0 ? parsedRankedGenes.join("\n") : "");
   const scoredGenesRaw = parsedScoredGenes.length > 0
     ? parsedScoredGenes.map((row) => `${row.gene}\t${row.score}`).join("\n")
     : "";
@@ -328,13 +334,17 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       return;
     }
   } else if (inputMode === "single-textarea") {
-    if (!rankedGenes.trim()) {
-      alert("Please enter ranked genes in the single list.");
+    if (hasRankedTextInput && hasRankedFileInput) {
+      alert("Please choose one ranked input source: pasted text OR uploaded file.");
+      return;
+    }
+    if (!rankedGenesRaw.trim()) {
+      alert("Please enter ranked genes in the single list or upload a ranked genes file.");
       return;
     }
   }
 
-  if (!sigGenes.trim() && !insigGenes.trim() && !rankedGenes.trim() && !scoredGenesRaw.trim()) {
+  if (!sigGenes.trim() && !insigGenes.trim() && !rankedGenesRaw.trim() && !scoredGenesRaw.trim()) {
     alert("Please enter at least one gene.");
     return;
   }
@@ -385,7 +395,7 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
     minMembers,
     sigGenes: sigGenes.trim(),
     insigGenes: insigGenes.trim(),
-    rankedGenes: rankedGenes.trim(),
+    rankedGenes: rankedGenesRaw.trim(),
     scoredGenesRaw: scoredGenesRaw.trim(),
     selectedGeneSets: normalizeGeneSets(selectedGeneSets),
     thresholdType,
@@ -661,6 +671,90 @@ function clearScoredGenesFile() {
 function clearSingleGeneList() {
   document.getElementById('id_single_gene_list').value = '';
 }
+
+function parseRankedGenesFileContent(content) {
+  const parsedGenes = [];
+  const seen = new Set();
+  const lines = content.split(/\r?\n/);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (!line) {
+      continue;
+    }
+
+    const columns = line.includes("\t")
+      ? line.split("\t").map((value) => value.trim()).filter(Boolean)
+      : line.split(/\s+/).map((value) => value.trim()).filter(Boolean);
+
+    const gene = columns[0];
+    if (!gene) {
+      continue;
+    }
+    if (!seen.has(gene)) {
+      seen.add(gene);
+      parsedGenes.push(gene);
+    }
+  }
+
+  if (parsedGenes.length === 0) {
+    throw new Error("The file is empty or has no valid gene names.");
+  }
+
+  return parsedGenes;
+}
+
+function handleRankedGenesFileSelect(event) {
+  const file = event.target.files?.[0];
+  const statusEl = document.getElementById("ranked-genes-file-status");
+
+  if (!file) {
+    clearRankedGenesFile();
+    return;
+  }
+
+  const lowerName = file.name.toLowerCase();
+  if (!(lowerName.endsWith(".tsv") || lowerName.endsWith(".txt"))) {
+    clearRankedGenesFile();
+    alert("Please upload a .tsv or .txt file for ranked genes.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const content = typeof reader.result === "string" ? reader.result : "";
+      parsedRankedGenes = parseRankedGenesFileContent(content);
+      if (statusEl) {
+        statusEl.style.color = "green";
+        statusEl.textContent = `${file.name}: ${parsedRankedGenes.length} ranked genes loaded.`;
+      }
+    } catch (error) {
+      clearRankedGenesFile();
+      alert(`Invalid ranked genes file: ${error.message}`);
+    }
+  };
+
+  reader.onerror = () => {
+    clearRankedGenesFile();
+    alert("Unable to read the ranked genes file.");
+  };
+
+  reader.readAsText(file);
+}
+
+function clearRankedGenesFile() {
+  const input = document.getElementById("id_ranked_genes_file");
+  const statusEl = document.getElementById("ranked-genes-file-status");
+  parsedRankedGenes = [];
+  if (input) {
+    input.value = "";
+  }
+  if (statusEl) {
+    statusEl.style.color = "gray";
+    statusEl.textContent = "";
+  }
+}
 function LoadInput() {
   const savedMode = localStorage.getItem("gene-input-mode") || "single-textarea";
   showGeneInputTab(savedMode);
@@ -775,8 +869,12 @@ function clearLocalStorageExceptSettings() {
 
 document.addEventListener("DOMContentLoaded", () => {
   const scoredGenesFileInput = document.getElementById("id_scored_genes_file");
+  const rankedGenesFileInput = document.getElementById("id_ranked_genes_file");
   if (scoredGenesFileInput) {
     scoredGenesFileInput.addEventListener("change", handleScoredGenesFileSelect);
+  }
+  if (rankedGenesFileInput) {
+    rankedGenesFileInput.addEventListener("change", handleRankedGenesFileSelect);
   }
 });
 
