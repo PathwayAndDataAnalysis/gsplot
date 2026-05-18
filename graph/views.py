@@ -32,7 +32,10 @@ from .dataReduction import (
     parse_scored_genes_raw,
     run_gseapy,
 )
-from .gene_set_utils import get_selected_gene_sets_with_relevant_members
+from .gene_set_utils import (
+    get_selected_gene_sets_with_relevant_members,
+    build_gene_universe_from_selected_gene_sets,
+)
 from django.shortcuts import render
 
 # Create views here.
@@ -369,9 +372,20 @@ def gene_input_view(request):
                     with open(file_path, 'r') as f:
                         gene_sets_data = json.load(f)
 
+                selected_gene_universe = build_gene_universe_from_selected_gene_sets(
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
+                sig_genes = [gene for gene in sig_genes if gene in selected_gene_universe]
+                insig_genes = [gene for gene in insig_genes if gene in selected_gene_universe]
                 genes = sig_genes + insig_genes
 
                 print("collecting selected genes w revelnt members")
+
+                if not genes:
+                    return JsonResponse({
+                        "error": "No input genes overlap with the selected gene set collection."
+                    }, status=400)
 
                 # Filter selected gene sets
                 filtered = get_selected_gene_sets_with_relevant_members(
@@ -618,6 +632,16 @@ def gene_input_view2(request):
                     file_path = os.path.join(os.path.dirname(__file__), 'static', 'resources', filename)
                     with open(file_path, 'r') as f:
                         gene_sets_data = json.load(f)
+
+                selected_gene_universe = build_gene_universe_from_selected_gene_sets(
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
+                ranked_genes = [gene for gene in ranked_genes if gene in selected_gene_universe]
+                if not ranked_genes:
+                    return JsonResponse({
+                        "error": "No input genes overlap with the selected gene set collection."
+                    }, status=400)
 
                 # Filter selected gene sets
                 filtered = get_selected_gene_sets_with_relevant_members(
@@ -881,6 +905,21 @@ def scored_genes_view(request):
                     with open(file_path, "r") as f:
                         gene_sets_data = json.load(f)
 
+                selected_gene_universe = build_gene_universe_from_selected_gene_sets(
+                    selected_gene_sets=selected_gene_sets,
+                    gene_sets_data=gene_sets_data,
+                )
+                scored_genes = [
+                    row for row in scored_genes
+                    if row.get("gene") in selected_gene_universe
+                ]
+                ranked_genes = [row["gene"] for row in scored_genes]
+                if not scored_genes:
+                    return JsonResponse({
+                        "error": "No input genes overlap with the selected gene set collection."
+                    }, status=400)
+                user_weights = build_weights_from_scored_genes(scored_genes)
+
                 print("collecting selected genes with relevant members for scored genes")
                 filtered = get_selected_gene_sets_with_relevant_members(
                     gene_list=ranked_genes,
@@ -1085,6 +1124,10 @@ def preview_threshold(request):
 
         mode = (data.get("mode") or "").lower()
         tail_mode = (data.get("tail_mode") or "positive").lower()
+        selected_gene_sets = data.get("selected_genes_sets", [])
+        min_members = int(data.get("minMembers", 5))
+        species = (data.get("species", "human") or "human").lower()
+        custom_data = data.get("custom_data")
 
         if tail_mode not in {"positive", "negative", "both"}:
             return JsonResponse({"error": f"Invalid tail_mode: {tail_mode}"}, status=400)
@@ -1095,16 +1138,53 @@ def preview_threshold(request):
         p_val = float(p_val) if p_val not in [None, ""] else None
         fdr = float(fdr) if fdr not in [None, ""] else None
 
+        if not selected_gene_sets:
+            return JsonResponse({"error": "Missing selected_genes_sets input"}, status=400)
+
+        if species == "custom":
+            if not custom_data:
+                return JsonResponse({"error": "Missing custom_data for custom species"}, status=400)
+            gene_sets_data = custom_data
+        else:
+            file_map = {
+                "human": "msigdb.v2025.1.Hs.json",
+                "mouse": "msigdb.v2025.1.Mm.json"
+            }
+            filename = file_map.get(species)
+            if not filename:
+                return JsonResponse({"error": "Invalid species"}, status=400)
+
+            file_path = os.path.join(os.path.dirname(__file__), "static", "resources", filename)
+            with open(file_path, "r") as f:
+                gene_sets_data = json.load(f)
+
+        selected_gene_universe = build_gene_universe_from_selected_gene_sets(
+            selected_gene_sets=selected_gene_sets,
+            gene_sets_data=gene_sets_data,
+        )
+
         # ---------- Ranked mode ----------
         if mode == "ranked":
             ranked_genes = data.get("ranked_genes", [])
             if not ranked_genes:
                 return JsonResponse({"error": "Missing ranked_genes input"}, status=400)
 
-            filtered = [
-                {"matched_genes": [g], "gene_set_name": f"Gene {i}"}
-                for i, g in enumerate(ranked_genes)
-            ]
+            ranked_genes = [g for g in ranked_genes if g in selected_gene_universe]
+            if not ranked_genes:
+                return JsonResponse({
+                    "error": "No input genes overlap with the selected gene set collection."
+                }, status=400)
+
+            filtered = get_selected_gene_sets_with_relevant_members(
+                gene_list=ranked_genes,
+                min_members_threshold=min_members,
+                selected_gene_sets=selected_gene_sets,
+                gene_sets_data=gene_sets_data,
+            )
+            if not filtered:
+                return JsonResponse({
+                    "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
+                }, status=400)
 
             gene_sets_with_p = calculate_pvals(
                 filtered,
@@ -1120,10 +1200,24 @@ def preview_threshold(request):
             if not (sig_genes or insig_genes):
                 return JsonResponse({"error": "Missing sig_genes / insig_genes input"}, status=400)
 
-            filtered = [{
-                "matched_genes": list(set(sig_genes + insig_genes)),
-                "gene_set_name": "combined"
-            }]
+            sig_genes = [g for g in sig_genes if g in selected_gene_universe]
+            insig_genes = [g for g in insig_genes if g in selected_gene_universe]
+            combined = sig_genes + insig_genes
+            if not combined:
+                return JsonResponse({
+                    "error": "No input genes overlap with the selected gene set collection."
+                }, status=400)
+
+            filtered = get_selected_gene_sets_with_relevant_members(
+                gene_list=combined,
+                min_members_threshold=min_members,
+                selected_gene_sets=selected_gene_sets,
+                gene_sets_data=gene_sets_data,
+            )
+            if not filtered:
+                return JsonResponse({
+                    "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
+                }, status=400)
 
             gene_sets_with_p = run_fishers_test(
                 filtered,
@@ -1142,10 +1236,26 @@ def preview_threshold(request):
             if not scored_genes:
                 return JsonResponse({"error": "No valid scored genes were found."}, status=400)
 
-            filtered = [
-                {"matched_genes": [row["gene"]], "gene_set_name": f"Gene {i}"}
-                for i, row in enumerate(scored_genes)
+            scored_genes = [
+                row for row in scored_genes
+                if row.get("gene") in selected_gene_universe
             ]
+            if not scored_genes:
+                return JsonResponse({
+                    "error": "No input genes overlap with the selected gene set collection."
+                }, status=400)
+
+            ranked_genes = [row["gene"] for row in scored_genes]
+            filtered = get_selected_gene_sets_with_relevant_members(
+                gene_list=ranked_genes,
+                min_members_threshold=min_members,
+                selected_gene_sets=selected_gene_sets,
+                gene_sets_data=gene_sets_data,
+            )
+            if not filtered:
+                return JsonResponse({
+                    "error": "No gene sets matched after filtering. Please select other categories or adjust your input."
+                }, status=400)
 
             gene_sets_with_p = run_gseapy(filtered, scored_genes, tail_mode=tail_mode)
 
