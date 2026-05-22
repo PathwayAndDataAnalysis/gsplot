@@ -978,8 +978,15 @@
         const labels = displayedData["clusterLabel"] || []; // already available from backend
         const xs = displayedData["X"] || [];
         const ys = displayedData["Y"] || [];
+        const directions = displayedData["direction"] || [];
 
-        // map clusterID -> {sumX, sumY, n, label}
+        const CLUSTER_LABEL_COLORS = {
+          positive: "#b24747", // muted red
+          negative: "#3f67b1", // muted blue
+          neutral: "#2f2f2f",
+        };
+
+        // map clusterID -> {sumX, sumY, n, label, pos, neg}
         const agg = {};
         for (let i = 0; i < clusterIDs.length; i++) {
           const cid = clusterIDs[i];
@@ -988,25 +995,43 @@
           const c = typeof cid === "string" ? parseInt(cid, 10) : cid;
           if (Number.isNaN(c)) continue;
 
-          if (!agg[c]) agg[c] = { sumX: 0, sumY: 0, n: 0, label: labels[i] ?? `Cluster ${c}` };
+          if (!agg[c]) agg[c] = {
+            sumX: 0,
+            sumY: 0,
+            n: 0,
+            label: labels[i] ?? `Cluster ${c}`,
+            pos: 0,
+            neg: 0,
+          };
           agg[c].sumX += Number(xs[i]);
           agg[c].sumY += Number(ys[i]);
           agg[c].n += 1;
+          if (directions[i] === "positive") agg[c].pos += 1;
+          if (directions[i] === "negative") agg[c].neg += 1;
         }
 
         const clusterIdsSorted = Object.keys(agg).map(Number).sort((a, b) => a - b);
-        const colorMap = buildClusterColorMap(clusterIdsSorted); // already have :contentReference[oaicite:2]{index=2}
 
         return clusterIdsSorted.map((cid) => {
           const c = agg[cid];
           const x = c.sumX / c.n;
           const y = c.sumY / c.n;
+          const dominantDirection =
+            c.pos > c.neg ? "positive" : (c.neg > c.pos ? "negative" : "neutral");
+          const labelText = String(c.label || `Cluster ${cid}`).trim();
           return {
             _kind: "cluster",
             x, y,
-            text: c.label || `Cluster ${cid}`,
+            text: labelText,
             showarrow: false,
-            font: { size: 14, color: "#111", family: "Arial Black, Arial, sans-serif" },
+            font: {
+              size: 14,
+              color: CLUSTER_LABEL_COLORS[dominantDirection],
+              family: "Arial Black, Arial, sans-serif"
+            },
+            align: "center",
+            xanchor: "center",
+            yanchor: "middle",
           };
         });
       }
