@@ -1457,6 +1457,7 @@
         let header = pad("Gene Set Name", 25) + "\t" +
           pad("P-Value", 15) + "\t" +
           pad("Q-Value", 15) + "\t" +
+          pad("Enrichment Direction", 22) + "\t" +
           pad("Set Size", 15) + "\t" +
           "Matched Genes\n";
 
@@ -1470,6 +1471,7 @@
             name: fullGraphData["setName"][i] ?? "N/A",
             p: fullGraphData["pValue"]?.[i] ?? Infinity,
             q: fullGraphData["qValue"]?.[i] ?? Infinity,
+            direction: fullGraphData["direction"]?.[i] ?? "neutral",
             size: fullGraphData["setSize"]?.[i] ?? "N/A",
             genes: fullGraphData["molecules"]?.[i]?.split(" ").join(",") ?? ""
           });
@@ -1482,6 +1484,7 @@
           content += pad(row.name, 25) + "\t" +
             pad(row.p.toExponential(2), 15) + "\t" +
             pad(row.q.toExponential(2), 15) + "\t" +
+            pad(row.direction, 22) + "\t" +
             pad(row.size, 15) + "\t" +
             row.genes + "\n"; // no padding for genes, allow overflow
         }
