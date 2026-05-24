@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gene Set Plot Help</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     {% load static %}
     <link
       rel="stylesheet"
@@ -202,6 +203,38 @@ CXCL10	-2.20</code></pre>
                 visible text directly on the graph.
               </li>
             </ul>
+
+            <h4>Mode bar icons quick guide</h4>
+            <div class="icon-legend-grid">
+              <div class="icon-legend-item">
+                <span class="icon-chip plotly-icon" data-icon="camera" aria-hidden="true"></span>
+                <div><b>Download</b><br />Save graph as PNG.</div>
+              </div>
+              <div class="icon-legend-item">
+                <span class="icon-chip plotly-icon" data-icon="zoom" aria-hidden="true"></span>
+                <div><b>Zoom</b><br />Drag a region to zoom in.</div>
+              </div>
+              <div class="icon-legend-item">
+                <span class="icon-chip plotly-icon" data-icon="pan" aria-hidden="true"></span>
+                <div><b>Pan</b><br />Move the view across the graph.</div>
+              </div>
+              <div class="icon-legend-item">
+                <span class="icon-chip plotly-icon" data-icon="boxSelect" aria-hidden="true"></span>
+                <div><b>Box Select</b><br />Select points in a rectangle.</div>
+              </div>
+              <div class="icon-legend-item">
+                <span class="icon-chip plotly-icon" data-icon="lasso" aria-hidden="true"></span>
+                <div><b>Lasso</b><br />Select points with a free-form loop.</div>
+              </div>
+              <div class="icon-legend-item">
+                <span class="icon-chip plotly-icon" data-icon="autoscale" aria-hidden="true"></span>
+                <div><b>Autoscale</b><br />Fit axes to visible data.</div>
+              </div>
+              <div class="icon-legend-item">
+                <span class="icon-chip plotly-icon" data-icon="reset" aria-hidden="true"></span>
+                <div><b>Reset</b><br />Restore the default plot view.</div>
+              </div>
+            </div>
           </div>
 
           <div id="selection" class="tabcontent">

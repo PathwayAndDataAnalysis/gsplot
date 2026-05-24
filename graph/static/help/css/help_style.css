@@ -153,6 +153,52 @@ pre {
   min-height: 288px;
 }
 
+.icon-legend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 12px 8px 16px;
+}
+
+.icon-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #9cc5e7;
+  border-radius: 5px;
+  background-color: #ffffff;
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.icon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  border-radius: 5px;
+  background-color: #e8f2f9;
+  color: #2f5f7c;
+  font-size: 18px;
+  font-weight: 700;
+  border: 1px solid #77a5c2;
+  padding: 0;
+  line-height: 1;
+  overflow: visible;
+}
+
+.icon-chip svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  margin: auto;
+  fill: #2f5f7c;
+  overflow: visible;
+}
+
 @keyframes fadeEffect {
   from {
     opacity: 0;
