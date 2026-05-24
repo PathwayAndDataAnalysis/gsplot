@@ -361,8 +361,8 @@ def gene_input_view(request):
                     gene_sets_data = custom_data
                 else:
                     file_map = {
-                        "human": "msigdb.v2025.1.Hs.json",
-                        "mouse": "msigdb.v2025.1.Mm.json"
+                        "human": "msigdb.v2026.1.Hs.json",
+                        "mouse": "msigdb.v2026.1.Mm.json"
                     }
                     filename = file_map.get(species)
                     if not filename:
@@ -622,8 +622,8 @@ def gene_input_view2(request):
                     gene_sets_data = custom_data
                 else:
                     file_map = {
-                        "human": "msigdb.v2025.1.Hs.json",
-                        "mouse": "msigdb.v2025.1.Mm.json"
+                        "human": "msigdb.v2026.1.Hs.json",
+                        "mouse": "msigdb.v2026.1.Mm.json"
                     }
                     filename = file_map.get(species)
                     if not filename:
@@ -894,8 +894,8 @@ def scored_genes_view(request):
                     gene_sets_data = custom_data
                 else:
                     file_map = {
-                        "human": "msigdb.v2025.1.Hs.json",
-                        "mouse": "msigdb.v2025.1.Mm.json"
+                        "human": "msigdb.v2026.1.Hs.json",
+                        "mouse": "msigdb.v2026.1.Mm.json"
                     }
                     filename = file_map.get(species)
                     if not filename:
@@ -1147,8 +1147,8 @@ def preview_threshold(request):
             gene_sets_data = custom_data
         else:
             file_map = {
-                "human": "msigdb.v2025.1.Hs.json",
-                "mouse": "msigdb.v2025.1.Mm.json"
+                "human": "msigdb.v2026.1.Hs.json",
+                "mouse": "msigdb.v2026.1.Mm.json"
             }
             filename = file_map.get(species)
             if not filename:
@@ -1301,8 +1301,8 @@ def serve_msigdb(request):
         species = request.GET.get("species", "human").lower()
 
         file_map = {
-            "human": "msigdb.v2025.1.Hs.json",
-            "mouse": "msigdb.v2025.1.Mm.json"
+            "human": "msigdb.v2026.1.Hs.json",
+            "mouse": "msigdb.v2026.1.Mm.json"
         }
         filename = file_map.get(species)
         if not filename:
