@@ -196,7 +196,14 @@ except Exception:
 def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
     # Prefer official typed exceptions from Google API core.
     if gapi_exceptions is not None:
-        if isinstance(exc, (gapi_exceptions.TooManyRequests, gapi_exceptions.ResourceExhausted)):
+        if isinstance(
+            exc,
+            (
+                gapi_exceptions.TooManyRequests,
+                gapi_exceptions.ResourceExhausted,
+                gapi_exceptions.ServiceUnavailable,
+            ),
+        ):
             return True
 
     # Fallback to structured status/code attributes when available.
@@ -209,10 +216,16 @@ def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
         # HTTP 429
         if code == 429 or str(code) == "429":
             return True
+        # HTTP 503 / temporary service unavailability
+        if code == 503 or str(code) == "503":
+            return True
         # gRPC RESOURCE_EXHAUSTED often surfaces as code 8
         if code == 8 or str(code) == "8":
             return True
-        if str(code).upper() in {"RESOURCE_EXHAUSTED", "TOO_MANY_REQUESTS"}:
+        # gRPC UNAVAILABLE often surfaces as code 14
+        if code == 14 or str(code) == "14":
+            return True
+        if str(code).upper() in {"RESOURCE_EXHAUSTED", "TOO_MANY_REQUESTS", "UNAVAILABLE"}:
             return True
 
     # Last-resort compatibility fallback based on message text.
@@ -221,8 +234,12 @@ def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
         "quota",
         "rate limit",
         "429",
+        "503",
         "resource_exhausted",
         "too many requests",
+        "unavailable",
+        "high demand",
+        "try again later",
     ]
     return any(m in msg for m in markers)
 
