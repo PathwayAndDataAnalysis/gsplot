@@ -272,8 +272,17 @@ CXCL10	-2.20</code></pre>
                 at the centers of detected clusters.
               </li>
               <li>
-                Point labels can be edited and moved on the graph. Cluster labels stay
-                tied to cluster mode and are regenerated when the graph is recomputed.
+                Drag the body of a cluster label box to move it around the plot. Drag
+                the bottom-right corner of the box to resize it horizontally; the label
+                text wraps automatically as the box gets narrower.
+              </li>
+              <li>
+                Cluster label positions and widths are saved for each cluster while you
+                work with the current graph. Labels remain tied to cluster mode and are
+                regenerated when the graph is recomputed.
+              </li>
+              <li>
+                Point labels can be edited and moved on the graph.
               </li>
             </ul>
           </div>
@@ -284,6 +293,10 @@ CXCL10	-2.20</code></pre>
               <li>
                 Use the camera icon in the Plotly mode bar to download the current graph
                 as a PNG image.
+              </li>
+              <li>
+                Cluster labels are interactive HTML overlays, so the Plotly camera export
+                may not include them in the downloaded image. To capture cluster labels in an image, use your operating system's screenshot tool instead of the Plotly download button.
               </li>
               <li>
                 Click <b>Download Result</b> below the graph to export
