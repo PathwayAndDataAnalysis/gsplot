@@ -24,6 +24,37 @@
         height: 100vh;
       }
 
+      #cluster-label-layer {
+        position: absolute;
+        pointer-events: none;
+        z-index: 20;
+        overflow: hidden;
+      }
+
+      .cluster-label-box {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid rgba(0, 0, 0, 0.18);
+        border-radius: 4px;
+        padding: 6px 10px;
+        width: 180px;
+        min-width: 80px;
+        max-width: 360px;
+        resize: horizontal;
+        overflow: hidden;
+        pointer-events: auto;
+
+        font-family: "Arial Black", Arial, sans-serif;
+        font-size: 14px;
+        line-height: 1.15;
+        text-align: center;
+
+        white-space: normal;
+        overflow-wrap: break-word;
+        box-sizing: border-box;
+      }
+
       #download-button-wrapper {
         position: fixed;
         bottom: 10px;
@@ -305,6 +336,7 @@
           layout.yaxis = camera.yaxis;
           Plotly.newPlot(myPlot, [trace], layout, config);
         }
+        resetClusterLabelPositionHandlers();
         let currentConfig = { ...config };
 
         myPlot.on("plotly_relayout", function (event) {
@@ -312,7 +344,11 @@
             const isPan = event.dragmode === "pan";
             currentConfig.scrollZoom = isPan;
 
-            Plotly.react(myPlot, myPlot.data, myPlot.layout, currentConfig);
+            Plotly.react(myPlot, myPlot.data, myPlot.layout, currentConfig).then(() => {
+              resetClusterLabelPositionHandlers();
+              bindClusterLabelPositionHandlers();
+              scheduleClusterLabelRender();
+            });
           }
         });
 
@@ -774,14 +810,25 @@
         clearSelected();
       }
 
-      // Resize window on browser size change
-      window.onresize = function () {
-        let update = {
+      function syncGraphLayoutToFrame() {
+        if (!myPlot || !myPlot._fullLayout) {
+          renderClusterLabelDOM();
+          return;
+        }
+
+        const update = {
           height: Math.max(window.innerHeight - 50, 300),
           width: Math.max(window.innerWidth - 50, 300),
         };
-        Plotly.relayout(myPlot, update);
-      };
+
+        Plotly.relayout(myPlot, update).then(() => {
+          scheduleClusterLabelRender();
+        });
+      }
+
+      // Resize window on browser size change
+      window.onresize = syncGraphLayoutToFrame;
+      window.syncGraphLayoutToFrame = syncGraphLayoutToFrame;
 
       // --- Cluster coloring helpers ---
       const CLUSTER_OPACITY = 0.55; // Slightly transparent so overlapped points are still visible
@@ -986,87 +1033,336 @@
         return trace;
       }
 
-      function buildClusterLabelAnnotations(displayedData, settings) {
+      const CLUSTER_LABEL_WIDTHS_KEY = "cluster-label-widths";
+      const CLUSTER_LABEL_OFFSETS_KEY = "cluster-label-offsets";
+      let latestClusterLabelData = null;
+      let latestClusterLabelSettings = null;
+      let clusterLabelFrameRequest = null;
+      let clusterLabelPlotlyHandlersBound = false;
+      let clusterLabelHandlerGeneration = 0;
+      let clusterLabelResizeObserver = null;
+
+      function getClusterLabelLayer() {
+        return document.getElementById("cluster-label-layer");
+      }
+
+      function getClusterLabelWidths() {
+        return getLocalStorage(CLUSTER_LABEL_WIDTHS_KEY) || {};
+      }
+
+      function saveClusterLabelWidth(clusterID, width) {
+        const numericWidth = Number(width);
+        if (!Number.isFinite(numericWidth)) return;
+
+        const widths = getClusterLabelWidths();
+        widths[clusterID] = Math.round(numericWidth);
+        setLocalStorage(CLUSTER_LABEL_WIDTHS_KEY, widths);
+      }
+
+      function getClusterLabelOffsets() {
+        return getLocalStorage(CLUSTER_LABEL_OFFSETS_KEY) || {};
+      }
+
+      function saveClusterLabelOffset(clusterID, offset) {
+        const dx = Number(offset?.dx);
+        const dy = Number(offset?.dy);
+        if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+
+        const offsets = getClusterLabelOffsets();
+        offsets[clusterID] = {
+          dx: Math.round(dx),
+          dy: Math.round(dy),
+        };
+        setLocalStorage(CLUSTER_LABEL_OFFSETS_KEY, offsets);
+      }
+
+      function isClusterLabelResizeHandle(event, element) {
+        const rect = element.getBoundingClientRect();
+        const handleSize = 18;
+        return (
+          event.clientX >= rect.right - handleSize &&
+          event.clientY >= rect.bottom - handleSize
+        );
+      }
+
+      function getPlotAreaBounds() {
+        if (!myPlot._fullLayout) return null;
+
+        const xAxis = myPlot._fullLayout.xaxis;
+        const yAxis = myPlot._fullLayout.yaxis;
+        const left = xAxis._offset;
+        const top = yAxis._offset;
+        const width = xAxis._length;
+        const height = yAxis._length;
+
+        if (![left, top, width, height].every(Number.isFinite)) {
+          return null;
+        }
+
+        return { left, top, width, height };
+      }
+
+      function dataToPixel(x, y) {
+        if (!myPlot._fullLayout) return null;
+
+        const xAxis = myPlot._fullLayout.xaxis;
+        const yAxis = myPlot._fullLayout.yaxis;
+        const xValue = Number(x);
+        const yValue = Number(y);
+
+        if (!Number.isFinite(xValue) || !Number.isFinite(yValue)) {
+          return null;
+        }
+
+        const left = (xAxis.d2p ? xAxis.d2p(xValue) : xAxis.l2p(xValue)) + xAxis._offset;
+        const top = (yAxis.d2p ? yAxis.d2p(yValue) : yAxis.l2p(yValue)) + yAxis._offset;
+
+        if (!Number.isFinite(left) || !Number.isFinite(top)) {
+          return null;
+        }
+
+        return { left, top };
+      }
+
+      function buildClusterLabelDOMData(displayedData) {
         const clusterIDs = displayedData["clusterID"] || [];
-        const labels = displayedData["clusterLabel"] || []; // already available from backend
+        const labels = displayedData["clusterLabel"] || [];
         const xs = displayedData["X"] || [];
         const ys = displayedData["Y"] || [];
         const directions = displayedData["direction"] || [];
 
-        const CLUSTER_LABEL_COLORS = {
-          positive: "#b24747", // muted red
-          negative: "#3f67b1", // muted blue
-          neutral: "#2f2f2f",
-        };
-
-        // map clusterID -> {sumX, sumY, n, label, pos, neg}
         const agg = {};
+
         for (let i = 0; i < clusterIDs.length; i++) {
           const cid = clusterIDs[i];
+
           if (cid === null || cid === undefined || cid === -1 || cid === "-1") continue;
 
           const c = typeof cid === "string" ? parseInt(cid, 10) : cid;
           if (Number.isNaN(c)) continue;
 
-          if (!agg[c]) agg[c] = {
-            sumX: 0,
-            sumY: 0,
-            n: 0,
-            label: labels[i] ?? `Cluster ${c}`,
-            pos: 0,
-            neg: 0,
-          };
-          agg[c].sumX += Number(xs[i]);
-          agg[c].sumY += Number(ys[i]);
+          if (!agg[c]) {
+            agg[c] = {
+              sumX: 0,
+              sumY: 0,
+              n: 0,
+              label: labels[i] ?? `Cluster ${c}`,
+              pos: 0,
+              neg: 0,
+            };
+          }
+
+          const x = Number(xs[i]);
+          const y = Number(ys[i]);
+
+          if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+
+          agg[c].sumX += x;
+          agg[c].sumY += y;
           agg[c].n += 1;
+
           if (directions[i] === "positive") agg[c].pos += 1;
           if (directions[i] === "negative") agg[c].neg += 1;
         }
 
-        const clusterIdsSorted = Object.keys(agg).map(Number).sort((a, b) => a - b);
+        return Object.keys(agg)
+          .map(Number)
+          .sort((a, b) => a - b)
+          .filter((cid) => agg[cid].n > 0)
+          .map((cid) => {
+            const c = agg[cid];
 
-        return clusterIdsSorted.map((cid) => {
-          const c = agg[cid];
-          const x = c.sumX / c.n;
-          const y = c.sumY / c.n;
-          const dominantDirection =
-            c.pos > c.neg ? "positive" : (c.neg > c.pos ? "negative" : "neutral");
-          const labelText = String(c.label || `Cluster ${cid}`).trim();
-          return {
-            _kind: "cluster",
-            x, y,
-            text: labelText,
-            showarrow: false,
-            font: {
-              size: 14,
-              color: CLUSTER_LABEL_COLORS[dominantDirection],
-              family: "Arial Black, Arial, sans-serif"
-            },
-            align: "center",
-            xanchor: "center",
-            yanchor: "middle",
-          };
+            const dominantDirection =
+              c.pos > c.neg ? "positive" : c.neg > c.pos ? "negative" : "neutral";
+
+            return {
+              cid,
+              x: c.sumX / c.n,
+              y: c.sumY / c.n,
+              text: String(c.label || `Cluster ${cid}`).trim(),
+              direction: dominantDirection,
+            };
+          });
+      }
+
+      function renderClusterLabelDOM() {
+        const layer = getClusterLabelLayer();
+        if (!layer) return;
+
+        layer.innerHTML = "";
+
+        if (!latestClusterLabelData || !latestClusterLabelSettings) {
+          return;
+        }
+
+        if (!latestClusterLabelSettings["cluster-mode"] || !myPlot._fullLayout) {
+          return;
+        }
+
+        const plotArea = getPlotAreaBounds();
+        if (!plotArea) return;
+
+        layer.style.left = `${plotArea.left}px`;
+        layer.style.top = `${plotArea.top}px`;
+        layer.style.width = `${plotArea.width}px`;
+        layer.style.height = `${plotArea.height}px`;
+
+        const labelColors = {
+          positive: "#b24747",
+          negative: "#3f67b1",
+          neutral: "#2f2f2f",
+        };
+
+        const labelWidths = getClusterLabelWidths();
+        const labelOffsets = getClusterLabelOffsets();
+
+        buildClusterLabelDOMData(latestClusterLabelData).forEach((label) => {
+          const pixel = dataToPixel(label.x, label.y);
+          if (!pixel) return;
+
+          const savedOffset = labelOffsets[label.cid] || {};
+          const offsetX = Number.isFinite(Number(savedOffset.dx)) ? Number(savedOffset.dx) : 0;
+          const offsetY = Number.isFinite(Number(savedOffset.dy)) ? Number(savedOffset.dy) : 0;
+          const baseLeft = pixel.left - plotArea.left;
+          const baseTop = pixel.top - plotArea.top;
+
+          const div = document.createElement("div");
+          div.className = "cluster-label-box";
+          div.dataset.clusterId = label.cid;
+          div.textContent = label.text;
+          div.style.left = `${baseLeft + offsetX}px`;
+          div.style.top = `${baseTop + offsetY}px`;
+          div.style.color = labelColors[label.direction] || labelColors.neutral;
+
+          const savedWidth = Number(labelWidths[label.cid]);
+          if (Number.isFinite(savedWidth)) {
+            div.style.width = `${savedWidth}px`;
+          }
+
+          div.addEventListener("pointerdown", (event) => {
+            event.stopPropagation();
+
+            if (!isClusterLabelResizeHandle(event, div)) {
+              event.preventDefault();
+
+              const startClientX = event.clientX;
+              const startClientY = event.clientY;
+              const startOffsetX = offsetX;
+              const startOffsetY = offsetY;
+
+              div.setPointerCapture(event.pointerId);
+              div.style.cursor = "grabbing";
+
+              const onPointerMove = (moveEvent) => {
+                const nextOffsetX = startOffsetX + moveEvent.clientX - startClientX;
+                const nextOffsetY = startOffsetY + moveEvent.clientY - startClientY;
+
+                div.style.left = `${baseLeft + nextOffsetX}px`;
+                div.style.top = `${baseTop + nextOffsetY}px`;
+              };
+
+              const onPointerUp = (upEvent) => {
+                const nextOffsetX = startOffsetX + upEvent.clientX - startClientX;
+                const nextOffsetY = startOffsetY + upEvent.clientY - startClientY;
+
+                div.style.cursor = "";
+                saveClusterLabelOffset(label.cid, {
+                  dx: nextOffsetX,
+                  dy: nextOffsetY,
+                });
+
+                div.removeEventListener("pointermove", onPointerMove);
+                div.removeEventListener("pointerup", onPointerUp);
+                div.removeEventListener("pointercancel", onPointerUp);
+              };
+
+              div.addEventListener("pointermove", onPointerMove);
+              div.addEventListener("pointerup", onPointerUp);
+              div.addEventListener("pointercancel", onPointerUp);
+              return;
+            }
+
+            const saveWidthOnRelease = () => {
+              saveClusterLabelWidth(label.cid, div.getBoundingClientRect().width);
+            };
+            document.addEventListener("pointerup", saveWidthOnRelease, { once: true });
+          });
+
+          div.addEventListener("pointerup", () => {
+            saveClusterLabelWidth(label.cid, div.getBoundingClientRect().width);
+          });
+
+          div.addEventListener("mouseup", () => {
+            saveClusterLabelWidth(label.cid, div.getBoundingClientRect().width);
+          });
+
+          layer.appendChild(div);
         });
       }
 
+      function scheduleClusterLabelRender() {
+        if (clusterLabelFrameRequest !== null) {
+          window.cancelAnimationFrame(clusterLabelFrameRequest);
+        }
+
+        clusterLabelFrameRequest = window.requestAnimationFrame(() => {
+          clusterLabelFrameRequest = null;
+          renderClusterLabelDOM();
+        });
+      }
+
+      function bindClusterLabelPositionHandlers() {
+        if (!clusterLabelPlotlyHandlersBound && myPlot.on) {
+          const handlerGeneration = clusterLabelHandlerGeneration;
+          const rerender = () => {
+            if (handlerGeneration !== clusterLabelHandlerGeneration) return;
+            scheduleClusterLabelRender();
+            window.setTimeout(scheduleClusterLabelRender, 0);
+            window.setTimeout(scheduleClusterLabelRender, 60);
+          };
+
+          myPlot.on("plotly_afterplot", rerender);
+          myPlot.on("plotly_relayout", rerender);
+          myPlot.on("plotly_relayouting", () => {
+            if (handlerGeneration !== clusterLabelHandlerGeneration) return;
+            scheduleClusterLabelRender();
+          });
+          clusterLabelPlotlyHandlersBound = true;
+        }
+
+        if (!clusterLabelResizeObserver && window.ResizeObserver) {
+          clusterLabelResizeObserver = new ResizeObserver(scheduleClusterLabelRender);
+          clusterLabelResizeObserver.observe(myPlot);
+        }
+      }
+
+      function resetClusterLabelPositionHandlers() {
+        clusterLabelHandlerGeneration += 1;
+        clusterLabelPlotlyHandlersBound = false;
+      }
+
       function applyClusterLabelsIfNeeded(displayedData, settings) {
-        const clusterMode = !!settings["cluster-mode"];
+        latestClusterLabelData = displayedData;
+        latestClusterLabelSettings = settings;
+        bindClusterLabelPositionHandlers();
+
         const existing = (myPlot.layout && Array.isArray(myPlot.layout.annotations))
           ? myPlot.layout.annotations
           : [];
 
-        // keep point labels (or anything not cluster)
-        const keep = existing.filter(a => a?._kind !== "cluster");
+        const pointAnnotations = existing.filter((annotation) => {
+          return annotation && annotation._kind === "point";
+        });
 
-        if (!clusterMode) {
-          Plotly.relayout(myPlot, { annotations: keep });
+        if (!settings["cluster-mode"]) {
+          Plotly.relayout(myPlot, { annotations: pointAnnotations });
+          renderClusterLabelDOM();
           return;
         }
 
-        const clusterAnn = buildClusterLabelAnnotations(displayedData, settings)
-          .map(a => ({ ...a, _kind: "cluster" }));
-
-        Plotly.relayout(myPlot, { annotations: keep.concat(clusterAnn) });
+        Plotly.relayout(myPlot, { annotations: pointAnnotations }).then(() => {
+          scheduleClusterLabelRender();
+        });
       }
 
       // Point selection code. Event contains refrence to the point selected along with marker data for point. Allowunselect is a bool
@@ -1541,6 +1837,7 @@
     <div id="download-button-wrapper" style="display: none;">
       <button onclick="downloadAnalysisResults()">Download Result</button>
     </div>
+    <div id="cluster-label-layer"></div>
   </div>
 </body>
 

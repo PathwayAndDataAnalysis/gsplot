@@ -249,6 +249,20 @@ settingsButton.addEventListener("click", function () {
   settingsContainer.classList.toggle("visible");
   graph.classList.toggle("settings-open");
   document.body.classList.toggle("settings-open", settingsContainer.classList.contains("visible"));
+
+  const syncGraphLayout = () => {
+    const frame = graph.contentWindow;
+    if (frame?.syncGraphLayoutToFrame) {
+      frame.syncGraphLayoutToFrame();
+    } else {
+      frame?.dispatchEvent(new Event("resize"));
+    }
+  };
+
+  window.requestAnimationFrame(syncGraphLayout);
+  setTimeout(syncGraphLayout, 100);
+  setTimeout(syncGraphLayout, 300);
+  setTimeout(syncGraphLayout, 550);
 });
 
 function convertToExpectedFormat(arrayOfObjects) {
