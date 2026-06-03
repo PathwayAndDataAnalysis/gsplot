@@ -1130,6 +1130,7 @@
         const xs = displayedData["X"] || [];
         const ys = displayedData["Y"] || [];
         const directions = displayedData["direction"] || [];
+        const qValues = displayedData["qValue"] || [];
 
         const agg = {};
 
@@ -1149,6 +1150,8 @@
               label: labels[i] ?? `Cluster ${c}`,
               pos: 0,
               neg: 0,
+              bestQValue: Infinity,
+              bestDirection: "neutral",
             };
           }
 
@@ -1163,6 +1166,17 @@
 
           if (directions[i] === "positive") agg[c].pos += 1;
           if (directions[i] === "negative") agg[c].neg += 1;
+
+          const direction = directions[i];
+          const qValue = Number(qValues[i]);
+          if (
+            (direction === "positive" || direction === "negative") &&
+            Number.isFinite(qValue) &&
+            qValue < agg[c].bestQValue
+          ) {
+            agg[c].bestQValue = qValue;
+            agg[c].bestDirection = direction;
+          }
         }
 
         return Object.keys(agg)
@@ -1173,7 +1187,7 @@
             const c = agg[cid];
 
             const dominantDirection =
-              c.pos > c.neg ? "positive" : c.neg > c.pos ? "negative" : "neutral";
+              c.pos > c.neg ? "positive" : c.neg > c.pos ? "negative" : c.bestDirection;
 
             return {
               cid,
@@ -1208,8 +1222,8 @@
         layer.style.height = `${plotArea.height}px`;
 
         const labelColors = {
-          positive: "#b24747",
-          negative: "#3f67b1",
+          positive: latestClusterLabelSettings["significant-color"] || "#b24747",
+          negative: latestClusterLabelSettings["negative-significant-color"] || "#3f67b1",
           neutral: "#2f2f2f",
         };
 
