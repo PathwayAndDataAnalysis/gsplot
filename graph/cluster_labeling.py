@@ -188,61 +188,6 @@ def _parse_cluster_mapping_json(raw_text: str) -> Dict[str, Any]:
 from google import genai
 from google.genai import types
 
-try:
-    from google.api_core import exceptions as gapi_exceptions
-except Exception:
-    gapi_exceptions = None
-
-def _is_quota_or_rate_limit_error(exc: Exception) -> bool:
-    # Prefer official typed exceptions from Google API core.
-    if gapi_exceptions is not None:
-        if isinstance(
-            exc,
-            (
-                gapi_exceptions.TooManyRequests,
-                gapi_exceptions.ResourceExhausted,
-                gapi_exceptions.ServiceUnavailable,
-            ),
-        ):
-            return True
-
-    # Fallback to structured status/code attributes when available.
-    status_candidates = [
-        getattr(exc, "status_code", None),
-        getattr(exc, "code", None),
-        getattr(getattr(exc, "response", None), "status_code", None),
-    ]
-    for code in status_candidates:
-        # HTTP 429
-        if code == 429 or str(code) == "429":
-            return True
-        # HTTP 503 / temporary service unavailability
-        if code == 503 or str(code) == "503":
-            return True
-        # gRPC RESOURCE_EXHAUSTED often surfaces as code 8
-        if code == 8 or str(code) == "8":
-            return True
-        # gRPC UNAVAILABLE often surfaces as code 14
-        if code == 14 or str(code) == "14":
-            return True
-        if str(code).upper() in {"RESOURCE_EXHAUSTED", "TOO_MANY_REQUESTS", "UNAVAILABLE"}:
-            return True
-
-    # Last-resort compatibility fallback based on message text.
-    msg = str(exc).lower()
-    markers = [
-        "quota",
-        "rate limit",
-        "429",
-        "503",
-        "resource_exhausted",
-        "too many requests",
-        "unavailable",
-        "high demand",
-        "try again later",
-    ]
-    return any(m in msg for m in markers)
-
 def label_clusters_with_llm(
     summaries: Dict[int, dict],
     cache_obj: Any = None,
@@ -301,8 +246,7 @@ def label_clusters_with_llm(
         model = model or os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
         temperature = os.getenv("LLM_TEMPERATURE")
         max_out = int(os.getenv("LLM_MAX_TOKENS", "12000"))
-        primary_key = os.getenv("GEMINI_API_KEY")
-        paid_key = os.getenv("GEMINI_PAID_API_KEY")
+        api_key = os.getenv("GEMINI_API_KEY")
 
         def _extract_text(resp) -> str:
             # 1) preferred
@@ -368,17 +312,10 @@ def label_clusters_with_llm(
                 print("[LLM DEBUG] repaired parsed type:", type(parsed_local))
                 return parsed_local
 
-        if not primary_key:
+        if not api_key:
             raise RuntimeError("GEMINI_API_KEY is not set")
 
-        try:
-            parsed = _generate_and_parse(genai.Client(api_key=primary_key))
-        except Exception as e:
-            if paid_key and paid_key != primary_key and _is_quota_or_rate_limit_error(e):
-                print("[LLM DEBUG] primary Gemini key hit quota/rate limit, retrying with paid key")
-                parsed = _generate_and_parse(genai.Client(api_key=paid_key))
-            else:
-                raise
+        parsed = _generate_and_parse(genai.Client(api_key=api_key))
 
         name_by_id: Dict[int, str] = {}
         for k, v in parsed.items():

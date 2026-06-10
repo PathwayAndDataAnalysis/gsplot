@@ -69,7 +69,7 @@ GSPlot requires a Django secret key. Create a local `.env` file in the project r
 DJANGO_SECRET_KEY=replace-with-a-strong-secret
 ```
 
-If optional cluster label generation is used, also configure the required API key environment variable according to the deployment setup.
+If optional cluster label generation is used, also configure the Gemini API key.
 
 Example:
 
