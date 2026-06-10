@@ -685,6 +685,54 @@ function clearScoredGenesFile() {
 
 function clearSingleGeneList() {
   document.getElementById('id_single_gene_list').value = '';
+  const statusEl = document.getElementById("ranked-example-status");
+  if (statusEl) {
+    statusEl.textContent = "";
+  }
+}
+
+async function loadRankedGenesExample(button) {
+  const textarea = document.getElementById("id_single_gene_list");
+  const statusEl = document.getElementById("ranked-example-status");
+  const exampleUrl = button?.dataset?.exampleUrl;
+
+  if (!textarea || !exampleUrl) {
+    alert("Unable to load the ranked genes example.");
+    return;
+  }
+
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Loading...";
+  if (statusEl) {
+    statusEl.style.color = "gray";
+    statusEl.textContent = "Loading example ranked gene list...";
+  }
+
+  try {
+    const response = await fetch(exampleUrl, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const exampleText = await response.text();
+    parseRankedGenesFileContent(exampleText);
+    textarea.value = exampleText.trim();
+    clearRankedGenesFile();
+
+    if (statusEl) {
+      statusEl.textContent = "";
+    }
+  } catch (error) {
+    if (statusEl) {
+      statusEl.style.color = "red";
+      statusEl.textContent = "Unable to load example ranked gene list.";
+    }
+    alert(`Unable to load example ranked gene list: ${error.message}`);
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
 }
 
 function parseRankedGenesFileContent(content) {
@@ -890,6 +938,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   if (rankedGenesFileInput) {
     rankedGenesFileInput.addEventListener("change", handleRankedGenesFileSelect);
+  }
+  const loadRankedExampleButton = document.getElementById("load-ranked-example-button");
+  if (loadRankedExampleButton) {
+    loadRankedExampleButton.addEventListener("click", () => loadRankedGenesExample(loadRankedExampleButton));
   }
 });
 

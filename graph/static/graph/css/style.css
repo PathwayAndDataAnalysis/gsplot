@@ -520,6 +520,25 @@ tbody th {
   background-color: #666;
 }
 
+.ranked-gene-textarea-actions {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.gene-input-column .ranked-gene-textarea-actions button {
+  position: static;
+  white-space: nowrap;
+}
+
+.gene-input-column .ranked-gene-textarea-actions button:disabled {
+  cursor: wait;
+  opacity: 0.75;
+}
+
 @media (max-width: 900px) {
   .gene-input-panel-header {
     flex-direction: column;

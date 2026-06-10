@@ -84,12 +84,28 @@
           </div>
         </div>
       </div>
+      <p class="gene-input-helper ranked-example-helper">
+        To try an example, click <b>Load Example</b>. <u>Recommended</u>: select the GO collections under C5 in the gene set tree,
+        then open settings with the gear button and set the FDR threshold to 0.05. You can also explore the available
+        options in the settings panel. See <a href="/help">Help</a> for more details.
+      </p>
       <label for="id_single_gene_list" style="font-weight: bold">Enter Gene List:</label><br />
       <div class="gene-input-column">
         <textarea id="id_single_gene_list" rows="10" cols="80"
           placeholder="Enter all genes, comma or newline separated."></textarea>
-        <button onclick="clearSingleGeneList()">Clear</button>
+        <div class="ranked-gene-textarea-actions">
+          <button type="button" onclick="clearSingleGeneList()">Clear</button>
+          <button
+            type="button"
+            id="load-ranked-example-button"
+            data-example-url="{% static 'resources/ground-sq-prot-S-W.txt' %}"
+            title="Loads an example ranked gene list. Recommended test: select the GO collections under C5, open settings with the gear button, and set the FDR threshold to 0.01 or another value you want to try. See Help for more details."
+          >
+            Load Example
+          </button>
+        </div>
       </div>
+      <div id="ranked-example-status" class="gene-input-status"></div>
       <div class="gene-input-column" style="margin-top: 12px;">
         <label for="id_ranked_genes_file" style="font-weight: bold;">Or Upload File:</label>
         <input id="id_ranked_genes_file" type="file" accept=".tsv,.txt" />
