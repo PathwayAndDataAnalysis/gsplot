@@ -1,6 +1,6 @@
 const defaultSettings = {
   "insignificant-color": "#CDCDCD",
-  "significant-color": "#000000",
+  "significant-color": "#b2182b",
   "negative-significant-color": "#2166ac",
   "selected-color": "#6bfc03",
   "fixed-size": true,
