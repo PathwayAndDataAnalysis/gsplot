@@ -70,24 +70,23 @@
           <span class="test-mode-label">Directional Hypotheses</span>
           <div class="test-mode-options">
             <label class="test-mode-option">
-              <input type="radio" name="test-mode-input" value="positive" checked />
+              <input type="radio" name="test-mode-input" value="both" checked />
+              <span>Two-Sided</span>
+            </label>
+            <label class="test-mode-option">
+              <input type="radio" name="test-mode-input" value="positive" />
               <span>Positive</span>
             </label>
             <label class="test-mode-option">
               <input type="radio" name="test-mode-input" value="negative" />
               <span>Negative</span>
             </label>
-            <label class="test-mode-option">
-              <input type="radio" name="test-mode-input" value="both" />
-              <span>Two-Sided</span>
-            </label>
           </div>
         </div>
       </div>
       <p class="gene-input-helper ranked-example-helper">
         To try an example, click <b>Load Example</b>. This loads a winter-versus-summer hibernating ground squirrel
-        platelet proteome ranked gene list. Recommended gene sets: Gene Ontology (MSigDB Human -> C5 -> GO).
-        You can also explore the available options in the settings panel. See <a href="/help">Help</a> for more details.
+        platelet proteome ranked gene list. Recommended gene sets: Gene Ontology (MSigDB Human -> C5 -> GO). You can open settings with the gear button to customize the parameters and explore the available options in the settings panel. See <a href="/help">Help</a> for more details.
       </p>
       <label for="id_single_gene_list" style="font-weight: bold">Enter Gene List:</label><br />
       <div class="gene-input-column">
@@ -151,16 +150,16 @@
           <span class="test-mode-label">Directional Hypotheses</span>
           <div class="test-mode-options">
             <label class="test-mode-option">
-              <input type="radio" name="test-mode-scored" value="positive" checked />
+              <input type="radio" name="test-mode-scored" value="both" checked />
+              <span>Two-Sided</span>
+            </label>
+            <label class="test-mode-option">
+              <input type="radio" name="test-mode-scored" value="positive" />
               <span>Positive</span>
             </label>
             <label class="test-mode-option">
               <input type="radio" name="test-mode-scored" value="negative" />
               <span>Negative</span>
-            </label>
-            <label class="test-mode-option">
-              <input type="radio" name="test-mode-scored" value="both" />
-              <span>Two-Sided</span>
             </label>
           </div>
         </div>

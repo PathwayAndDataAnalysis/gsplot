@@ -561,7 +561,7 @@ function initializeInputTestModes() {
   document.querySelectorAll(".test-mode-group").forEach((group) => {
     const modeKey = group.dataset.modeKey;
     const storageKey = `gene-test-mode-${modeKey}`;
-    const savedMode = localStorage.getItem(storageKey) || "positive";
+    const savedMode = localStorage.getItem(storageKey) || "both";
     const matchingInput = group.querySelector(`input[type="radio"][value="${savedMode}"]`);
     if (matchingInput) {
       matchingInput.checked = true;
@@ -582,9 +582,9 @@ function initializeInputTestModes() {
 function getInputTestMode(tabId) {
   const storageKey = inputTestModeStorageKeys[tabId];
   if (!storageKey) {
-    return "positive";
+    return "both";
   }
-  return localStorage.getItem(storageKey) || "positive";
+  return localStorage.getItem(storageKey) || "both";
 }
 
 function syncCurrentInputTestMode(tabId) {

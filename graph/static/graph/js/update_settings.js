@@ -225,13 +225,13 @@ function displayValues(settings) {
 function getCurrentDirectionalMode() {
   const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
   const testModeMap = {
-    "scored-genes": localStorage.getItem("gene-test-mode-scored") || "positive",
-    "single-textarea": localStorage.getItem("gene-test-mode-input") || "positive",
+    "scored-genes": localStorage.getItem("gene-test-mode-scored") || "both",
+    "single-textarea": localStorage.getItem("gene-test-mode-input") || "both",
   };
 
   return {
     inputMode,
-    testMode: testModeMap[inputMode] || "positive",
+    testMode: testModeMap[inputMode] || "both",
   };
 }
 

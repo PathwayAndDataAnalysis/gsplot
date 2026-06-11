@@ -468,7 +468,7 @@
       function getGeneData(settings) {
         return new Promise((resolve, reject) => {
           const rankedGenes = getInputValue("rankedGenes", "");
-          const tailMode = localStorage.getItem("gene-test-mode-input") || "positive";
+          const tailMode = localStorage.getItem("gene-test-mode-input") || "both";
           const selectedGeneSets = window.parent?.GSP?.selectedGeneSets || [];
           const minMembers = localStorage.getItem("minMembers")
           const pVal = localStorage.getItem("p-value")
@@ -698,7 +698,7 @@
         return new Promise((resolve, reject) => {
           const selectedGeneSets = window?.parent?.GSP?.selectedGeneSets || window?.GSP?.selectedGeneSets || [];
           const scoredGenesRaw = getInputValue("scoredGenesRaw", "");
-          const tailMode = localStorage.getItem("gene-test-mode-scored") || "positive";
+          const tailMode = localStorage.getItem("gene-test-mode-scored") || "both";
           const species = localStorage.getItem("species") || "human";
           const minMembers = parseInt(localStorage.getItem("minMembers") || "5", 10);
           const pThr = localStorage.getItem("p-value");
@@ -922,7 +922,7 @@
 
       function shouldUseDirectionalColors(data) {
         const inputMode = localStorage.getItem("gene-input-mode") || "scored-genes";
-        const tailMode = localStorage.getItem("gene-test-mode-current") || "positive";
+        const tailMode = localStorage.getItem("gene-test-mode-current") || "both";
         const displayModes = data["displayMode"] || [];
 
         return (
