@@ -85,9 +85,9 @@
         </div>
       </div>
       <p class="gene-input-helper ranked-example-helper">
-        To try an example, click <b>Load Example</b>. <u>Recommended</u>: select the GO collections under C5 in the gene set tree,
-        then open settings with the gear button and set the FDR threshold to 0.05. You can also explore the available
-        options in the settings panel. See <a href="/help">Help</a> for more details.
+        To try an example, click <b>Load Example</b>. This loads a winter-versus-summer hibernating ground squirrel
+        platelet proteome ranked gene list. Recommended gene sets: Gene Ontology (MSigDB Human -> C5 -> GO).
+        You can also explore the available options in the settings panel. See <a href="/help">Help</a> for more details.
       </p>
       <label for="id_single_gene_list" style="font-weight: bold">Enter Gene List:</label><br />
       <div class="gene-input-column">
@@ -99,7 +99,7 @@
             type="button"
             id="load-ranked-example-button"
             data-example-url="{% static 'resources/ground-sq-prot-S-W.txt' %}"
-            title="Loads an example ranked gene list. Recommended test: select the GO collections under C5, open settings with the gear button, and set the FDR threshold to 0.01 or another value you want to try. See Help for more details."
+            title="Loads an example ranked list of genes. Data source: doi.org/10.1152/physiolgenomics.00078.2021. Seasonal changes in hibernating ground squirrel platelet proteome are profiled. Current comparison is winter versus summer, genes are ranked by descending log-fold-change, and gene symbols are mapped to human based on homology."
           >
             Load Example
           </button>
