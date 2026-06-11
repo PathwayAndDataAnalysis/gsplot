@@ -355,12 +355,12 @@
       <div class="form-group">
         <h4>Choose Algorithm:</h4>
         <select class="form-control" id="algorithmSelect" onchange="toggleAlgorithmParams()">
-          <option value="umap">UMAP</option>
           <option value="tsne">t-SNE</option>
+          <option value="umap">UMAP</option>
           <option value="isomap">Isomap</option>
         </select>
       </div>
-      <div id="umapParams" class="param-group">
+      <div id="umapParams" class="param-group" style="display: none;">
         <h5>UMAP Settings</h5>
         <div class="form-group row">
           <label for="umapNNeighbors" class="col-sm-4 col-form-label">Number of Neighbors:</label>
@@ -382,7 +382,7 @@
           </div>
         </div>
       </div>
-      <div id="tsneParams" class="param-group" style="display: none;">
+      <div id="tsneParams" class="param-group">
         <h5>t-SNE Settings</h5>
         <div class="form-group row">
           <label for="tsnePerplexity" class="col-sm-4 col-form-label">Perplexity:</label>

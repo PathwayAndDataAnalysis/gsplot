@@ -199,11 +199,11 @@
       }
 
       function getAxisLabels(settings) {
-        const mode = settings?.mode || settings?.reduction?.mode || "umap";
-        let prefix = "UMAP";
+        const mode = settings?.mode || settings?.reduction?.mode || "tsne";
+        let prefix = "t-SNE";
 
-        if (mode === "tsne") {
-          prefix = "t-SNE";
+        if (mode === "umap") {
+          prefix = "UMAP";
         } else if (mode === "isomap") {
           prefix = "Isomap";
         }

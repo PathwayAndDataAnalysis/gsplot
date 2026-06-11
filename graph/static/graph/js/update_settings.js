@@ -107,12 +107,12 @@ function main() {
     // MERGE defaults so new keys (like cluster-mode) always exist
     const currentSettings = { ...defaultSettings, ...raw };
 
-    currentSettings.reduction = raw.reduction ?? defaultUmap;
+    currentSettings.reduction = raw.reduction ?? defaultTsne;
 
     localStorage.setItem("settings", JSON.stringify(currentSettings));
     displayValues(currentSettings);
   } else {
-    defaultSettings.reduction = defaultUmap;
+    defaultSettings.reduction = defaultTsne;
     localStorage.setItem("settings", JSON.stringify(defaultSettings));
     displayValues(defaultSettings);
   }
@@ -189,10 +189,10 @@ function displayValues(settings) {
   }
 
   // Restore reduction UI too
-  const reduction = settings.reduction || defaultUmap;
+  const reduction = settings.reduction || defaultTsne;
 
   if (algorithmSelect) {
-    algorithmSelect.value = reduction.mode || "umap";
+    algorithmSelect.value = reduction.mode || "tsne";
   }
 
   if (reduction.mode === "umap") {

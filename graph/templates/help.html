@@ -442,15 +442,15 @@ CXCL10	-2.20</code></pre>
           <div class="collapsible-content" id="reduction-collapse">
             <ul>
               <li>
-                <b>UMAP:</b> default layout method. Number of Neighbors controls local
+                <b>t-SNE:</b> default layout method. Perplexity
+                controls neighborhood scale, Early Exaggeration affects early cluster
+                separation, and Max Iterations controls optimization length.
+              </li>
+              <li>
+                <b>UMAP:</b> Number of Neighbors controls local
                 versus global structure, Minimum Distance controls how tightly points
                 can pack, and Random State sets reproducibility. A seed of 0 or blank
                 uses random initialization.
-              </li>
-              <li>
-                <b>t-SNE:</b> useful for local neighborhood structure. Perplexity
-                controls neighborhood scale, Early Exaggeration affects early cluster
-                separation, and Max Iterations controls optimization length.
               </li>
               <li>
                 <b>Isomap:</b> preserves graph geodesic structure. Number of Neighbors
