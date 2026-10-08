@@ -46,7 +46,7 @@
     </div>
   </div>
 
-  <div id="manual-gene-input" style="margin-top: 40px; padding: 20px; border: 1px solid #ccc; border-radius: 8px">
+  <div id="manual-gene-input">
     <h2>Gene Input</h2>
     <p class="gene-input-intro">
       Choose an input style. Scored and ranked inputs let you choose whether to run a positive test, negative test, or two-sided test.
@@ -177,9 +177,9 @@
   </div>
 
   <!--Human/Mouse/Upload Dataset Selection-->
-  <div id="species-selector" style="text-align: center; margin-top: 30px;">
+  <div id="species-selector">
     <label><strong>Select Gene Set Dataset:</strong></label>
-    <select id="species-select" onchange="handleSpeciesChange()" style="margin-left: 10px; padding: 5px;">
+    <select id="species-select" onchange="handleSpeciesChange()" style="margin-left: 10px;">
       <option value="human" selected>Human (MSigDB)</option>
       <option value="mouse">Mouse (MSigDB)</option>
       <option value="custom">Upload your own</option>
@@ -193,7 +193,7 @@
 
   <!-- Collection selection sections -->
   <div id="tree-container">
-    <h3 style="text-align: center;">Select Gene Set Collection(s):</h3>
+    <h3>Select Gene Set Collection(s):</h3>
     <div style="text-align: left; margin-top: 20px;">
       <label for="min-member-input" style="font-weight: normal; margin-right: 10px;">
         Enter the minimum relevant members for each gene set:
@@ -465,7 +465,7 @@
               auto-filled.</span>
           </span>
         </label>
-        <div style="display: flex; gap: 20px; margin-top: 5px;">
+        <div class="threshold-type-options">
           <label><input type="radio" name="threshold-type" value="fdr" checked> Use FDR</label>
           <label><input type="radio" name="threshold-type" value="pvalue"> Use P-Value</label>
         </div>
@@ -510,7 +510,7 @@
 
   <div id="submit-section-wrapper" style="padding-bottom: 5px;">
     <div style="display: flex; justify-content: center; margin: 20px 0 60px 0;">
-      <button id="submit-gene-button" style="padding: 10px 20px; font-size: 16px;">
+      <button id="submit-gene-button">
         Submit
       </button>
     </div>

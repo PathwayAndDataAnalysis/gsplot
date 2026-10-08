@@ -1,96 +1,43 @@
-html {
-  margin: 0;
-  padding: 0;
-  height: 100svh;
-  background-color: rgb(235, 235, 235);
-  font-family: Arial, sans-serif;
-  overflow-x: hidden;
+/* Shared visual theme. Visibility and interaction rules remain below. */
+:root {
+  --page: #f2f5f3;
+  --surface: #ffffff;
+  --ink: #172f3d;
+  --muted: #405952;
+  --line: #cbd8d2;
+  --accent: #23664b;
+  --accent-dark: #164b35;
+  --accent-soft: #eaf3ed;
+  --shadow: 0 3px 12px rgba(25, 52, 42, .04);
+  --gutter: clamp(16px, 3vw, 48px);
 }
-
-.no-click {
-  pointer-events: none;
-}
-
-/* Styling for nav bar and buttons */
-.nav-bar {
-  margin-left: 50px;
-  margin-right: 50px;
-  margin-top: 15px;
-  background-color: #9cc5e7;
-  color: #fff;
-  padding-top: 15px;
-  padding-bottom: 15px;
-  display: flex;
-  justify-content: space-between;
-  height: 50px;
-  border-radius: 100px;
-  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
-}
-
-.header-container {
-  margin-left: 50px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-}
-
-.header-container h1 {
-  margin: 0px;
-  color: black;
-}
-
-.nav-bar a {
-  text-decoration: none;
-}
-.nav-links {
-  margin-right: 50px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 100%;
-  column-gap: 20px;
-}
-
-.nav-button {
-  position: relative;
-  text-align: center;
-  padding: 10px;
-  border-radius: 15px;
-  border: 0px;
-  font-size: large;
-  color: black;
-}
-
-.nav-button,
-.settings-button {
-  cursor: pointer;
-}
-
-.nav-button::after,
-.settings-button::after {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  bottom: 0;
-  left: 0;
-  background-color: black;
-  transform: scaleX(0);
-  transition: transform 0.5s ease;
-}
-
-.nav-button:hover::after,
-.settings-button:hover::after {
-  transform: scaleX(0.75);
-}
-
-.settings-button {
-  position: relative;
-  height: 40px;
-  border-radius: 15px;
-}
-
+html { margin: 0; padding: 0; min-height: 100svh; background: var(--page); font-family: "Segoe UI", system-ui, sans-serif; overflow-x: hidden; color: var(--ink); }
+body { margin: 0; font-size: 17px; line-height: 1.65; }
+h1, h2, h3, h4, h5 { line-height: 1.25; letter-spacing: -.015em; }
+h2 { font-size: clamp(30px, 2.5vw, 38px); }
+h3 { font-size: 24px; }
+.no-click { pointer-events: none; }
+a { color: var(--accent); text-underline-offset: 3px; }
+.nav-bar { margin: 20px var(--gutter) 0; padding: 18px 24px; background: #c1d5dc; color: var(--ink); display: flex; align-items: center; justify-content: space-between; gap: 20px; border-radius: 8px; box-shadow: 0 8px 24px rgba(20,46,66,.12); }
+.header-container { display: flex; align-items: center; }
+.header-container h1 { margin: 0; color: #244c59; font-size: 30px; font-weight: 700; letter-spacing: -.02em; }
+.nav-bar a { text-decoration: none; }
+.nav-links { display: flex; align-items: center; gap: 8px; }
+.nav-button { padding: 9px 15px; border-radius: 9px; font-size: 16px; font-weight: 600; color: #294f5a; text-align: center; cursor: pointer; transition: background .18s, color .18s; }
+.nav-button:hover { background: #aec9d1; color: #163e49; }
+.settings-button { position: relative; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 9px; cursor: pointer; }
+.settings-button:hover { background: #aec9d1; }
+.settings-button svg { width: 24px; height: 24px; fill: #294f5a; }
+button, input, select, textarea { font: inherit; }
+button { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); padding: 9px 14px; font-weight: 600; cursor: pointer; transition: background .18s, border-color .18s, box-shadow .18s; }
+button:hover { background: var(--accent-soft); border-color: #8ebfbe; }
+button:disabled { opacity: .55; cursor: not-allowed; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]), select, textarea { border: 1px solid #cddbe4; border-radius: 8px; padding: 9px 12px; background: #fff; color: var(--ink); box-sizing: border-box; }
+input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); }
+input[type="file"] { max-width: 100%; color: var(--muted); font-size: 15px; }
+input[type="file"]::file-selector-button { padding: 9px 14px; margin-right: 12px; background: #edf4f7; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font: inherit; font-weight: 600; }
+:focus-visible { outline: 3px solid #7ca58c; outline-offset: 3px; }
+textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(8,127,140,.09); }
 /* STYLING FOR MAIN PAGE - order of styling roughly follows how content is displayed top to bottom, left to right*/
 /* Upload overlay */
 #upload-container {
@@ -324,17 +271,17 @@ table {
 th,
 td {
   padding: 8px;
-  border: 1px solid #000000;
+  border: 1px solid var(--line);
 }
 
 thead {
   word-break: break-all;
-  background-color: #77a5c2;
+  background-color: var(--accent);
   text-align: center;
 }
 
 tbody th {
-  background-color: #77a5c2;
+  background-color: var(--accent);
   text-align: center;
   vertical-align: top;
   width: 10%;
@@ -402,17 +349,21 @@ tbody th {
 }
 
 .test-mode-group {
-  min-width: 250px;
-  padding: 14px 16px;
+  width: 342px;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  padding: 16px;
   border: 1px solid #d7e3ef;
-  border-radius: 12px;
+  border-radius: 6px;
   background: linear-gradient(180deg, #f8fbfe 0%, #eef5fb 100%);
 }
 
 .test-mode-label {
   display: block;
   margin-bottom: 10px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -420,15 +371,18 @@ tbody th {
 }
 
 .test-mode-options {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  align-items: stretch;
 }
 
 .test-mode-option {
   position: relative;
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  margin: 0;
 }
 
 .test-mode-option input[type="radio"] {
@@ -447,17 +401,17 @@ tbody th {
   border-radius: 999px;
   background-color: #ffffff;
   color: #466077;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .test-mode-option input[type="radio"]:checked + span {
-  background-color: #77a5c2;
+  background-color: var(--accent);
   color: #ffffff;
-  border-color: #77a5c2;
-  box-shadow: 0 8px 18px rgba(119, 165, 194, 0.28);
+  border-color: var(--accent);
+  box-shadow: 0 3px 8px rgba(8, 127, 140, .15);
 }
 
 .gene-input-helper {
@@ -510,7 +464,7 @@ tbody th {
   color: white;
   border: none;
   padding: 5px 10px;
-  font-size: 12px;
+  font-size: 14px;
   border-radius: 4px;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -639,7 +593,7 @@ tbody th {
 }
 
 .toggle-switch input:checked + .toggle-slider {
-  background-color: #2196F3;
+  background-color: var(--accent);
 }
 
 .toggle-switch input:checked + .toggle-slider:before {
@@ -700,20 +654,122 @@ tbody th {
 }
 .collection-picker { margin: 24px 0; color: #243449; }
 .collection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
-.collection-toolbar p { margin: 0; color: #64748b; font-size: 14px; }
+.collection-toolbar p { margin: 0; color: #465e68; font-size: 16px; }
 .collection-actions { display: flex; gap: 8px; }
-.collection-actions button { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
-.collection-actions button:hover { background: #eef5fc; border-color: #4a90e2; }
+.collection-actions button { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 15px; }
+.collection-actions button:hover { background: var(--accent-soft); border-color: var(--accent); }
 .collection-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
-.collection-section { border: 1px solid #dce4ee; border-radius: 12px; overflow: hidden; background: #fff; }
+.collection-section { border: 1px solid #dce4ee; border-radius: 6px; overflow: hidden; background: #fff; }
 .collection-heading, .collection-option { display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 0; min-height: 48px; box-sizing: border-box; padding: 12px 16px; }
-.collection-heading { background: #f1f5fa; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
-.collection-option { padding-left: calc(16px + var(--collection-depth, 0) * 16px); border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+.collection-heading { background: #f0f6f8; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
+.collection-option { padding-left: calc(16px + var(--collection-depth, 0) * 16px); border-bottom: 1px solid #f1f5f9; font-size: 16px; }
 .collection-option:last-child { border-bottom: 0; }
 .collection-option:hover { background: #f8fafc; }
-.collection-heading.is-selected, .collection-option.is-selected { background: #edf5ff; }
-.collection-picker input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex-shrink: 0; accent-color: #3478ca; cursor: pointer; }
+.collection-heading.is-selected, .collection-option.is-selected { background: var(--accent-soft); }
+.collection-picker input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex-shrink: 0; accent-color: var(--accent); cursor: pointer; }
 .collection-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.collection-count { font-size: 12px; font-weight: 400; color: #64748b; white-space: nowrap; }
-.collection-status { margin-top: 16px; padding: 14px 16px; border-radius: 8px; background: #f1f5fa; font-size: 14px; line-height: 1.6; max-height: 120px; overflow-y: auto; }
-.collection-picker :focus-visible { outline: 3px solid #4a90e2; outline-offset: 3px; }
+.collection-count { font-size: 14px; font-weight: 400; color: #465e68; white-space: nowrap; }
+.collection-status { margin-top: 16px; padding: 14px 16px; border-radius: 8px; background: var(--accent-soft); font-size: 16px; line-height: 1.6; max-height: 120px; overflow-y: auto; }
+.collection-picker :focus-visible { outline: 3px solid #7ca58c; outline-offset: 3px; }
+
+/* Page surfaces and controls */
+#manual-gene-input { margin: 32px var(--gutter) 0; padding: clamp(20px, 2.5vw, 32px); border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); }
+#manual-gene-input > h2 { margin: 0 0 10px; }
+.gene-input-intro { color: var(--muted); margin-bottom: 24px; }
+.gene-input-tabs { gap: 4px; padding: 5px; width: fit-content; border: 1px solid #e3ebf0; border-radius: 6px; background: #f1f5f8; }
+.gene-input-tab-button { border: 0; border-radius: 8px; padding: 10px 18px; color: var(--muted); font-size: 16px; font-weight: 600; }
+.gene-input-tab-button:hover { background: #e7eef2; }
+.gene-input-tab-button.active { border: 0; color: #fff; background: var(--accent); box-shadow: none; }
+.gene-input-content { padding: 24px; border-color: var(--line); border-radius: 6px; }
+.gene-input-panel-header p, .gene-input-helper, .gene-input-status { color: var(--muted); font-size: 15px; line-height: 1.7; }
+.test-mode-group { background: #e6eeeb; border-color: #b8cdc2; }
+.test-mode-option span { border-radius: 6px; min-width: 0; width: 100%; min-height: 46px; box-sizing: border-box; padding: 10px 6px; font-size: 14px; line-height: 1.4; text-align: center; overflow-wrap: anywhere; }
+.test-mode-option input:focus-visible + span { outline: 3px solid #7ca58c; outline-offset: 3px; }
+.gene-input-column textarea { border-radius: 10px; background: #fbfdfe; padding: 14px; font-family: ui-monospace, Consolas, monospace; font-size: 16px; line-height: 1.7; }
+.gene-input-column button { background: #edf3f6; color: #415d70; border: 1px solid #dce6ed; border-radius: 6px; }
+.gene-input-column button:hover { background: #dcebee; color: var(--accent-dark); }
+#species-selector { margin: 28px var(--gutter) 0; padding: 20px 24px; border: 1px solid var(--line); border-radius: 8px; background: #fff; text-align: left; box-shadow: var(--shadow); }
+#species-select { min-width: 210px; }
+#tree-container { padding: 0 var(--gutter); }
+#tree-container > h3 { text-align: left; font-size: 30px; margin-bottom: 10px; padding-bottom: 16px; border-bottom: 2px solid var(--ink); }
+.collection-section { border-color: var(--line); border-radius: 8px; box-shadow: 0 3px 12px rgba(25,52,72,.03); }
+.collection-heading { min-height: 64px; padding: 16px 20px; font-size: 20px; background: #cbdce1; color: #244c59; border-left: 5px solid #4d9472; }
+.collection-option { min-height: 50px; padding-left: calc(20px + var(--collection-depth, 0) * 18px); padding-right: 20px; }
+.collection-count { padding: 3px 9px; background: #e7eef2; border-radius: 6px; font-size: 14px; }
+.collection-status { border: 1px solid #cce5e4; color: var(--accent-dark); }
+.settings-container { border-color: var(--line); border-radius: 8px; box-shadow: 0 12px 36px rgba(24,45,64,.1); font-size: 15px; }
+.settings-container h4 { border-top: 1px solid #edf2f5; padding-top: 16px; margin-top: 20px; color: #234459; }
+.settings-container .option { padding: 7px 0; text-wrap: wrap; align-items: center; }
+.settings-container input[type="numeric"] { width: 64px; }
+.settings-container select { max-width: 150px; padding: 6px; font-size: 14px; }
+.settings-container .button-container { gap: 6px; flex-wrap: wrap; }
+.settings-container button { padding: 8px 10px; font-size: 14px; }
+.param-group { border-color: var(--line); border-radius: 10px; background: #f8fbfc; }
+#submit-section-wrapper { padding: 12px var(--gutter) 24px; }
+#submit-gene-button, .settings-container button[onclick="updateSettings()"] { background: var(--accent); color: #fff; border-color: var(--accent); border-radius: 10px; box-shadow: 0 4px 12px rgba(8,127,140,.16); }
+#submit-gene-button { min-height: 48px; padding: 12px 28px; }
+#submit-gene-button:hover, .settings-container button[onclick="updateSettings()"]:hover { background: var(--accent-dark); }
+#welcome-message { background: transparent; color: var(--ink); }
+#welcome-message h3 { color: var(--muted); font-size: 16px; font-weight: 400; }
+#graph { border-radius: 8px; background: white; }
+#selected-points-container p { border: 1px solid var(--line); border-radius: 6px; box-shadow: var(--shadow); }
+thead, tbody th { background: #edf4f6; color: #284c61; }
+.spinner-overlay { background: rgba(20,46,66,.35); backdrop-filter: blur(3px); }
+.spinner { border-width: 5px; border-top-color: var(--accent); width: 46px; height: 46px; }
+@media (max-width: 700px) {
+  .nav-bar { padding: 16px; gap: 12px; flex-wrap: wrap; }
+  .header-container h1 { font-size: 26px; }
+  .nav-links { gap: 2px; }
+  .nav-button { padding: 8px 10px; font-size: 15px; }
+  .gene-input-content { padding: 16px; }
+  .gene-input-column { min-width: 0; flex-basis: 100%; }
+  .gene-input-tabs { width: auto; }
+  .gene-input-tab-button { padding: 9px 12px; }
+  #species-select { display: block; margin: 10px 0 0 !important; width: 100%; }
+  .collection-toolbar { align-items: flex-start; }
+  .collection-heading, .collection-option { gap: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-button, button, .gene-input-tab-button, .test-mode-option span { transition: none; }
+}
+
+/* Scientific typography and stronger section hierarchy */
+.header-container h1, #manual-gene-input > h2, #tree-container > h3, #welcome-message h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 700;
+}
+.nav-bar { border-bottom: 4px solid #4d9472; box-shadow: none; }
+#manual-gene-input { border-top: 4px solid var(--accent); }
+#manual-gene-input > h2 { padding-bottom: 12px; }
+.gene-input-panel-header h3 { font-size: 24px; color: var(--ink); }
+.gene-input-intro { font-size: 17px; max-width: 1000px; }
+.gene-input-panel-header p, .gene-input-helper { font-size: 16px; }
+.gene-input-tabs { border-radius: 6px; }
+.gene-input-tab-button { border-radius: 4px; padding: 12px 20px; }
+.gene-input-column label { font-size: 17px; }
+#id_single_gene_list, #id_significant_genes, #id_insignificant_genes { padding-top: 48px; }
+#species-selector { border-left: 4px solid var(--accent); }
+#species-selector > label { font-size: 18px; }
+.collection-grid { gap: 24px; }
+.collection-heading.is-selected { background: #c6decc; color: #204e35; }
+.collection-heading .collection-count { background: #fff; color: #385b64; font-size: 15px; }
+.collection-option { font-size: 17px; min-height: 54px; border-bottom-color: #e2e9e4; }
+.collection-option .collection-name { font-weight: 600; color: #243d37; }
+.collection-option.is-selected { box-shadow: inset 4px 0 0 var(--accent); }
+.collection-picker input[type="checkbox"] { width: 21px; height: 21px; }
+.collection-status { font-size: 16px; border-color: #b9d3c2; border-left: 4px solid var(--accent); }
+.collection-toolbar p { font-size: 16px; color: var(--muted); }
+#submit-gene-button { font-size: 18px; min-width: 180px; border-radius: 6px; }
+.settings-container h4 { font-size: 17px; }
+.settings-container .graph-settings-header h3, .settings-container .umap-settings-header h3 { font-size: 22px; }
+@media (max-width: 700px) {
+  #tree-container > h3 { font-size: 27px; }
+  .collection-heading { font-size: 19px; }
+  .test-mode-group { min-width: 0; }
+  .gene-input-tab-button { padding: 10px 14px; }
+}
+
+/* Align each threshold choice with its value field. */
+.threshold-type-options { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
+.threshold-type-options label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.threshold-type-options input { margin: 0; flex-shrink: 0; }
