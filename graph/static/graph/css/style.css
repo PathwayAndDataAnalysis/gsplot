@@ -688,3 +688,32 @@ tbody th {
   opacity: 0.6;
   pointer-events: none;
 }
+
+/* Collection checkbox sections */
+#tree-container {
+  margin: 40px 0;
+  padding: 0 clamp(16px, 3vw, 48px);
+  max-width: none;
+  width: auto;
+  box-sizing: border-box;
+  border: 0;
+}
+.collection-picker { margin: 24px 0; color: #243449; }
+.collection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+.collection-toolbar p { margin: 0; color: #64748b; font-size: 14px; }
+.collection-actions { display: flex; gap: 8px; }
+.collection-actions button { border: 1px solid #cbd5e1; background: #fff; color: #334155; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+.collection-actions button:hover { background: #eef5fc; border-color: #4a90e2; }
+.collection-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+.collection-section { border: 1px solid #dce4ee; border-radius: 12px; overflow: hidden; background: #fff; }
+.collection-heading, .collection-option { display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 0; min-height: 48px; box-sizing: border-box; padding: 12px 16px; }
+.collection-heading { background: #f1f5fa; font-weight: 700; border-bottom: 1px solid #e2e8f0; }
+.collection-option { padding-left: calc(16px + var(--collection-depth, 0) * 16px); border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+.collection-option:last-child { border-bottom: 0; }
+.collection-option:hover { background: #f8fafc; }
+.collection-heading.is-selected, .collection-option.is-selected { background: #edf5ff; }
+.collection-picker input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex-shrink: 0; accent-color: #3478ca; cursor: pointer; }
+.collection-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.collection-count { font-size: 12px; font-weight: 400; color: #64748b; white-space: nowrap; }
+.collection-status { margin-top: 16px; padding: 14px 16px; border-radius: 8px; background: #f1f5fa; font-size: 14px; line-height: 1.6; max-height: 120px; overflow-y: auto; }
+.collection-picker :focus-visible { outline: 3px solid #4a90e2; outline-offset: 3px; }
