@@ -33,69 +33,196 @@ Important project files and folders include:
 - `requirements.txt`: pinned Python dependencies.
 - `.gitignore`: ignored local files, environment files, and sensitive files.
 
+
+
 ## Installation
 
-### 1. Clone the repository
+### Prerequisites (Ubuntu/Debian)
+GSPlot relies on scientific libraries like NumPy and SciPy[cite: 1]. To ensure these packages compile correctly from source, install the required system-level C and Fortran development headers before creating your virtual environment:
+
+```bash
+sudo apt-get update
+sudo apt-get install build-essential pkg-config python3-dev gfortran libopenblas-dev liblapack-dev
+
+```
+
+### Base Setup
+
+Follow these steps to download the code and set up the Python environment.
+
+**1. Clone the repository**
 
 ```bash
 git clone https://github.com/PathwayAndDataAnalysis/gsplot.git
 cd gsplot
+
 ```
 
-### 2. Create and activate a virtual environment
+**2. Create and activate a virtual environment**
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+
 ```
 
-On Windows, use:
+(On Windows, use: `.venv\Scripts\activate`)
+
+**3. Install dependencies**
+Upgrade your core build tools first to prevent metadata generation errors, then install the pinned project requirements:
 
 ```bash
-.venv\Scripts\activate
-```
-
-### 3. Install dependencies
-
-```bash
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
+
 ```
 
-### 4. Configure environment variables
-
+**4. Configure environment variables**
 GSPlot requires a Django secret key. Create a local `.env` file in the project root:
 
 ```bash
 DJANGO_SECRET_KEY=replace-with-a-strong-secret
+
 ```
 
-If optional cluster label generation is used, also configure the Gemini API key.
-
-Example:
+If optional cluster label generation is used, also configure the Gemini API key:
 
 ```bash
 GEMINI_API_KEY=replace-with-your-api-key
+
 ```
 
-Do not commit `.env` files, API keys, tokens, or secret keys to the repository.
+Note: Do not commit `.env` files, API keys, tokens, or secret keys to the repository.
 
-### 5. Run database migrations
+**5. Run database migrations**
 
 ```bash
 python manage.py migrate
+
 ```
 
-### 6. Start the development server
+---
+
+### Development Environment
+
+For local development and testing, use Django's built-in development server.
+
+**1. Start the server**
 
 ```bash
 python manage.py runserver
+
 ```
 
+**2. Access the application**
 Open the local development site at:
 
 ```text
 http://127.0.0.1:8000
+
 ```
+
+---
+
+### Production Environment (Ubuntu + Gunicorn + Nginx)
+
+For a live deployment, do not use the development server. Use a production-grade WSGI server (Gunicorn) and a reverse proxy (Nginx) to handle traffic and serve static files securely.
+
+**1. Collect static files**
+Gather all static assets into a single directory for Nginx to serve:
+
+```bash
+python manage.py collectstatic
+
+```
+
+**2. Install Gunicorn**
+
+```bash
+pip install gunicorn
+
+```
+
+**3. Create a Gunicorn systemd service**
+Ensure Gunicorn runs in the background by creating a service file:
+
+```bash
+sudo nano /etc/systemd/system/gsplot.service
+
+```
+
+Paste the following configuration (replace `/path/to/gsplot` and `YOUR_LINUX_USERNAME` with your actual server details):
+
+```ini
+[Unit]
+Description=Gunicorn daemon for GSPlot
+After=network.target
+
+[Service]
+User=YOUR_LINUX_USERNAME
+Group=www-data
+WorkingDirectory=/path/to/gsplot
+ExecStart=/path/to/gsplot/.venv/bin/gunicorn --access-logfile - --workers 3 --bind 127.0.0.1:8000 gsplot.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
+
+```
+
+Start and enable the service to run on boot:
+
+```bash
+sudo systemctl start gsplot
+sudo systemctl enable gsplot
+
+```
+
+**4. Configure Nginx as a reverse proxy**
+Install Nginx and create a server block to route public traffic (port 80) to Gunicorn (port 8000):
+
+```bash
+sudo apt install nginx
+sudo nano /etc/nginx/sites-available/gsplot
+
+```
+
+Paste the following configuration (update `YOUR_SERVER_IP_OR_DOMAIN` and `/path/to/gsplot`):
+
+```nginx
+server {
+    listen 80;
+    server_name YOUR_SERVER_IP_OR_DOMAIN;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    
+    location /static/ {
+        alias /path/to/gsplot/staticfiles/;
+    }
+
+    location / {
+        include proxy_params;
+        proxy_pass http://127.0.0.1:8000;
+    }
+}
+
+```
+
+Enable the site, check for syntax errors, and restart Nginx:
+
+```bash
+sudo ln -s /etc/nginx/sites-available/gsplot /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+
+```
+
+Grant Nginx read permissions to your home directory if necessary so it can access the `staticfiles` folder:
+
+```bash
+sudo chmod 755 /path/to/your/home/directory
+
+```
+
 
 ## Required Dependencies
 
@@ -287,71 +414,13 @@ GSPlot supports several dimensionality-reduction methods for placing gene sets i
 
 The final coordinates are used only for visualization. Similar or overlapping gene sets should appear near each other, but the exact layout can vary depending on the selected method, parameters, software versions, and random seed behavior.
 
-## Data and Gene Set Resources
-
-GSPlot supports predefined and user-uploaded gene set resources.
-
-The current application uses MSigDB-derived human and mouse gene set resources for built-in analysis support. Example local resource filenames may include:
-
-```text
-msigdb.v2026.1.Hs.json
-msigdb.v2026.1.Mm.json
-```
-
-These files are used by the application to provide built-in human and mouse gene set options.
-
-### MSigDB Licensing and Redistribution Notes
-
-MSigDB gene sets are provided by the Molecular Signatures Database (MSigDB), a joint project of UC San Diego and the Broad Institute.
-
-According to the official MSigDB license information, MSigDB versions v6.0 to v7.5.1 and v2022.1 and later are available under Creative Commons Attribution 4.0-style terms, with additional terms for some gene sets. Some gene sets are derived from third-party sources and may have extra licensing or attribution requirements.
-
-Because of these additional terms, users and developers should review the official MSigDB license terms before redistributing MSigDB-derived files, especially in a public repository or commercial setting.
-
-For safest public distribution, this project may either:
-
-- provide instructions for users to download MSigDB resources directly from the official MSigDB website, or
-- include only resources that are confirmed to be redistributable under the intended license and use case.
-
-Users should obtain MSigDB resources from the official MSigDB website and follow MSigDB's registration, license, and citation requirements.
-
-Official MSigDB website:
-
-```text
-https://www.gsea-msigdb.org/gsea/msigdb
-```
-
-Official MSigDB license terms:
-
-```text
-https://www.gsea-msigdb.org/gsea/license_terms_list.jsp
-```
 
 ## Citation
 
-If you use GSPlot in research, please cite this repository and the related manuscript or preprint when available.
-
-Suggested repository citation format before publication:
-
 ```text
-Le, T., et al. GSPlot: An interactive visualization tool for gene set enrichment results. GitHub repository: https://github.com/PathwayAndDataAnalysis/gsplot
+Le TC, Espinoza CG, Courtois J, Babur Ö. GSPlot: Visualizing gene set similarity in enrichment results. bioRxiv. 2026 Jun 16:2026-06.
 ```
 
-If you use a specific version of the code, please cite the repository URL together with the release tag or commit hash.
-
-When using MSigDB gene sets, please also cite MSigDB according to the official MSigDB citation instructions. MSigDB citation guidance commonly references Subramanian, Tamayo, et al. (2005), along with other MSigDB papers as appropriate for the gene set collections used.
-
-Recommended MSigDB citations may include:
-
-```text
-Subramanian, A., Tamayo, P., et al. (2005). Gene set enrichment analysis: A knowledge-based approach for interpreting genome-wide expression profiles. Proceedings of the National Academy of Sciences.
-
-Liberzon, A., et al. (2011). Molecular signatures database (MSigDB) 3.0. Bioinformatics.
-
-Liberzon, A., et al. (2015). The Molecular Signatures Database hallmark gene set collection. Cell Systems.
-```
-
-If using Mouse MSigDB, also follow the additional Mouse MSigDB citation instructions listed by MSigDB.
 
 ## Reproducibility Notes
 
@@ -442,9 +511,3 @@ https://sites.google.com/view/umb-network-biology
 ```
 
 Paper, preprint, or documentation links can be added here when publicly available.
-
-## License
-
-This project includes a `LICENSE` file at the repository root.
-
-The project source code license applies to the GSPlot code. Third-party resources, including MSigDB-derived gene set files and other external datasets, may be covered by their own licenses and citation requirements. Users are responsible for following the license terms of any external resources used with this project.
