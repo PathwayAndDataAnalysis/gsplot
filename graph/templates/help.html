@@ -18,6 +18,7 @@
     />
   </head>
   <body>
+    {% if not request.GET.embedded %}
     <nav class="nav-bar">
       <div class="header-container">
         <div class="title">
@@ -26,10 +27,13 @@
       </div>
       <div class="nav-links">
         <a class="nav-button" href="/">Input</a>
-        <a class="nav-button" href="/help">Help</a>
-        <a class="nav-button" href="/about">About</a>
+        <a class="nav-button" href="/#graph" aria-disabled="true" onclick="event.preventDefault()">Graph</a>
+        <a class="nav-button" href="/help/" aria-current="page">Help</a>
+        <a class="nav-button" href="/about/">About</a>
+        <div class="settings-button nav-placeholder" aria-hidden="true"></div>
       </div>
     </nav>
+    {% endif %}
 
     <div id="help-button-container">
       <button

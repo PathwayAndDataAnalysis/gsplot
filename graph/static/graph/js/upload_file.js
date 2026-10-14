@@ -55,12 +55,14 @@ function getCachedGraphData() {
 
 function setCachedGraphData(data) {
   getRuntimeState().graphData = cloneJSON(data);
+  window.dispatchEvent(new Event("graph-cache-changed"));
 }
 
 function clearCachedGraphData() {
   const state = getRuntimeState();
   state.graphData = null;
   state.lastComputeFingerprint = null;
+  window.dispatchEvent(new Event("graph-cache-changed"));
 }
 
 function hasCachedGraphData() {
@@ -227,14 +229,7 @@ document.querySelectorAll(".settings input, .settings select").forEach((el) => {
 
 // Import file button script
 function importFile() {
-  // Clear selected points and remove local storage
-  localStorage.setItem("selected", "[]");
-  localStorage.removeItem("camera");
-  localStorage.removeItem("annotations");
-  localStorage.setItem("reset", JSON.stringify(true));
-  clearCachedGraphData();
-  setCachedInputData(null);
-  clearPoints()
+  // Keep the current graph available until a changed input is submitted.
   // Show upload screen
   hideGraph();
   setTimeout(() => {
@@ -439,24 +434,19 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       return;
     }
 
-    if (!hasData) {
-      // First time submission - need to generate the graph
-      await frame.main();
-      hideUpload();
-      hideInput();
-      setTimeout(() => showGraph(), transitionDuration);
-
-      // Hide the submit button after first render
-      document.getElementById("submit-section-wrapper").style.display = "none";
-    } else {
+    if (hasData) {
       // Input/settings changed in this same session: recompute from scratch.
       clearCachedGraphData();
       localStorage.removeItem("camera");
       localStorage.removeItem("annotations");
       localStorage.setItem("selected", "[]");
       localStorage.setItem("reset", JSON.stringify(true));
-      await frame.main();
     }
+
+    await frame.main();
+    hideUpload();
+    hideInput();
+    showGraph();
 
     setLastComputeFingerprint(analysisFingerprint);
 
@@ -825,6 +815,7 @@ function LoadInput() {
 
 
 function showGraph() {
+  window.dispatchEvent(new CustomEvent("analysis-view-changed", { detail: "graph" }));
   graphAndSettingsContainer.classList.add("no-click");
   graphAndSettingsContainer.style.display = "flex";
   selectedPoints.style.display = "block";
@@ -887,6 +878,7 @@ function hideUpload() {
 }
 
 function showInput() {
+  window.dispatchEvent(new CustomEvent("analysis-view-changed", { detail: "input" }));
   treeContainer.style.display = "block";
   speciesSelector.style.display = "block";
   geneContainer.style.display = "block";

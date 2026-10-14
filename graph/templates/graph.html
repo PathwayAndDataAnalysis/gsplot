@@ -131,6 +131,21 @@
         return window.parent?.GSPRuntime?.inputData || {};
       }
 
+      function updateComputedThresholds(pValue, fdr) {
+        const selectedType = window.parent.localStorage.getItem("threshold-type") || "fdr";
+        for (const [type, id, key, value] of [
+          ["pvalue", "pvalue-input", "computed-p-value", pValue],
+          ["fdr", "fdr-input", "computed-fdr", fdr],
+        ]) {
+          if (value === null || value === undefined || !Number.isFinite(Number(value))) continue;
+          const exactValue = String(value);
+          window.parent.localStorage.setItem(key, exactValue);
+          if (type !== selectedType) {
+            window.parent.document.getElementById(id).value = exactValue;
+          }
+        }
+      }
+
       function getInputValue(key, fallback = "") {
         const runtimeInput = getRuntimeInputData();
         if (runtimeInput && runtimeInput[key] !== undefined && runtimeInput[key] !== null) {
@@ -526,10 +541,7 @@
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
 
-              window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
-              window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
-              window.parent.localStorage.setItem("computed-p-value", parseFloat(pvalDisplay).toFixed(4));
-              window.parent.localStorage.setItem("computed-fdr", parseFloat(fdrDisplay).toFixed(4));
+              updateComputedThresholds(pvalDisplay, fdrDisplay);
 
               // Convert returned data into the localStorage.data structure
               let dataStorage = {};
@@ -644,10 +656,7 @@
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
 
-              window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
-              window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
-              window.parent.localStorage.setItem("computed-p-value", parseFloat(pvalDisplay).toFixed(4));
-              window.parent.localStorage.setItem("computed-fdr", parseFloat(fdrDisplay).toFixed(4));
+              updateComputedThresholds(pvalDisplay, fdrDisplay);
 
               // Convert returned data into the localStorage.data structure
               let dataStorage = {};
@@ -746,10 +755,7 @@
               const fdrDisplay = data.fdr_value;
               const umapData = data.umap;
 
-              window.parent.document.getElementById("pvalue-input").value = parseFloat(pvalDisplay).toFixed(4);
-              window.parent.document.getElementById("fdr-input").value = parseFloat(fdrDisplay).toFixed(4);
-              window.parent.localStorage.setItem("computed-p-value", parseFloat(pvalDisplay).toFixed(4));
-              window.parent.localStorage.setItem("computed-fdr", parseFloat(fdrDisplay).toFixed(4));
+              updateComputedThresholds(pvalDisplay, fdrDisplay);
 
               let dataStorage = {};
               dataKeys.forEach((key) => {

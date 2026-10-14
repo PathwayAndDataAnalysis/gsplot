@@ -24,9 +24,10 @@
       </div>
     </div>
     <div class="nav-links">
-      <span class="nav-button" id="nav-import" onclick="importFile()">Input</span>
-      <a class="nav-button" href="/help">Help</a>
-      <a class="nav-button" href="/about">About</a>
+      <a class="nav-button" id="nav-import" href="/" aria-current="page">Input</a>
+      <a class="nav-button" id="nav-graph" href="/#graph" aria-disabled="true">Graph</a>
+      <a class="nav-button" data-page="help" href="/help/">Help</a>
+      <a class="nav-button" data-page="about" href="/about/">About</a>
       <div class="settings-button">
         <!-- Gear Icon -->
         <svg height="100%" id="Layer_1" style="enable-background: new 0 0 512 512" version="1.1" viewBox="0 0 512 512"
@@ -38,6 +39,8 @@
     </div>
   </nav>
 
+  <iframe id="information-page" title="Help" hidden></iframe>
+  <main id="analysis-page">
   <!-- Upload Section (No form) -->
   <div id="upload-container">
     <div id="welcome-message">
@@ -474,12 +477,12 @@
       <div id="threshold-container" style="display: flex; gap: 10px; justify-content: space-between; margin-top: 10px;">
         <div id="fdr-wrapper" style="display: flex; flex-direction: column;">
           <label for="fdr-input" style="font-weight: bold; font-size: 14px;">FDR</label>
-          <input type="number" id="fdr-input" step="0.0001" value="0.05" min="0" max="1" style="width: 100px;">
+          <input type="number" id="fdr-input" step="any" value="0.05" min="0" max="1" style="width: 100px;">
         </div>
         <div style="display: flex; align-items: center; font-size: 14px; font-weight: normal;">or</div>
         <div id="pvalue-wrapper" style="display: flex; flex-direction: column;">
           <label for="pvalue-input" style="font-weight: bold; font-size: 14px;">P-Value</label>
-          <input type="number" id="pvalue-input" step="0.0001" value="0.05" min="0" max="1" style="width: 100px;">
+          <input type="number" id="pvalue-input" step="any" value="0.05" min="0" max="1" style="width: 100px;">
         </div>
       </div>
 
@@ -536,10 +539,12 @@
   -->
 
   <!-- JavaScript Files -->
+  </main>
   <script src="{% static 'graph/js/update_settings.js' %}"></script>
   <script src="{% static 'graph/js/msigdb_loader.js' %}"></script>
   <script src="{% static 'graph/js/modify_selected.js' %}"></script>
   <script src="{% static 'graph/js/upload_file.js' %}"></script>
+  <script src="{% static 'graph/js/navigation.js' %}"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </body>
 
