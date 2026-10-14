@@ -1799,63 +1799,50 @@
         return cookieValue;
       }
 
+      function buildAnalysisExport() {
+        const data = getLocalStorage("data");
+        if (!data?.X?.length) throw new Error("No analysis data available.");
+        const clusterMode = !!getLocalStorage("settings")?.["cluster-mode"];
+        const scoredMode = data.displayMode?.[0] === "scored";
+        const columns = ["Point ID", "Gene Set Name", "P-Value", "Q-Value", "Enrichment Direction",
+          "Set Size", "X", "Y", ...(clusterMode ? ["Cluster ID", "Cluster Label"] : []),
+          "Matched Genes", ...(scoredMode ? ["Leading Edge Genes"] : []), "Display Mode"];
+        const rows = data.X.map((x, i) => {
+          const id = data.pointNumber?.[i] ?? i;
+          return [id, data.setName?.[i], data.pValue?.[i], data.qValue?.[i], data.direction?.[i],
+            data.setSize?.[i], x, data.Y?.[i],
+            ...(clusterMode ? [data.clusterID?.[i], data.clusterLabel?.[i]] : []),
+            data.molecules?.[i], ...(scoredMode ? [data.leadingEdgeMolecules?.[i]] : []),
+            data.displayMode?.[i]];
+        });
+        return { columns, rows };
+      }
+
       function downloadAnalysisResults() {
-        const fullGraphData = getLocalStorage("data");
-        if (!fullGraphData) {
-          alert("No analysis data available.");
-          return;
+        try {
+          const snapshot = buildAnalysisExport();
+          // Keep tab-separated text readable while preserving field boundaries and precision.
+          const cell = value => {
+            const text = value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
+            return /[\t\r\n"]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+          };
+          const content = [snapshot.columns, ...snapshot.rows].map(row => row.map(cell).join("\t")).join("\n") + "\n";
+          const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "analysis_results.txt";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (error) {
+          alert("Unable to export results: " + error.message);
         }
-
-        const pad = (text, width) => String(text).padEnd(width, " ");
-
-        let header = pad("Gene Set Name", 25) + "\t" +
-          pad("P-Value", 15) + "\t" +
-          pad("Q-Value", 15) + "\t" +
-          pad("Enrichment Direction", 22) + "\t" +
-          pad("Set Size", 15) + "\t" +
-          "Matched Genes\n";
-
-        let content = "";
-
-        const rows = [];
-        const total = fullGraphData["setName"].length;
-
-        for (let i = 0; i < total; i++) {
-          rows.push({
-            name: fullGraphData["setName"][i] ?? "N/A",
-            p: fullGraphData["pValue"]?.[i] ?? Infinity,
-            q: fullGraphData["qValue"]?.[i] ?? Infinity,
-            direction: fullGraphData["direction"]?.[i] ?? "neutral",
-            size: fullGraphData["setSize"]?.[i] ?? "N/A",
-            genes: fullGraphData["molecules"]?.[i]?.split(" ").join(",") ?? ""
-          });
-        }
-
-        // Sort ascending by p-value
-        rows.sort((a, b) => a.p - b.p);
-
-        for (const row of rows) {
-          content += pad(row.name, 25) + "\t" +
-            pad(row.p.toExponential(2), 15) + "\t" +
-            pad(row.q.toExponential(2), 15) + "\t" +
-            pad(row.direction, 22) + "\t" +
-            pad(row.size, 15) + "\t" +
-            row.genes + "\n"; // no padding for genes, allow overflow
-        }
-
-        const blob = new Blob([header + content], { type: "text/tab-separated-values" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "analysis_results.tsv";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
       }
     </script>
     <div id="download-button-wrapper" style="display: none;">
-      <button onclick="downloadAnalysisResults()">Download Result</button>
+      <button onclick="downloadAnalysisResults()" title="Full precision enrichment results, coordinates, clusters and gene lists">Download Result (TXT)</button>
     </div>
     <div id="cluster-label-layer"></div>
   </div>
