@@ -55,7 +55,7 @@ function renderCollectionSections(treeData) {
   function addRow(node, host, path, depth = 0) {
     const genes = genesOf(node);
     const label = document.createElement("label");
-    label.className = depth ? "collection-option" : "collection-heading";
+    label.className = depth ? "collection-option" : "collection-heading-label";
     label.style.setProperty("--collection-depth", Math.max(0, depth - 1));
     const input = document.createElement("input");
     input.type = "checkbox";
@@ -67,13 +67,47 @@ function renderCollectionSections(treeData) {
     count.className = "collection-count";
     count.textContent = `${genes.length.toLocaleString()} sets`;
     label.append(input, name, count);
-    host.append(label);
-    rows.push({ input, label, genes, path });
+    let selectionRow = label;
+    let childHost = host;
+    if (depth === 0) {
+      const heading = document.createElement("div");
+      heading.className = "collection-heading";
+      selectionRow = heading;
+      if (node.children && node.children.length) {
+        childHost = document.createElement("div");
+        childHost.className = "collection-subcollections";
+        childHost.id = `collection-subcollections-${rows.length}`;
+        childHost.hidden = true;
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "collection-toggle";
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-controls", childHost.id);
+        toggle.setAttribute("aria-label", `Expand ${node.name} subcollections`);
+        const arrow = document.createElement("span");
+        arrow.className = "collection-chevron";
+        arrow.setAttribute("aria-hidden", "true");
+        toggle.append(arrow);
+        toggle.addEventListener("click", () => {
+          const expanded = childHost.hidden;
+          childHost.hidden = !expanded;
+          toggle.setAttribute("aria-expanded", String(expanded));
+          toggle.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} ${node.name} subcollections`);
+        });
+        heading.append(toggle);
+      }
+      heading.append(label);
+      host.append(heading);
+      if (childHost !== host) host.append(childHost);
+    } else {
+      host.append(label);
+    }
+    rows.push({ input, label: selectionRow, genes, path });
     input.addEventListener("change", () => {
       genes.forEach(gs => input.checked ? selected.set(keyOf(gs), gs) : selected.delete(keyOf(gs)));
       sync();
     });
-    (node.children || []).forEach(child => addRow(child, host, `${path} > ${child.name}`, depth + 1));
+    (node.children || []).forEach(child => addRow(child, childHost, `${path} > ${child.name}`, depth + 1));
   }
   (treeData.children || []).slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })).forEach(node => {
     const section = document.createElement("section");

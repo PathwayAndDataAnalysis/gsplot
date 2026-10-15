@@ -780,3 +780,13 @@ thead, tbody th { background: #edf4f6; color: #284c61; }
 .threshold-type-options { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .threshold-type-options label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 15px; font-weight: 600; color: var(--ink); cursor: pointer; }
 .threshold-type-options input { margin: 0; flex-shrink: 0; }
+
+/* Independent disclosure controls keep collection selection available when collapsed. */
+.collection-heading { position: relative; cursor: default; }
+.collection-heading-label { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; cursor: pointer; margin: 0; }
+.collection-toggle { position: absolute; left: 1px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 24px; padding: 0; border: 0; border-radius: 2px; background: transparent; box-shadow: none; color: #244c59; }
+.collection-toggle:hover { background: transparent; color: var(--accent-dark); }
+.collection-chevron { width: 6px; height: 6px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
+.collection-toggle[aria-expanded="true"] .collection-chevron { transform: translateY(2px) rotate(225deg); }
+.collection-subcollections[hidden] { display: none; }
+.collection-subcollections .collection-option { padding-left: calc(25px + var(--collection-depth, 0) * 18px); }
