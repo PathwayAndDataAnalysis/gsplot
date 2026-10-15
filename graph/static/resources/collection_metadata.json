@@ -1,0 +1,381 @@
+{
+  "schemaVersion": 1,
+  "msigdbRelease": "2026.1",
+  "reviewedOn": "2026-10-15",
+  "contentNote": "Concise editorial summaries based on MSigDB collection documentation; not verbatim descriptions.",
+  "human": {
+    "H": {
+      "title": "Hallmark gene sets",
+      "description": "Broad biological programs with coordinated expression.",
+      "details": "Combines overlapping signatures to reduce redundancy.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C1": {
+      "title": "Positional gene sets",
+      "description": "Genes grouped by chromosome band.",
+      "details": "Useful for exploring regional genomic effects.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2": {
+      "title": "Curated gene sets",
+      "description": "Pathways and experimentally derived signatures.",
+      "details": "Includes expert curation and published studies.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CGP": {
+      "title": "Chemical and genetic perturbations",
+      "description": "Expression changes following experimental perturbations.",
+      "details": "UP and DN signatures describe opposite responses.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CP": {
+      "title": "Canonical pathways",
+      "description": "Established biological pathways.",
+      "details": "Expert knowledge organizes genes into cellular processes.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CP:BIOCARTA": {
+      "title": "BioCarta pathways",
+      "description": "Pathway groupings from BioCarta.",
+      "details": "A historical resource for signaling pathways.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CP:KEGG_LEGACY": {
+      "title": "KEGG legacy pathways",
+      "description": "Older KEGG pathway groupings.",
+      "details": "Retained separately from newer KEGG MEDICUS sets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CP:KEGG_MEDICUS": {
+      "title": "KEGG MEDICUS pathways",
+      "description": "Pathways curated from KEGG MEDICUS.",
+      "details": "A newer KEGG resource within MSigDB.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CP:PID": {
+      "title": "Pathway Interaction Database",
+      "description": "Pathways from the NCI PID resource.",
+      "details": "Captures curated molecular interactions and signaling.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CP:REACTOME": {
+      "title": "Reactome pathways",
+      "description": "Biological pathways curated by Reactome.",
+      "details": "MSigDB filters highly redundant pathway sets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C2:CP:WIKIPATHWAYS": {
+      "title": "WikiPathways",
+      "description": "Pathways from the WikiPathways resource.",
+      "details": "A community-supported source of pathway knowledge.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C3": {
+      "title": "Regulatory target gene sets",
+      "description": "Potential targets of gene regulation.",
+      "details": "Includes microRNA and transcription factor targets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C3:MIR": {
+      "title": "MicroRNA targets",
+      "description": "Predicted targets of microRNAs.",
+      "details": "Combines miRDB predictions and legacy motif sets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C3:MIR:MIRDB": {
+      "title": "miRDB targets",
+      "description": "High-confidence predicted microRNA targets.",
+      "details": "Derived from the miRDB prediction resource.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C3:MIR:MIR_LEGACY": {
+      "title": "Legacy microRNA targets",
+      "description": "Older microRNA motif-based target sets.",
+      "details": "Genes share candidate sites in untranslated regions.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C3:TFT": {
+      "title": "Transcription factor targets",
+      "description": "Potential transcription factor target genes.",
+      "details": "Includes GTRD predictions and older motif sets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C3:TFT:GTRD": {
+      "title": "GTRD targets",
+      "description": "Predicted transcription factor binding targets.",
+      "details": "Groups genes using promoter-region binding predictions.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C3:TFT:TFT_LEGACY": {
+      "title": "Legacy transcription factor targets",
+      "description": "Older regulatory motif-based gene groups.",
+      "details": "Shared upstream motifs suggest potential regulatory targets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C4": {
+      "title": "Computational gene sets",
+      "description": "Patterns mined from cancer expression data.",
+      "details": "Includes cancer metaprograms, neighborhoods, and modules.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C4:3CA": {
+      "title": "Curated Cancer Cell Atlas",
+      "description": "Coordinated expression programs in tumors.",
+      "details": "Captures shared and lineage-specific cellular patterns.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C4:CGN": {
+      "title": "Cancer gene neighborhoods",
+      "description": "Genes coexpressed with cancer-associated genes.",
+      "details": "Neighborhoods come from multiple expression datasets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C4:CM": {
+      "title": "Cancer modules",
+      "description": "Computationally identified cancer expression modules.",
+      "details": "Groups genes with cancer-associated activity patterns.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C5": {
+      "title": "Ontology gene sets",
+      "description": "Genes sharing biological annotations.",
+      "details": "Includes Gene Ontology and human phenotype associations.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C5:GO": {
+      "title": "Gene Ontology",
+      "description": "Gene groups defined by GO annotations.",
+      "details": "Covers processes, cellular locations, and molecular activities.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C5:GO:BP": {
+      "title": "Biological Process",
+      "description": "Genes participating in biological processes.",
+      "details": "Describes coordinated biological events and programs.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C5:GO:CC": {
+      "title": "Cellular Component",
+      "description": "Genes associated with cellular locations.",
+      "details": "Includes structures and protein-containing complexes.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C5:GO:MF": {
+      "title": "Molecular Function",
+      "description": "Genes sharing molecular activities.",
+      "details": "Describes activities such as binding and catalysis.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C5:HPO": {
+      "title": "Human Phenotype Ontology",
+      "description": "Genes linked to human phenotypes.",
+      "details": "Connects genetic associations with disease-related abnormalities.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C6": {
+      "title": "Oncogenic signatures",
+      "description": "Expression signatures associated with cancer pathways.",
+      "details": "Many originate from perturbing known cancer genes.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C7": {
+      "title": "Immunologic signatures",
+      "description": "Immune cell states and responses.",
+      "details": "Includes immune perturbations and vaccination studies.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C7:IMMUNESIGDB": {
+      "title": "ImmuneSigDB",
+      "description": "Signatures curated from immunology experiments.",
+      "details": "Includes published human and mouse immune studies.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C7:VAX": {
+      "title": "Vaccine response signatures",
+      "description": "Human expression responses to vaccination.",
+      "details": "Curated by the Human Immunology Project Consortium.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C8": {
+      "title": "Cell type signatures",
+      "description": "Markers identified in single-cell studies.",
+      "details": "Helps interpret cell identities in human tissues.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    },
+    "C9": {
+      "title": "Computational perturbation signatures",
+      "description": "Expression patterns associated with gene dependencies.",
+      "details": "Derived using DepMap CRISPR and CCLE expression data.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/human/collection_details.jsp"
+    }
+  },
+  "mouse": {
+    "MH": {
+      "title": "Mouse-ortholog hallmarks",
+      "description": "Human hallmark programs mapped to mouse.",
+      "details": "Allows hallmark analysis with mouse gene identifiers.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M1": {
+      "title": "Positional gene sets",
+      "description": "Mouse genes grouped by chromosome band.",
+      "details": "Useful for exploring regional genomic effects.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M2": {
+      "title": "Curated gene sets",
+      "description": "Mouse pathways and experimental signatures.",
+      "details": "Includes literature curation and pathway resources.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M2:CGP": {
+      "title": "Chemical and genetic perturbations",
+      "description": "Mouse expression responses to perturbations.",
+      "details": "Captures experimentally observed increases and decreases.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M2:CP": {
+      "title": "Canonical pathways",
+      "description": "Established biological pathways.",
+      "details": "Expert knowledge organizes genes into cellular processes.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M2:CP:BIOCARTA": {
+      "title": "BioCarta pathways",
+      "description": "Pathway groupings from BioCarta.",
+      "details": "A historical resource for signaling pathways.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M2:CP:REACTOME": {
+      "title": "Reactome pathways",
+      "description": "Biological pathways curated by Reactome.",
+      "details": "MSigDB filters highly redundant pathway sets.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M2:CP:WIKIPATHWAYS": {
+      "title": "WikiPathways",
+      "description": "Pathways from the WikiPathways resource.",
+      "details": "A community-supported source of pathway knowledge.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M3": {
+      "title": "Regulatory target gene sets",
+      "description": "Potential regulatory targets in mouse.",
+      "details": "Includes microRNA and transcription factor predictions.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M3:MIRDB": {
+      "title": "miRDB targets",
+      "description": "Predicted mouse microRNA target genes.",
+      "details": "Uses high-confidence miRDB predictions.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M3:GTRD": {
+      "title": "GTRD targets",
+      "description": "Predicted transcription factor binding targets.",
+      "details": "Groups genes using promoter-region binding predictions.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M5": {
+      "title": "Ontology gene sets",
+      "description": "Mouse genes sharing ontology annotations.",
+      "details": "Includes GO and tumor-related phenotype terms.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M5:GO": {
+      "title": "Gene Ontology",
+      "description": "Gene groups defined by GO annotations.",
+      "details": "Covers processes, cellular locations, and molecular activities.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M5:GO:BP": {
+      "title": "Biological Process",
+      "description": "Genes participating in biological processes.",
+      "details": "Describes coordinated biological events and programs.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M5:GO:CC": {
+      "title": "Cellular Component",
+      "description": "Genes associated with cellular locations.",
+      "details": "Includes structures and protein-containing complexes.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M5:GO:MF": {
+      "title": "Molecular Function",
+      "description": "Genes sharing molecular activities.",
+      "details": "Describes activities such as binding and catalysis.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M5:MPT": {
+      "title": "Tumor phenotype ontology",
+      "description": "Genes associated with tumor phenotypes.",
+      "details": "Uses cancer-related Mammalian Phenotype Ontology terms.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M7": {
+      "title": "Immunologic signatures",
+      "description": "Mouse immune states and perturbations.",
+      "details": "Provides signatures for interpreting immune-related expression.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    },
+    "M8": {
+      "title": "Cell type signatures",
+      "description": "Markers from mouse single-cell studies.",
+      "details": "Supports interpretation of mouse tissue cell identities.",
+      "sourceUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collections.jsp",
+      "detailsUrl": "https://www.gsea-msigdb.org/gsea/msigdb/mouse/collection_details.jsp"
+    }
+  }
+}
