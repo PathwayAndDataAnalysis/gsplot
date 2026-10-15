@@ -790,3 +790,20 @@ thead, tbody th { background: #edf4f6; color: #284c61; }
 .collection-toggle[aria-expanded="true"] .collection-chevron { transform: translateY(2px) rotate(225deg); }
 .collection-subcollections[hidden] { display: none; }
 .collection-subcollections .collection-option { padding-left: calc(25px + var(--collection-depth, 0) * 18px); }
+
+/* Collection descriptions are outside checkbox labels. */
+.collection-description { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 8px 16px; padding: 12px 20px 16px 58px; background: #f8fbf9; border-bottom: 1px solid var(--line); font-size: 16px; color: var(--muted); }
+.collection-description > p { flex: 1; min-width: 0; margin: 0; line-height: 1.6; }
+.collection-information { flex: 0 0 auto; }
+.collection-information summary { display: flex; align-items: center; justify-content: center; list-style: none; width: 26px; height: 26px; box-sizing: border-box; border: 1px solid #79998b; border-radius: 50%; font: italic 700 17px Georgia, serif; color: var(--accent-dark); cursor: pointer; }
+.collection-information summary::-webkit-details-marker { display: none; }
+.collection-information summary:hover { background: #dcecdf; }
+.collection-information[open] { flex-basis: 100%; }
+.collection-information[open] summary { margin-left: auto; background: #dcecdf; }
+.collection-information-content { margin-top: 8px; padding: 16px; background: #fff; border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; }
+.collection-information-content p { margin: 0 0 8px; }
+.collection-information-content a { font-size: 15px; font-weight: 600; }
+.collection-heading-label .collection-name { line-height: 1.4; }
+@media (max-width: 700px) {
+  .collection-description { padding-right: 16px; padding-left: 25px; }
+}

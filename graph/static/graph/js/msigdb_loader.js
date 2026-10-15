@@ -1,4 +1,24 @@
-function renderCollectionSections(treeData) {
+const collectionMetadataUrl = document.currentScript?.dataset.collectionMetadataUrl;
+let collectionMetadataRequest;
+
+function loadCollectionMetadata() {
+  if (!collectionMetadataUrl) return Promise.resolve({});
+  if (!collectionMetadataRequest) {
+    collectionMetadataRequest = fetch(collectionMetadataUrl)
+      .then(response => {
+        if (!response.ok) throw new Error("Unable to load collection descriptions.");
+        return response.json();
+      })
+      .catch(error => {
+        console.warn(error);
+        collectionMetadataRequest = null;
+        return {};
+      });
+  }
+  return collectionMetadataRequest;
+}
+
+function renderCollectionSections(treeData, metadata = {}) {
   const container = document.getElementById("tree-container");
   container.querySelectorAll(".collection-picker, #selected-group-label, #selection-controls, svg").forEach(el => el.remove());
   const picker = document.createElement("div");
@@ -54,6 +74,7 @@ function renderCollectionSections(treeData) {
 
   function addRow(node, host, path, depth = 0) {
     const genes = genesOf(node);
+    const info = metadata[path.split(" > ").join(":")];
     const label = document.createElement("label");
     label.className = depth ? "collection-option" : "collection-heading-label";
     label.style.setProperty("--collection-depth", Math.max(0, depth - 1));
@@ -62,7 +83,7 @@ function renderCollectionSections(treeData) {
     input.disabled = genes.length === 0;
     const name = document.createElement("span");
     name.className = "collection-name";
-    name.textContent = node.name;
+    name.textContent = info ? `${node.name} \u2014 ${info.title}` : node.name;
     const count = document.createElement("span");
     count.className = "collection-count";
     count.textContent = `${genes.length.toLocaleString()} sets`;
@@ -98,6 +119,7 @@ function renderCollectionSections(treeData) {
       }
       heading.append(label);
       host.append(heading);
+      if (info) host.append(createCollectionDescription(info, node.name));
       if (childHost !== host) host.append(childHost);
     } else {
       host.append(label);
@@ -124,6 +146,32 @@ function renderCollectionSections(treeData) {
     actions.append(button);
   });
   sync();
+}
+
+function createCollectionDescription(info, code) {
+  const description = document.createElement("div");
+  description.className = "collection-description";
+  const brief = document.createElement("p");
+  brief.textContent = info.description;
+  const details = document.createElement("details");
+  details.className = "collection-information";
+  const summary = document.createElement("summary");
+  summary.textContent = "i";
+  summary.setAttribute("aria-label", `More information about ${code} - ${info.title}`);
+  summary.title = `About ${info.title}`;
+  const content = document.createElement("div");
+  content.className = "collection-information-content";
+  const text = document.createElement("p");
+  text.textContent = info.details;
+  const link = document.createElement("a");
+  link.textContent = "View on MSigDB";
+  link.href = info.detailsUrl || info.sourceUrl;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  content.append(text, link);
+  details.append(summary, content);
+  description.append(brief, details);
+  return description;
 }
 
 function uploadAndRenderCustomGeneSets(file) {
@@ -193,11 +241,14 @@ function handleSpeciesChange() {
   } else {
     uploadSection.style.display = "none";
 
-    fetch(`/api/msigdb/?species=${species}`)
-      .then(res => res.json())
-      .then(msigdb => {
+    Promise.all([
+      fetch(`/api/msigdb/?species=${species}`).then(res => res.json()),
+      loadCollectionMetadata()
+    ])
+      .then(([msigdb, metadata]) => {
+        if (document.getElementById("species-select").value !== species) return;
         const data = buildSimpleTree(msigdb);
-        renderCollectionSections(data);
+        renderCollectionSections(data, metadata[species] || {});
       })
       .catch(error => {
         console.error("Error loading MSigDB data:", error);
