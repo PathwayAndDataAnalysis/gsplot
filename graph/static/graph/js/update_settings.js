@@ -37,8 +37,6 @@ const defaultIsoMap = {
   'mode': "isomap",
   'n_neighbors': 5,
 }
-let lastPValue = document.getElementById("pvalue-input")?.value || "0.05";
-let lastFDR = document.getElementById("fdr-input")?.value || "0.05";
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
@@ -123,10 +121,10 @@ function main() {
     radio.addEventListener("change", updateThresholdInputs);
   });
   document.getElementById("pvalue-input").addEventListener("input", (event) => {
-    if (!event.target.readOnly) lastPValue = event.target.value;
+    if (!event.target.readOnly) cacheThresholdInputs();
   });
   document.getElementById("fdr-input").addEventListener("input", (event) => {
-    if (!event.target.readOnly) lastFDR = event.target.value;
+    if (!event.target.readOnly) cacheThresholdInputs();
   });
   updateThresholdInputs();
   toggleClusterParamsVisibility();
@@ -382,6 +380,9 @@ function updateSettings(suppressToast = false) {
 
   // Save ONLY current UI settings
   localStorage.setItem("settings", JSON.stringify(newSettings));
+  // Apply must persist the same threshold mode and pair as Submit.
+  localStorage.setItem("threshold-type", selectedType);
+  cacheThresholdInputs();
 
   const anythingChanged = stylingOnly || isDataChange || thresholdChange || clusterChanged;
 
@@ -819,20 +820,49 @@ window.update_settings = {
   refreshDirectionColorControls: refreshDirectionColorControls,
 };
 
-function initializeThresholdInputs() {
-  // Computed thresholds belong to the current graph, never a previous page load.
-  localStorage.removeItem("computed-p-value");
-  localStorage.removeItem("computed-fdr");
-  const saved = JSON.parse(localStorage.getItem("settings") || "{}");
-  const valid = value => value !== null && value !== undefined && value !== "" &&
+function isValidThreshold(value) {
+  return value !== null && value !== undefined && value !== "" &&
     Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 1;
-  const savedP = saved.p_value_threshold ?? localStorage.getItem("p-value");
-  const savedFDR = saved.fdr_threshold ?? localStorage.getItem("fdr");
-  lastPValue = valid(savedP) ? String(savedP) : "0.05";
-  lastFDR = valid(savedFDR) ? String(savedFDR) : "0.05";
-  const selectedType = valid(saved.p_value_threshold) ? "pvalue" :
-    valid(saved.fdr_threshold) ? "fdr" :
+}
+
+function cacheThresholdInputs() {
+  const pvalue = document.getElementById("pvalue-input").value;
+  const fdr = document.getElementById("fdr-input").value;
+  const type = document.querySelector('input[name="threshold-type"]:checked')?.value;
+  // Save a complete pair atomically; ignore temporarily empty input while typing.
+  if (!isValidThreshold(pvalue) || !isValidThreshold(fdr)) return;
+  localStorage.setItem("threshold-inputs", JSON.stringify({ pvalue, fdr, type }));
+}
+window.cacheThresholdInputs = cacheThresholdInputs;
+
+function initializeThresholdInputs() {
+  let cached;
+  try {
+    cached = JSON.parse(localStorage.getItem("threshold-inputs") || "null");
+  } catch { cached = null; }
+  const saved = JSON.parse(localStorage.getItem("settings") || "{}");
+  const completePair = cached && isValidThreshold(cached.pvalue) && isValidThreshold(cached.fdr) &&
+    ["pvalue", "fdr"].includes(cached.type);
+  const savedType = isValidThreshold(saved.p_value_threshold) ? "pvalue" :
+    isValidThreshold(saved.fdr_threshold) ? "fdr" :
     localStorage.getItem("threshold-type") === "pvalue" ? "pvalue" : "fdr";
+  // An applied analysis is authoritative if an older display cache disagrees.
+  const hasAppliedThreshold = isValidThreshold(saved.p_value_threshold) ||
+    isValidThreshold(saved.fdr_threshold);
+  const selectedType = hasAppliedThreshold ? savedType : completePair ? cached.type : savedType;
+  // Migrate older caches using the calculated counterpart as well as the selected value.
+  const savedP = savedType === "pvalue" ?
+    (saved.p_value_threshold ?? localStorage.getItem("p-value")) : localStorage.getItem("computed-p-value");
+  const savedFDR = savedType === "fdr" ?
+    (saved.fdr_threshold ?? localStorage.getItem("fdr")) : localStorage.getItem("computed-fdr");
+  document.getElementById("pvalue-input").value = completePair ? cached.pvalue :
+    isValidThreshold(savedP) ? String(savedP) : "0.05";
+  document.getElementById("fdr-input").value = completePair ? cached.fdr :
+    isValidThreshold(savedFDR) ? String(savedFDR) : "0.05";
+  if (hasAppliedThreshold) {
+    const activeInput = document.getElementById(selectedType === "pvalue" ? "pvalue-input" : "fdr-input");
+    activeInput.value = String(selectedType === "pvalue" ? saved.p_value_threshold : saved.fdr_threshold);
+  }
   document.querySelectorAll('input[name="threshold-type"]').forEach(radio => {
     radio.checked = radio.value === selectedType;
   });
@@ -840,21 +870,15 @@ function initializeThresholdInputs() {
 
 function updateThresholdInputs() {
   const selectedType = document.querySelector('input[name="threshold-type"]:checked')?.value;
-  const pInput = document.getElementById("pvalue-input");
-  const fdrInput = document.getElementById("fdr-input");
   const usePValue = selectedType === "pvalue";
-
-  // Switching modes restores the user's draft, not the graph's computed value.
-  pInput.value = usePValue ? lastPValue :
-    (localStorage.getItem("computed-p-value") ?? lastPValue);
-  fdrInput.value = usePValue ?
-    (localStorage.getItem("computed-fdr") ?? lastFDR) : lastFDR;
-  pInput.readOnly = !usePValue;
-  fdrInput.readOnly = usePValue;
+  // Changing the editable threshold must leave both displayed values in place.
+  document.getElementById("pvalue-input").readOnly = !usePValue;
+  document.getElementById("fdr-input").readOnly = usePValue;
   document.getElementById("pvalue-wrapper").classList.toggle("grayed-out", !usePValue);
   document.getElementById("fdr-wrapper").classList.toggle("grayed-out", usePValue);
   localStorage.setItem("threshold-type", selectedType);
   window.syncAnalysisControls?.();
+  cacheThresholdInputs();
 }
 
 window.addEventListener("load", () => {

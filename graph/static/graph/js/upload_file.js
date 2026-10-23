@@ -241,9 +241,14 @@ function importFile() {
 
 // When the user clicks the settings button, add classes to trigger css animation
 settingsButton.addEventListener("click", function () {
-  settingsContainer.classList.toggle("visible");
-  graph.classList.toggle("settings-open");
-  document.body.classList.toggle("settings-open", settingsContainer.classList.contains("visible"));
+  setSettingsOpen(!settingsContainer.classList.contains("visible"));
+});
+
+function setSettingsOpen(open) {
+  settingsContainer.classList.toggle("visible", open);
+  graph.classList.toggle("settings-open", open);
+  document.body.classList.toggle("settings-open", open);
+  settingsButton.setAttribute("aria-expanded", String(open));
 
   const syncGraphLayout = () => {
     const frame = graph.contentWindow;
@@ -258,7 +263,7 @@ settingsButton.addEventListener("click", function () {
   setTimeout(syncGraphLayout, 100);
   setTimeout(syncGraphLayout, 300);
   setTimeout(syncGraphLayout, 550);
-});
+}
 
 function convertToExpectedFormat(arrayOfObjects) {
   const keys = Object.keys(arrayOfObjects[0]);
@@ -815,6 +820,7 @@ function LoadInput() {
 
 
 function showGraph() {
+  setSettingsOpen(true);
   window.dispatchEvent(new CustomEvent("analysis-view-changed", { detail: "graph" }));
   graphAndSettingsContainer.classList.add("no-click");
   graphAndSettingsContainer.style.display = "flex";
@@ -830,6 +836,18 @@ function showGraph() {
     graphAndSettingsContainer.style.opacity = "1";
     graphAndSettingsContainer.classList.remove("no-click");
   }, 100);
+
+  // Input sections collapse after their fade-out. Reset the page scroll both
+  // now and after that layout change so a long input page cannot leave the
+  // viewport underneath the newly displayed graph. Keep the toolbar visible.
+  const revealGraph = () => {
+    if (graphAndSettingsContainer.style.display === "none" ||
+        document.getElementById("analysis-page")?.hidden) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    graph.contentWindow?.syncGraphLayoutToFrame?.();
+  };
+  window.requestAnimationFrame(revealGraph);
+  setTimeout(revealGraph, transitionDuration + 50);
 
   // Show download button in iframe
   try {
