@@ -18,13 +18,21 @@ function loadCollectionMetadata() {
   return collectionMetadataRequest;
 }
 
-function renderCollectionSections(treeData, metadata = {}) {
+function renderCollectionSections(treeData, metadata = {}, species = null) {
   const container = document.getElementById("tree-container");
   container.querySelectorAll(".collection-picker, #selected-group-label, #selection-controls, svg").forEach(el => el.remove());
   const picker = document.createElement("div");
   picker.className = "collection-picker";
   container.querySelector("h3").after(picker);
   const selected = new Map();
+  const preferenceKey = species ? `collection-selection-${species}` : null;
+  let savedPaths = null;
+  if (preferenceKey) {
+    try {
+      const stored = JSON.parse(localStorage.getItem(preferenceKey) || "null");
+      if (Array.isArray(stored) && stored.every(path => typeof path === "string")) savedPaths = stored;
+    } catch { /* Ignore invalid saved preferences. */ }
+  }
   const rows = [];
   const keyOf = gs => JSON.stringify([gs.collection || "", gs.name]);
   const genesOf = node => {
@@ -51,7 +59,7 @@ function renderCollectionSections(treeData, metadata = {}) {
   status.setAttribute("role", "status");
   picker.append(status);
 
-  function sync() {
+  function sync(persist = false) {
     const paths = [];
     const selectedItems = new Set();
     rows.forEach(row => {
@@ -70,6 +78,10 @@ function renderCollectionSections(treeData, metadata = {}) {
     window.GSP.selectedGeneSets = window.selectedGeneSets;
     window.selectedCollectionLabel = paths.join(", ");
     status.textContent = selected.size ? `${selected.size.toLocaleString()} gene sets selected - ${paths.join(", ") || "Partial collection selection"}` : "No gene sets selected. Tick a checkbox to get started.";
+    if (persist && preferenceKey) {
+      localStorage.setItem(preferenceKey, JSON.stringify(paths));
+      hint.textContent = "Your collection selection is saved for next time. You can change it below.";
+    }
   }
 
   function addRow(node, host, path, depth = 0) {
@@ -127,7 +139,7 @@ function renderCollectionSections(treeData, metadata = {}) {
     rows.push({ input, label: selectionRow, genes, path });
     input.addEventListener("change", () => {
       genes.forEach(gs => input.checked ? selected.set(keyOf(gs), gs) : selected.delete(keyOf(gs)));
-      sync();
+      sync(true);
     });
     (node.children || []).forEach(child => addRow(child, childHost, `${path} > ${child.name}`, depth + 1));
   }
@@ -142,9 +154,25 @@ function renderCollectionSections(treeData, metadata = {}) {
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = text;
-    button.addEventListener("click", () => { action(); sync(); });
+    button.addEventListener("click", () => { action(); sync(true); });
     actions.append(button);
   });
+  if (preferenceKey) {
+    const initialPaths = savedPaths ?? [species === "mouse" ? "M5 > GO" : "C5 > GO"];
+    rows.filter(row => initialPaths.includes(row.path)).forEach(row => {
+      row.genes.forEach(gs => selected.set(keyOf(gs), gs));
+    });
+    hint.textContent = savedPaths === null
+      ? `GO (Gene Ontology) in ${species === "mouse" ? "M5" : "C5"} is selected by default. Change the selection below; we will remember your choice.`
+      : "Your previous collection selection has been restored. You can change it below.";
+    // Make the selected subcollection visible without requiring an extra click.
+    grid.querySelectorAll(".collection-section").forEach(section => {
+      if ([...section.querySelectorAll('input[type="checkbox"]')].some(input =>
+        rows.some(row => row.input === input && row.genes.some(gs => selected.has(keyOf(gs)))))) {
+        section.querySelector(".collection-toggle")?.click();
+      }
+    });
+  }
   sync();
 }
 
@@ -209,6 +237,7 @@ function uploadAndRenderCustomGeneSets(file) {
 // Load the tree based on dataset selection
 function handleSpeciesChange() {
   const species = document.getElementById("species-select").value;
+  if (species !== "custom") localStorage.setItem("collection-dataset", species);
   const uploadSection = document.getElementById("custom-upload-section");
 
   // CLEAR SELECTION before loading new tree
@@ -248,7 +277,7 @@ function handleSpeciesChange() {
       .then(([msigdb, metadata]) => {
         if (document.getElementById("species-select").value !== species) return;
         const data = buildSimpleTree(msigdb);
-        renderCollectionSections(data, metadata[species] || {});
+        renderCollectionSections(data, metadata[species] || {}, species);
       })
       .catch(error => {
         console.error("Error loading MSigDB data:", error);
@@ -260,6 +289,10 @@ window.handleSpeciesChange = handleSpeciesChange;
 
 // Auto draw human tree when server starts
 document.addEventListener("DOMContentLoaded", () => {
+  const savedSpecies = localStorage.getItem("collection-dataset");
+  if (["human", "mouse"].includes(savedSpecies)) {
+    document.getElementById("species-select").value = savedSpecies;
+  }
   handleSpeciesChange();
 });
 
