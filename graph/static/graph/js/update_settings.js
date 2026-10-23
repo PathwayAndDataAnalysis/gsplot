@@ -118,10 +118,17 @@ function main() {
   }
   toggleSizeVisibility();
 
+  initializeThresholdInputs();
   document.querySelectorAll('input[name="threshold-type"]').forEach((radio) => {
     radio.addEventListener("change", updateThresholdInputs);
   });
-  updateThresholdInputs(); // Call on load
+  document.getElementById("pvalue-input").addEventListener("input", (event) => {
+    if (!event.target.readOnly) lastPValue = event.target.value;
+  });
+  document.getElementById("fdr-input").addEventListener("input", (event) => {
+    if (!event.target.readOnly) lastFDR = event.target.value;
+  });
+  updateThresholdInputs();
   toggleClusterParamsVisibility();
   toggleClusterAlgorithmParams();
   refreshDirectionColorControls();
@@ -812,57 +819,42 @@ window.update_settings = {
   refreshDirectionColorControls: refreshDirectionColorControls,
 };
 
+function initializeThresholdInputs() {
+  // Computed thresholds belong to the current graph, never a previous page load.
+  localStorage.removeItem("computed-p-value");
+  localStorage.removeItem("computed-fdr");
+  const saved = JSON.parse(localStorage.getItem("settings") || "{}");
+  const valid = value => value !== null && value !== undefined && value !== "" &&
+    Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 1;
+  const savedP = saved.p_value_threshold ?? localStorage.getItem("p-value");
+  const savedFDR = saved.fdr_threshold ?? localStorage.getItem("fdr");
+  lastPValue = valid(savedP) ? String(savedP) : "0.05";
+  lastFDR = valid(savedFDR) ? String(savedFDR) : "0.05";
+  const selectedType = valid(saved.p_value_threshold) ? "pvalue" :
+    valid(saved.fdr_threshold) ? "fdr" :
+    localStorage.getItem("threshold-type") === "pvalue" ? "pvalue" : "fdr";
+  document.querySelectorAll('input[name="threshold-type"]').forEach(radio => {
+    radio.checked = radio.value === selectedType;
+  });
+}
+
 function updateThresholdInputs() {
   const selectedType = document.querySelector('input[name="threshold-type"]:checked')?.value;
   const pInput = document.getElementById("pvalue-input");
   const fdrInput = document.getElementById("fdr-input");
-  const pWrapper = document.getElementById("pvalue-wrapper");
-  const fWrapper = document.getElementById("fdr-wrapper");
+  const usePValue = selectedType === "pvalue";
 
-  const storedAppliedP = localStorage.getItem("p-value");
-  const storedAppliedFDR = localStorage.getItem("fdr");
-  const storedComputedP = localStorage.getItem("computed-p-value");
-  const storedComputedFDR = localStorage.getItem("computed-fdr");
-
-  if (selectedType === "pvalue") {
-    if (storedAppliedP !== null) {
-      pInput.value = storedAppliedP;
-    } else if (storedComputedP !== null) {
-      pInput.value = storedComputedP;
-    } else if (lastPValue !== "") {
-      pInput.value = lastPValue;
-    } else {
-      pInput.value = "0.05";
-    }
-
-    lastFDR = fdrInput.value;
-
-    pInput.removeAttribute("readonly");
-    fdrInput.setAttribute("readonly", true);
-
-    pWrapper.classList.remove("grayed-out");
-    fWrapper.classList.add("grayed-out");
-  } else {
-    if (storedAppliedFDR !== null) {
-      fdrInput.value = storedAppliedFDR;
-    } else if (storedComputedFDR !== null) {
-      fdrInput.value = storedComputedFDR;
-    } else if (lastFDR !== "") {
-      fdrInput.value = lastFDR;
-    } else {
-      fdrInput.value = "0.05";
-    }
-
-    lastPValue = pInput.value;
-
-    fdrInput.removeAttribute("readonly");
-    pInput.setAttribute("readonly", true);
-
-    fWrapper.classList.remove("grayed-out");
-    pWrapper.classList.add("grayed-out");
-  }
-
+  // Switching modes restores the user's draft, not the graph's computed value.
+  pInput.value = usePValue ? lastPValue :
+    (localStorage.getItem("computed-p-value") ?? lastPValue);
+  fdrInput.value = usePValue ?
+    (localStorage.getItem("computed-fdr") ?? lastFDR) : lastFDR;
+  pInput.readOnly = !usePValue;
+  fdrInput.readOnly = usePValue;
+  document.getElementById("pvalue-wrapper").classList.toggle("grayed-out", !usePValue);
+  document.getElementById("fdr-wrapper").classList.toggle("grayed-out", usePValue);
   localStorage.setItem("threshold-type", selectedType);
+  window.syncAnalysisControls?.();
 }
 
 window.addEventListener("load", () => {

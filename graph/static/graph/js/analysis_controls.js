@@ -43,7 +43,11 @@
             original.value = String(Number(value.toPrecision(6)));
           }
         }
-        mirror.value = original.value;
+        // Number inputs can temporarily contain "0." while value is still "0".
+        // Reassigning value during typing removes the decimal and moves the caret.
+        if (document.activeElement !== mirror || original.readOnly) {
+          mirror.value = original.value;
+        }
         mirror.checked = original.checked;
         mirror.disabled = original.disabled;
         mirror.readOnly = original.readOnly;
