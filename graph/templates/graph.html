@@ -144,6 +144,7 @@
             window.parent.document.getElementById(id).value = exactValue;
           }
         }
+        window.parent.syncAnalysisControls?.();
       }
 
       function getInputValue(key, fallback = "") {

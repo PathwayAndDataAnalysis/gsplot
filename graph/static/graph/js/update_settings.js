@@ -220,6 +220,7 @@ function displayValues(settings) {
   toggleClusterParamsVisibility();
   toggleClusterAlgorithmParams();
   refreshDirectionColorControls();
+  window.syncAnalysisControls?.();
 }
 
 function getCurrentDirectionalMode() {

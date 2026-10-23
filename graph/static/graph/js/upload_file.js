@@ -878,6 +878,7 @@ function hideUpload() {
 }
 
 function showInput() {
+  document.getElementById("home-analysis-settings").hidden = false;
   window.dispatchEvent(new CustomEvent("analysis-view-changed", { detail: "input" }));
   treeContainer.style.display = "block";
   speciesSelector.style.display = "block";
@@ -885,6 +886,7 @@ function showInput() {
   submitContainer.style.display = "block";
 }
 function hideInput() {
+  document.getElementById("home-analysis-settings").hidden = true;
   treeContainer.style.display = "none";
   speciesSelector.style.display = "none";
   geneContainer.style.display = "none";
