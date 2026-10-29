@@ -1,3 +1,17 @@
+function syncGoSemanticAvailability() {
+  const select = document.getElementById("distance-metric");
+  const option = document.getElementById("go-semantic-option");
+  const species = document.getElementById("species-select")?.value;
+  const sets = window.GSP?.selectedGeneSets || [];
+  const available = ["human", "mouse"].includes(species) && sets.length > 0 &&
+    sets.every(gs => /^(C5|M5):GO:(BP|MF|CC)$/.test(gs.collection));
+  option.hidden = !available;
+  option.disabled = !available;
+  if (!available && select.value === "go-semantic") select.value = "jaccard-distance";
+  window.toggleJaccardOptions?.();
+  window.syncAnalysisControls?.();
+}
+
 const collectionMetadataUrl = document.currentScript?.dataset.collectionMetadataUrl;
 let collectionMetadataRequest;
 
@@ -76,6 +90,7 @@ function renderCollectionSections(treeData, metadata = {}, species = null) {
     window.selectedGeneSets = [...selected.values()];
     window.GSP = window.GSP || {};
     window.GSP.selectedGeneSets = window.selectedGeneSets;
+    syncGoSemanticAvailability();
     window.selectedCollectionLabel = paths.join(", ");
     status.textContent = selected.size ? `${selected.size.toLocaleString()} gene sets selected - ${paths.join(", ") || "Partial collection selection"}` : "No gene sets selected. Tick a checkbox to get started.";
     if (persist && preferenceKey) {
@@ -246,6 +261,7 @@ function handleSpeciesChange() {
   window.GSP.selectedGeneSets = [];
   window.selectedGeneSets = [];
   window.selectedCollectionLabel = "";
+  syncGoSemanticAvailability();
   localStorage.setItem("selected", "[]");
 
   // Remove label under tree

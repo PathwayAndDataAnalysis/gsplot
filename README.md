@@ -448,3 +448,35 @@ Paper, preprint, or documentation links can be added here when publicly availabl
 This project includes a `LICENSE` file at the repository root.
 
 The project source code license applies to the GSPlot code. Third-party resources, including MSigDB-derived gene set files and other external datasets, may be covered by their own licenses and citation requirements. Users are responsible for following the license terms of any external resources used with this project.
+
+## GO semantic similarity
+
+Selecting only human or mouse GO collections enables **GO Semantic (Wang)** for
+Ranked, Thresholded and Scored inputs. Selecting a non-GO collection, a mixed
+selection, or custom data hides this option and resets it to Jaccard if necessary.
+The server also validates the selection against the bundled MSigDB metadata.
+
+This compares the GO IDs in MSigDB's `exactSource` field directly, rather than
+projecting gene sets into GO annotations. Wang similarity uses maximum ancestor
+contributions with `is_a = 0.8` and `part_of = 0.6`; other relationships are
+excluded. Scores lie in [0, 1]. Gene weights do not apply. Cross-namespace pairs
+(BP/MF/CC) receive similarity 0. The raw distance `1 - similarity` passes through
+the same capped `d / (1 - d)` transformation used by the other metrics before
+embedding and distance-based clustering. Similarity 0 therefore gives distance 100.
+
+`graph/static/resources/go-wang.json.gz` contains an offline compact graph derived
+from the official [GO 2025-10-10 snapshot](https://release.geneontology.org/2025-10-10/ontology/go-basic.obo),
+matching the ontology used by [MSigDB 2026.1](https://docs.gsea-msigdb.org/MSigDB/Release_Notes/MSigDB_2026.1.Hs/).
+It includes the source URL, ontology version, and source SHA-256. No runtime
+network access or additional package is required. All bundled human and mouse GO
+IDs are checked against this resource in the tests. Unknown IDs cause an explicit
+error rather than a fallback to gene overlap.
+
+To reproduce the resource, download that snapshot, then run:
+
+```bash
+python tools/build_go_resource.py path/to/go-basic.obo
+```
+
+Method: [Wang et al. (2007), A new method to measure the semantic similarity of GO terms](https://doi.org/10.1093/bioinformatics/btm087).
+Ontology data: [Gene Ontology Consortium](https://geneontology.org/), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

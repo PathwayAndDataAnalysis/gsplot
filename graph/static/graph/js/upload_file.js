@@ -468,14 +468,9 @@ function toggleJaccardOptions() {
   const jaccardOptionsContainer = document.getElementById('jaccard-options-container');
   const overlapOptionsContainer = document.getElementById('overlap-options-container');
 
-  if (distanceMetricSelect.value === 'jaccard-distance') {
-    // Set a default for the Jaccard type if it becomes visible
-    jaccardOptionsContainer.style.display = 'block';
-    overlapOptionsContainer.style.display = 'none';
-  } else {
-    jaccardOptionsContainer.style.display = 'none';
-    overlapOptionsContainer.style.display = 'block';
-  }
+  jaccardOptionsContainer.style.display = distanceMetricSelect.value === 'jaccard-distance' ? 'block' : 'none';
+  overlapOptionsContainer.style.display = distanceMetricSelect.value === 'overlap-coeff' ? 'block' : 'none';
+  document.getElementById('go-semantic-description').hidden = distanceMetricSelect.value !== 'go-semantic';
 }
 
 function showGeneInputTab(tabId, event = null) {

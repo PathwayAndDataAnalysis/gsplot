@@ -26,8 +26,8 @@
   const threshold = document.createElement("div");
   algorithm.className = distance.className = threshold.className = "analysis-control-group";
   children.slice(0, 4).forEach(node => algorithm.append(node));
-  children.slice(4, 8).forEach(node => distance.append(node));
-  children.slice(8).forEach(node => threshold.append(node));
+  children.slice(4, 9).forEach(node => distance.append(node));
+  children.slice(9).forEach(node => threshold.append(node));
   copy.append(algorithm, distance, threshold);
   home.append(copy);
 
@@ -54,6 +54,8 @@
       }
       mirror.style.cssText = original.style.cssText;
       mirror.className = original.className;
+      mirror.hidden = original.hidden;
+      if (original.matches("option")) mirror.disabled = original.disabled;
     });
   }
 
@@ -72,10 +74,11 @@
     });
   });
 
-  // Also reflect visibility changes and computed thresholds from the graph.
-  new MutationObserver(sync).observe(source, {
-    attributes: true, subtree: true, attributeFilter: ["style", "class", "readonly", "disabled", "value"]
-  });
   window.syncAnalysisControls = sync;
   sync();
+
+  // Also reflect visibility changes and computed thresholds from the graph.
+  new MutationObserver(sync).observe(source, {
+    attributes: true, subtree: true, attributeFilter: ["style", "class", "readonly", "disabled", "hidden", "value"]
+  });
 })();

@@ -32,6 +32,7 @@ from .dataReduction import (
     parse_scored_genes_raw,
     run_gseapy,
 )
+from .go_semantic import GO_METRIC, get_go_terms_by_set, get_go_ontology
 from .gene_set_utils import (
     get_selected_gene_sets_with_relevant_members,
     build_gene_universe_from_selected_gene_sets,
@@ -451,6 +452,11 @@ def gene_input_view(request):
 
             # Run Ump
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
+            go_terms_by_set = None
+            ontology_key = ""
+            if distance_type == GO_METRIC:
+                go_terms_by_set = get_go_terms_by_set(species, selected_gene_sets)
+                ontology_key = ":" + get_go_ontology().version
             print("building weights")
             user_weights = build_weights_from_sets(sig_genes, insig_genes) if sig_genes else None
             directions_by_set = None
@@ -458,7 +464,7 @@ def gene_input_view(request):
                 directions_by_set = build_thresholded_directions_by_set(signif_gene_sets)
             print("building weights done")
 
-            dist_key = f"distance:thresholded:{key_hash}:{thr_key}:{distance_type}:rescaled"
+            dist_key = f"distance:thresholded:{key_hash}:{thr_key}:{distance_type}:rescaled{ontology_key}"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -476,6 +482,7 @@ def gene_input_view(request):
                     distance_type,
                     user_weights,
                     directions_by_set=directions_by_set,
+                    go_terms_by_set=go_terms_by_set,
                 )
                 print("distance matrix generated")
                 cache.set(dist_key, distance_matrix, timeout=cache_timeout)
@@ -488,6 +495,7 @@ def gene_input_view(request):
                 distance_type,
                 distance_matrix,
                 directions_by_set=directions_by_set,
+                go_terms_by_set=go_terms_by_set,
             )
             print("completed umap")
 
@@ -723,12 +731,17 @@ def gene_input_view2(request):
 
             # Run Ump
             distance_type = (data.get('distance_type') or 'jaccard_weighted').lower()
+            go_terms_by_set = None
+            ontology_key = ""
+            if distance_type == GO_METRIC:
+                go_terms_by_set = get_go_terms_by_set(species, selected_gene_sets)
+                ontology_key = ":" + get_go_ontology().version
             print("building user_weights")
             user_weights = build_weights_from_ranked_list(ranked_genes) if len(ranked_genes) > 0 else None
             directions_by_set = build_ranked_directions_by_set(filtered, signif_gene_sets)
             print("weights built")
 
-            dist_key = f"distance:ranked:{key_hash}:{thr_key}:{distance_type}:rescaled"
+            dist_key = f"distance:ranked:{key_hash}:{thr_key}:{distance_type}:rescaled{ontology_key}"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -746,6 +759,7 @@ def gene_input_view2(request):
                     distance_type,
                     user_weights,
                     directions_by_set=directions_by_set,
+                    go_terms_by_set=go_terms_by_set,
                 )
                 print("distance matrix generated")
                 cache.set(dist_key, distance_matrix, timeout=cache_timeout)
@@ -758,6 +772,7 @@ def gene_input_view2(request):
                 distance_type,
                 distance_matrix,
                 directions_by_set=directions_by_set,
+                go_terms_by_set=go_terms_by_set,
             )
             print("completed reduction")
 
@@ -1006,13 +1021,18 @@ def scored_genes_view(request):
                 return JsonResponse({"error": str(e)}, status=400)
 
             distance_type = (data.get("distance_type") or "jaccard_weighted").lower()
+            go_terms_by_set = None
+            ontology_key = ""
+            if distance_type == GO_METRIC:
+                go_terms_by_set = get_go_terms_by_set(species, selected_gene_sets)
+                ontology_key = ":" + get_go_ontology().version
             directions_by_set = build_scored_directions_by_set(filtered, signif_gene_sets)
 
             # For scored genes mode, weighted distances use rank-based weights from score ordering
             if distance_type in ["jaccard_weighted", "overlap_weighted"] and not user_weights:
                 user_weights = build_weights_from_scored_genes(scored_genes)
 
-            dist_key = f"distance:scored:{key_hash}:{thr_key}:{distance_type}:rescaled"
+            dist_key = f"distance:scored:{key_hash}:{thr_key}:{distance_type}:rescaled{ontology_key}"
             distance_matrix = cache.get(dist_key)
             expected_n = len(signif_gene_sets)
 
@@ -1030,6 +1050,7 @@ def scored_genes_view(request):
                     distance_type,
                     user_weights,
                     directions_by_set=directions_by_set,
+                    go_terms_by_set=go_terms_by_set,
                 )
                 print("distance matrix generated")
                 cache.set(dist_key, distance_matrix, timeout=cache_timeout)
@@ -1042,6 +1063,7 @@ def scored_genes_view(request):
                 distance_type,
                 distance_matrix,
                 directions_by_set=directions_by_set,
+                go_terms_by_set=go_terms_by_set,
             )
             print("completed umap")
 

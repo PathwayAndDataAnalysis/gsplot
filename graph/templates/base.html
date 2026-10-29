@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   {% load static %}
   <title>Gene Set Plot</title>
-  <link rel="stylesheet" type="text/css" href="{% static 'graph/css/style.css' %}" />
+  <link rel="stylesheet" type="text/css" href="{% static 'graph/css/style.css' %}?v=go-semantic-2" />
 </head>
 
 <body>
@@ -435,7 +435,7 @@
         <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
           <option value="jaccard-distance" selected>Jaccard Distance</option>
           <option value="overlap-coeff">Overlap Coeff</option>
-          <!-- Add more options here if needed -->
+          <option value="go-semantic" id="go-semantic-option" hidden disabled>GO Semantic (Wang)</option>
         </select>
       </div>
 
@@ -464,6 +464,11 @@
           </div>
         </div>
       </div>
+      <p id="go-semantic-description" class="option" hidden>
+        Uses the GO hierarchy to compare biological function, independently of shared genes.
+        No gene weighting is applied. BP, MF and CC are compared within their own branches;
+        pairs from different branches have maximum distance.
+      </p>
       <!-- END Additional Settings Section -->
 
       <div style="margin-top: 10px;">
@@ -549,11 +554,11 @@
 
   <!-- JavaScript Files -->
   </main>
-  <script src="{% static 'graph/js/update_settings.js' %}"></script>
-  <script src="{% static 'graph/js/msigdb_loader.js' %}" data-collection-metadata-url="{% static 'resources/collection_metadata.json' %}"></script>
+  <script src="{% static 'graph/js/update_settings.js' %}?v=go-semantic-2"></script>
+  <script src="{% static 'graph/js/msigdb_loader.js' %}?v=go-semantic-2" data-collection-metadata-url="{% static 'resources/collection_metadata.json' %}"></script>
   <script src="{% static 'graph/js/modify_selected.js' %}"></script>
-  <script src="{% static 'graph/js/upload_file.js' %}"></script>
-  <script src="{% static 'graph/js/analysis_controls.js' %}"></script>
+  <script src="{% static 'graph/js/upload_file.js' %}?v=go-semantic-2"></script>
+  <script src="{% static 'graph/js/analysis_controls.js' %}?v=go-semantic-2"></script>
   <script src="{% static 'graph/js/navigation.js' %}"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </body>

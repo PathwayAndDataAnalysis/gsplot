@@ -193,6 +193,16 @@ function displayValues(settings) {
     }
   }
 
+  const metric = settings.distance_type;
+  const metricSelect = document.getElementById("distance-metric");
+  if (metricSelect && metric) {
+    metricSelect.value = metric === "go_semantic_wang" ? "go-semantic" :
+      metric.startsWith("overlap") ? "overlap-coeff" : "jaccard-distance";
+    const radio = document.querySelector(`input[value="${metric}"]`);
+    if (radio) radio.checked = true;
+    window.syncGoSemanticAvailability?.();
+  }
+
   // Restore reduction UI too
   const reduction = settings.reduction || defaultTsne;
 
@@ -323,7 +333,9 @@ function updateSettings(suppressToast = false) {
 
   // Distance type
   const distanceMetric = document.getElementById("distance-metric")?.value;
-  if (distanceMetric === "jaccard-distance") {
+  if (distanceMetric === "go-semantic") {
+    newSettings["distance_type"] = "go_semantic_wang";
+  } else if (distanceMetric === "jaccard-distance") {
     if (document.getElementById("plain-jaccard")?.checked) {
       newSettings["distance_type"] = "jaccard_plain";
     } else if (document.getElementById("weighted-jaccard")?.checked) {
@@ -799,7 +811,9 @@ window.update_settings = {
     newSettings["mode"] = reduction["mode"];
 
     const distanceMetric = document.getElementById("distance-metric")?.value;
-    if (distanceMetric === "jaccard-distance") {
+    if (distanceMetric === "go-semantic") {
+      newSettings["distance_type"] = "go_semantic_wang";
+    } else if (distanceMetric === "jaccard-distance") {
       if (document.getElementById("plain-jaccard")?.checked) {
         newSettings["distance_type"] = "jaccard_plain";
       } else if (document.getElementById("weighted-jaccard")?.checked) {

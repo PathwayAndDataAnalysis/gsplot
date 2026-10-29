@@ -11,6 +11,7 @@ from scipy.stats import fisher_exact
 from statsmodels.stats.multitest import multipletests
 from scipy.stats import norm
 from sklearn.manifold import Isomap, TSNE
+from .go_semantic import GO_METRIC, get_go_ontology
 
 DISTANCE_RESCALING_CAP = 100.0
 
@@ -689,7 +690,7 @@ def calculate_pvals(filtered, ranked_genes, tail_mode='positive'):
     return add_q_values(gene_sets_with_p)
 
 
-def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, distance_matrix, directions_by_set=None):
+def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, distance_matrix, directions_by_set=None, go_terms_by_set=None):
     if distance_type in ['jaccard_weighted', 'overlap_weighted'] and user_weights is None:
         raise ValueError("user_weights must be provided when using weighted option.")
 
@@ -721,33 +722,10 @@ def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, 
 
         if distance_matrix is None:
             print("Computing new distance matrix.")
-            distance_matrix = np.zeros((n, n))
-            set_names = [row["Name"] for row in all_rows]
-            top_weights = user_weights or {}
-            bottom_weights = build_bottom_rank_weights(top_weights)
-            for i in range(n):
-                set1 = molecule_sets[i]
-                for j in range(i + 1, n):
-                    set2 = molecule_sets[j]
-                    pair_direction = None
-                    if directions_by_set:
-                        pair_direction = get_pair_weight_direction(
-                            directions_by_set.get(set_names[i]),
-                            directions_by_set.get(set_names[j]),
-                        )
-                    dist = compute_pair_distance(
-                        distance_type=distance_type,
-                        set1=set1,
-                        set2=set2,
-                        top_weights=top_weights,
-                        bottom_weights=bottom_weights,
-                        pair_direction=pair_direction,
-                    )
-                    scaled_dist = rescale_distance(dist)
-                    distance_matrix[i, j] = scaled_dist
-                    distance_matrix[j, i] = scaled_dist
-            if i % 50 == 0:
-                print(f"{i}/{n}")
+            distance_matrix = calculate_distance_matrix(
+                gene_sets_with_stats, distance_type, user_weights,
+                directions_by_set=directions_by_set, go_terms_by_set=go_terms_by_set,
+            )
 
         reducer = get_reducer(settings)
         print("applying reducer...")
@@ -777,11 +755,23 @@ def umap_reduction(gene_sets_with_stats, settings, user_weights, distance_type, 
         raise e
 
 
-def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights, directions_by_set=None):
+def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights, directions_by_set=None, go_terms_by_set=None):
     n = len(sigif_gene_sets)
 
     items = list(sigif_gene_sets.items())
     set_names = [set_name for set_name, _ in items]
+    if distance_type == GO_METRIC:
+        ontology = get_go_ontology()
+        if not go_terms_by_set or any(name not in go_terms_by_set for name in set_names):
+            raise ValueError("GO semantic similarity requires a GO ID for every gene set.")
+        terms = [ontology.resolve(go_terms_by_set[name]) for name in set_names]
+        matrix = np.zeros((n, n))
+        for i, first in enumerate(terms):
+            for j in range(i + 1, n):
+                distance = 1.0 - ontology.similarity(first, terms[j])
+                matrix[i, j] = matrix[j, i] = rescale_distance(distance)
+        return matrix
+
     molecule_sets = [set(gene_string.split()) for _, (gene_string, _, _) in items]
     top_weights = user_weights or {}
     bottom_weights = build_bottom_rank_weights(top_weights)
@@ -810,7 +800,7 @@ def calculate_distance_matrix(sigif_gene_sets, distance_type, user_weights, dire
             distance_matrix[i, j] = scaled_dist
             distance_matrix[j, i] = scaled_dist
 
-    if i % 50 == 0:
+    if n and i % 50 == 0:
         print(f"{i}/{n}")
 
     return distance_matrix
