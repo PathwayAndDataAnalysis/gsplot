@@ -3,21 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gene Set Plot</title>
+    <title>About GSPlot</title>
     {% load static %}
     <link
       rel="stylesheet"
       type="text/css"
-      href="{% static 'graph/css/style.css' %}"
+      href="{% static 'graph/css/style.css' %}?v=info-pages"
     />
     <link
       rel="stylesheet"
       type="text/css"
-      href="{% static 'about/css/about.css' %}"
+      href="{% static 'about/css/about.css' %}?v=info-pages"
     />
   </head>
 
   <body>
+    {% if not request.GET.embedded %}
     <nav class="nav-bar">
       <div class="header-container">
         <div class="title">
@@ -26,12 +27,15 @@
       </div>
       <div class="nav-links">
         <a class="nav-button" href="/">Input</a>
-        <a class="nav-button" href="/help">Help</a>
-        <a class="nav-button" href="/about">About</a>
+        <a class="nav-button" href="/#graph" aria-disabled="true" onclick="event.preventDefault()">Graph</a>
+        <a class="nav-button" href="/help/">Help</a>
+        <a class="nav-button" href="/about/" aria-current="page">About</a>
+        <div class="settings-button nav-placeholder" aria-hidden="true"></div>
       </div>
     </nav>
-    <div class="about-container">
-      <section class="about-section">
+    {% endif %}
+    <main class="info-page about-page">
+      <header class="info-hero">
         <h1>About GSPlot</h1>
         <p>
           GSPlot is a web application for exploring Gene Set Enrichment Analysis
@@ -39,9 +43,9 @@
           result tables into a visual landscape where related pathways appear
           near each other.
         </p>
-      </section>
+      </header>
 
-      <section class="about-section">
+      <section class="info-panel about-section">
         <h2>Why We Built It</h2>
         <p>
           GSEA outputs can be difficult to interpret because many gene sets are
@@ -54,7 +58,7 @@
         </p>
       </section>
 
-      <section class="about-section">
+      <section class="info-panel about-section">
         <h2>How GSPlot Helps</h2>
         <ul>
           <li>
@@ -79,7 +83,7 @@
         </p>
       </section>
 
-      <section class="about-section">
+      <section class="info-panel about-section">
         <h2>What You Can Do With It</h2>
         <p>
           Upload gene inputs, run enrichment against selected gene set
@@ -93,7 +97,7 @@
         </p>
       </section>
 
-      <section class="about-section">
+      <section class="info-panel about-section">
         <h2>Who GSPlot Is Designed For</h2>
         <p>
           GSPlot is designed for researchers, students, and analysts working
@@ -102,15 +106,16 @@
         </p>
       </section>
 
-      <section class="about-section">
+      <section class="info-panel about-section">
         <h2>Who Developed GSPlot</h2>
         <p>
-          GSPlot is being developed by <strong>Tien Le</strong>, with research
-          mentorship from <strong>Ozgun Babur</strong>.
+          GSPlot is being developed by
+          <strong><a href="https://www.cs.umb.edu/~tienle07/" target="_blank" rel="noopener">Tien Le</a></strong>,
+          with research mentorship from <strong>Ozgun Babur</strong>.
         </p>
       </section>
 
-      <section class="about-section bio-lab-container">
+      <section class="info-panel about-section">
         <div class="bio-lab-header">
           <h2>About the Network Biology Laboratory at UMass Boston</h2>
           <img
@@ -125,7 +130,7 @@
         </p>
       </section>
 
-      <section class="about-section">
+      <section class="info-panel about-section">
         <h2>Other Projects / Learn More</h2>
         <p>
           Explore additional projects from the lab:
@@ -134,6 +139,6 @@
           >.
         </p>
       </section>
-    </div>
+    </main>
   </body>
 </html>

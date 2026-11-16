@@ -9,15 +9,16 @@
     <link
       rel="stylesheet"
       type="text/css"
-      href="{% static 'graph/css/style.css' %}"
+      href="{% static 'graph/css/style.css' %}?v=info-pages"
     />
     <link
       rel="stylesheet"
       type="text/css"
-      href="{% static 'help/css/help_style.css' %}"
+      href="{% static 'help/css/help_style.css' %}?v=info-pages"
     />
   </head>
   <body>
+    {% if not request.GET.embedded %}
     <nav class="nav-bar">
       <div class="header-container">
         <div class="title">
@@ -26,38 +27,47 @@
       </div>
       <div class="nav-links">
         <a class="nav-button" href="/">Input</a>
-        <a class="nav-button" href="/help">Help</a>
-        <a class="nav-button" href="/about">About</a>
+        <a class="nav-button" href="/#graph" aria-disabled="true" onclick="event.preventDefault()">Graph</a>
+        <a class="nav-button" href="/help/" aria-current="page">Help</a>
+        <a class="nav-button" href="/about/">About</a>
+        <div class="settings-button nav-placeholder" aria-hidden="true"></div>
       </div>
     </nav>
+    {% endif %}
 
-    <div id="help-button-container">
+    <main class="info-page help-page">
+    <header class="info-hero">
+      <h1>GSPlot Help</h1>
+      <p>Prepare gene inputs, explore the graph, and adjust analysis settings.</p>
+    </header>
+
+    <div id="help-button-container" role="group" aria-label="Help topics">
       <button
-        class="rounded-button"
-        id="format-help"
-        onclick="openSection(event, 'format-content-container')"
+        type="button"
+        aria-controls="format-content-container"
+        aria-pressed="true"
       >
         Input
       </button>
       <button
-        class="rounded-button"
-        id="tools-help"
-        onclick="openSection(event, 'tools-content-container')"
+        type="button"
+        aria-controls="tools-content-container"
+        aria-pressed="false"
       >
         Graph
       </button>
       <button
-        class="rounded-button"
-        id="settings-help"
-        onclick="openSection(event, 'settings-content-container')"
+        type="button"
+        aria-controls="settings-content-container"
+        aria-pressed="false"
       >
         Settings
       </button>
     </div>
 
     <div id="help-content-container">
-      <div id="format-content-container">
-        <h2 class="center-text">Start an Analysis</h2>
+      <section class="info-panel" id="format-content-container">
+        <h2>Start an Analysis</h2>
         <div class="format-instructions">
           <p>
             Gene Set Plot visualizes gene set enrichment results from genes you provide.
@@ -128,36 +138,32 @@
           </ul>
 
           <h3>Scored gene file example</h3>
-          <div class="flex-center">
-            <div class="example-data">
-              <pre><code>TP53	2.84
+          <pre class="example-data"><code>TP53	2.84
 MYC	1.91
 STAT1	-1.32
 CXCL10	-2.20</code></pre>
-            </div>
-          </div>
         </div>
-      </div>
+      </section>
 
-      <div id="tools-content-container">
-        <div class="tabs">
+      <section class="info-panel" id="tools-content-container" hidden>
+        <div class="tabs" role="group" aria-label="Graph topics">
           <button
-            id="defaultTab"
-            class="tablinks"
-            onclick="openTool(event, 'workflow')"
+            type="button"
+            aria-controls="workflow"
+            aria-pressed="true"
           >
             Workflow
           </button>
-          <button class="tablinks" onclick="openTool(event, 'navigation')">
+          <button type="button" aria-controls="navigation" aria-pressed="false">
             Navigate
           </button>
-          <button class="tablinks" onclick="openTool(event, 'selection')">
+          <button type="button" aria-controls="selection" aria-pressed="false">
             Select
           </button>
-          <button class="tablinks" onclick="openTool(event, 'labels')">
+          <button type="button" aria-controls="labels" aria-pressed="false">
             Labels
           </button>
-          <button class="tablinks" onclick="openTool(event, 'download')">
+          <button type="button" aria-controls="download" aria-pressed="false">
             Export
           </button>
         </div>
@@ -184,7 +190,7 @@ CXCL10	-2.20</code></pre>
             </ul>
           </div>
 
-          <div id="navigation" class="tabcontent">
+          <div id="navigation" class="tabcontent" hidden>
             <h3>Navigate the Plotly graph</h3>
             <ul>
               <li>
@@ -237,7 +243,7 @@ CXCL10	-2.20</code></pre>
             </div>
           </div>
 
-          <div id="selection" class="tabcontent">
+          <div id="selection" class="tabcontent" hidden>
             <h3>Select and compare points</h3>
             <ul>
               <li>
@@ -260,7 +266,7 @@ CXCL10	-2.20</code></pre>
             </ul>
           </div>
 
-          <div id="labels" class="tabcontent">
+          <div id="labels" class="tabcontent" hidden>
             <h3>Labels and clustering</h3>
             <ul>
               <li>
@@ -287,7 +293,7 @@ CXCL10	-2.20</code></pre>
             </ul>
           </div>
 
-          <div id="download" class="tabcontent">
+          <div id="download" class="tabcontent" hidden>
             <h3>Export results</h3>
             <ul>
               <li>
@@ -307,19 +313,19 @@ CXCL10	-2.20</code></pre>
             </ul>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div id="settings-content-container">
-        <h2 class="center-text">Graph and Analysis Settings</h2>
+      <section class="info-panel" id="settings-content-container" hidden>
+        <h2>Graph and Analysis Settings</h2>
         <div class="graph-settings">
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'apply-collapse')"
+            aria-controls="apply-collapse" aria-expanded="false"
           >
-            <h3>Apply and Submit</h3>
+            Apply and Submit
           </button>
-          <div class="collapsible-content" id="apply-collapse">
+          <div class="collapsible-content" id="apply-collapse" hidden>
             <ul>
               <li>
                 <b>Submit</b> validates the current input, selected collections, threshold,
@@ -340,11 +346,11 @@ CXCL10	-2.20</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'color-collapse')"
+            aria-controls="color-collapse" aria-expanded="false"
           >
-            <h3>Point Color</h3>
+            Point Color
           </button>
-          <div class="collapsible-content" id="color-collapse">
+          <div class="collapsible-content" id="color-collapse" hidden>
             <ul>
               <li>
                 In standard mode, points are colored by q-value. The least significant
@@ -365,11 +371,11 @@ CXCL10	-2.20</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'size-collapse')"
+            aria-controls="size-collapse" aria-expanded="false"
           >
-            <h3>Point Size</h3>
+            Point Size
           </button>
-          <div class="collapsible-content" id="size-collapse">
+          <div class="collapsible-content" id="size-collapse" hidden>
             <ul>
               <li>
                 <b>Fixed:</b> every point uses the same marker diameter.
@@ -384,11 +390,11 @@ CXCL10	-2.20</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'display-collapse')"
+            aria-controls="display-collapse" aria-expanded="false"
           >
-            <h3>Display Genes</h3>
+            Display Genes
           </button>
-          <div class="collapsible-content" id="display-collapse">
+          <div class="collapsible-content" id="display-collapse" hidden>
             <ul>
               <li>
                 For thresholded input, <b>Show significant genes only</b> limits selected
@@ -411,11 +417,11 @@ CXCL10	-2.20</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'threshold-collapse')"
+            aria-controls="threshold-collapse" aria-expanded="false"
           >
-            <h3>Thresholds</h3>
+            Thresholds
           </button>
-          <div class="collapsible-content" id="threshold-collapse">
+          <div class="collapsible-content" id="threshold-collapse" hidden>
             <ul>
               <li>
                 Choose one threshold type: <b>FDR</b> or <b>P-Value</b>. Enter a value
@@ -435,11 +441,11 @@ CXCL10	-2.20</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'reduction-collapse')"
+            aria-controls="reduction-collapse" aria-expanded="false"
           >
-            <h3>Embedding Algorithm</h3>
+            Embedding Algorithm
           </button>
-          <div class="collapsible-content" id="reduction-collapse">
+          <div class="collapsible-content" id="reduction-collapse" hidden>
             <ul>
               <li>
                 <b>t-SNE:</b> default layout method. Perplexity
@@ -462,11 +468,11 @@ CXCL10	-2.20</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'distance-collapse')"
+            aria-controls="distance-collapse" aria-expanded="false"
           >
-            <h3>Distance Metric</h3>
+            Distance Metric
           </button>
-          <div class="collapsible-content" id="distance-collapse">
+          <div class="collapsible-content" id="distance-collapse" hidden>
             <ul>
               <li>
                 <b>Jaccard Distance:</b> compares overlap relative to the union of two
@@ -475,6 +481,13 @@ CXCL10	-2.20</code></pre>
               <li>
                 <b>Overlap Coeff:</b> compares overlap relative to the smaller gene set.
                 This can make subset-like relationships appear closer.
+              </li>
+              <li>
+                <b>GO Semantic (Wang):</b> available when only human or mouse GO
+                collections are selected. Compares GO terms using the ontology hierarchy,
+                independently of gene overlap or input weights. BP, MF and CC terms in
+                different branches have maximum distance. Uses the bundled GO 2025-10-10
+                ontology, matching MSigDB 2026.1.
               </li>
               <li>
                 <b>Weighted</b> metrics include available rank or score information.
@@ -486,11 +499,11 @@ CXCL10	-2.20</code></pre>
           <button
             type="button"
             class="collapsible"
-            onclick="collapseSection(event, 'cluster-collapse')"
+            aria-controls="cluster-collapse" aria-expanded="false"
           >
-            <h3>Cluster Labeling</h3>
+            Cluster Labeling
           </button>
-          <div class="collapsible-content" id="cluster-collapse">
+          <div class="collapsible-content" id="cluster-collapse" hidden>
             <p>
               Turn on <b>Cluster mode</b> if you want the graph to color points by
               detected clusters instead of by q-value. This also shows cluster labels on
@@ -587,8 +600,9 @@ CXCL10	-2.20</code></pre>
             <p>Points that are not assigned to any cluster are shown in gray.</p>
           </div>
         </div>
-      </div>
+      </section>
     </div>
-    <script src="{% static 'help/js/help.js' %}"></script>
+    </main>
+    <script src="{% static 'help/js/help.js' %}?v=info-pages"></script>
   </body>
 </html>

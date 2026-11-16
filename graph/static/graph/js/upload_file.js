@@ -55,12 +55,14 @@ function getCachedGraphData() {
 
 function setCachedGraphData(data) {
   getRuntimeState().graphData = cloneJSON(data);
+  window.dispatchEvent(new Event("graph-cache-changed"));
 }
 
 function clearCachedGraphData() {
   const state = getRuntimeState();
   state.graphData = null;
   state.lastComputeFingerprint = null;
+  window.dispatchEvent(new Event("graph-cache-changed"));
 }
 
 function hasCachedGraphData() {
@@ -227,14 +229,7 @@ document.querySelectorAll(".settings input, .settings select").forEach((el) => {
 
 // Import file button script
 function importFile() {
-  // Clear selected points and remove local storage
-  localStorage.setItem("selected", "[]");
-  localStorage.removeItem("camera");
-  localStorage.removeItem("annotations");
-  localStorage.setItem("reset", JSON.stringify(true));
-  clearCachedGraphData();
-  setCachedInputData(null);
-  clearPoints()
+  // Keep the current graph available until a changed input is submitted.
   // Show upload screen
   hideGraph();
   setTimeout(() => {
@@ -245,10 +240,33 @@ function importFile() {
 }
 
 // When the user clicks the settings button, add classes to trigger css animation
-settingsButton.addEventListener("click", function () {
-  settingsContainer.classList.toggle("visible");
-  graph.classList.toggle("settings-open");
-  document.body.classList.toggle("settings-open", settingsContainer.classList.contains("visible"));
+const closeSettingsButton = document.getElementById("close-settings");
+
+settingsButton.addEventListener("click", () => {
+  const open = settingsContainer.inert;
+  setSettingsOpen(open);
+  if (open) closeSettingsButton.focus();
+});
+
+function closeSettings() {
+  settingsButton.focus({ preventScroll: true });
+  setSettingsOpen(false);
+}
+
+closeSettingsButton.addEventListener("click", closeSettings);
+settingsContainer.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeSettings();
+  }
+});
+
+function setSettingsOpen(open) {
+  settingsContainer.classList.toggle("visible", open);
+  settingsContainer.inert = !open;
+  graph.classList.toggle("settings-open", open);
+  document.body.classList.toggle("settings-open", open);
+  settingsButton.setAttribute("aria-expanded", String(open));
 
   const syncGraphLayout = () => {
     const frame = graph.contentWindow;
@@ -263,7 +281,7 @@ settingsButton.addEventListener("click", function () {
   setTimeout(syncGraphLayout, 100);
   setTimeout(syncGraphLayout, 300);
   setTimeout(syncGraphLayout, 550);
-});
+}
 
 function convertToExpectedFormat(arrayOfObjects) {
   const keys = Object.keys(arrayOfObjects[0]);
@@ -285,7 +303,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       if (shouldToast) {
         const toast = document.getElementById("toast-message");
         if (toast) {
-          toast.style.color = "#2ecc71";
           toast.textContent = "New settings automatically applied.";
           toast.style.display = "block";
           setTimeout(() => {
@@ -439,24 +456,19 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       return;
     }
 
-    if (!hasData) {
-      // First time submission - need to generate the graph
-      await frame.main();
-      hideUpload();
-      hideInput();
-      setTimeout(() => showGraph(), transitionDuration);
-
-      // Hide the submit button after first render
-      document.getElementById("submit-section-wrapper").style.display = "none";
-    } else {
+    if (hasData) {
       // Input/settings changed in this same session: recompute from scratch.
       clearCachedGraphData();
       localStorage.removeItem("camera");
       localStorage.removeItem("annotations");
       localStorage.setItem("selected", "[]");
       localStorage.setItem("reset", JSON.stringify(true));
-      await frame.main();
     }
+
+    await frame.main();
+    hideUpload();
+    hideInput();
+    showGraph();
 
     setLastComputeFingerprint(analysisFingerprint);
 
@@ -473,14 +485,9 @@ function toggleJaccardOptions() {
   const jaccardOptionsContainer = document.getElementById('jaccard-options-container');
   const overlapOptionsContainer = document.getElementById('overlap-options-container');
 
-  if (distanceMetricSelect.value === 'jaccard-distance') {
-    // Set a default for the Jaccard type if it becomes visible
-    jaccardOptionsContainer.style.display = 'block';
-    overlapOptionsContainer.style.display = 'none';
-  } else {
-    jaccardOptionsContainer.style.display = 'none';
-    overlapOptionsContainer.style.display = 'block';
-  }
+  jaccardOptionsContainer.style.display = distanceMetricSelect.value === 'jaccard-distance' ? 'block' : 'none';
+  overlapOptionsContainer.style.display = distanceMetricSelect.value === 'overlap-coeff' ? 'block' : 'none';
+  document.getElementById('go-semantic-description').hidden = distanceMetricSelect.value !== 'go-semantic';
 }
 
 function showGeneInputTab(tabId, event = null) {
@@ -825,6 +832,8 @@ function LoadInput() {
 
 
 function showGraph() {
+  setSettingsOpen(true);
+  window.dispatchEvent(new CustomEvent("analysis-view-changed", { detail: "graph" }));
   graphAndSettingsContainer.classList.add("no-click");
   graphAndSettingsContainer.style.display = "flex";
   selectedPoints.style.display = "block";
@@ -839,6 +848,18 @@ function showGraph() {
     graphAndSettingsContainer.style.opacity = "1";
     graphAndSettingsContainer.classList.remove("no-click");
   }, 100);
+
+  // Input sections collapse after their fade-out. Reset the page scroll both
+  // now and after that layout change so a long input page cannot leave the
+  // viewport underneath the newly displayed graph. Keep the toolbar visible.
+  const revealGraph = () => {
+    if (graphAndSettingsContainer.style.display === "none" ||
+        document.getElementById("analysis-page")?.hidden) return;
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    graph.contentWindow?.syncGraphLayoutToFrame?.();
+  };
+  window.requestAnimationFrame(revealGraph);
+  setTimeout(revealGraph, transitionDuration + 50);
 
   // Show download button in iframe
   try {
@@ -887,12 +908,15 @@ function hideUpload() {
 }
 
 function showInput() {
+  document.getElementById("home-analysis-settings").hidden = false;
+  window.dispatchEvent(new CustomEvent("analysis-view-changed", { detail: "input" }));
   treeContainer.style.display = "block";
   speciesSelector.style.display = "block";
   geneContainer.style.display = "block";
   submitContainer.style.display = "block";
 }
 function hideInput() {
+  document.getElementById("home-analysis-settings").hidden = true;
   treeContainer.style.display = "none";
   speciesSelector.style.display = "none";
   geneContainer.style.display = "none";

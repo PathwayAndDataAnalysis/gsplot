@@ -37,8 +37,6 @@ const defaultIsoMap = {
   'mode': "isomap",
   'n_neighbors': 5,
 }
-let lastPValue = document.getElementById("pvalue-input")?.value || "0.05";
-let lastFDR = document.getElementById("fdr-input")?.value || "0.05";
 
 const fixedSizeButton = document.getElementById("fixed-size");
 const dynamicSizeButton = document.getElementById("dynamic-size");
@@ -118,10 +116,17 @@ function main() {
   }
   toggleSizeVisibility();
 
+  initializeThresholdInputs();
   document.querySelectorAll('input[name="threshold-type"]').forEach((radio) => {
     radio.addEventListener("change", updateThresholdInputs);
   });
-  updateThresholdInputs(); // Call on load
+  document.getElementById("pvalue-input").addEventListener("input", (event) => {
+    if (!event.target.readOnly) cacheThresholdInputs();
+  });
+  document.getElementById("fdr-input").addEventListener("input", (event) => {
+    if (!event.target.readOnly) cacheThresholdInputs();
+  });
+  updateThresholdInputs();
   toggleClusterParamsVisibility();
   toggleClusterAlgorithmParams();
   refreshDirectionColorControls();
@@ -188,6 +193,16 @@ function displayValues(settings) {
     }
   }
 
+  const metric = settings.distance_type;
+  const metricSelect = document.getElementById("distance-metric");
+  if (metricSelect && metric) {
+    metricSelect.value = metric === "go_semantic_wang" ? "go-semantic" :
+      metric.startsWith("overlap") ? "overlap-coeff" : "jaccard-distance";
+    const radio = document.querySelector(`input[value="${metric}"]`);
+    if (radio) radio.checked = true;
+    window.syncGoSemanticAvailability?.();
+  }
+
   // Restore reduction UI too
   const reduction = settings.reduction || defaultTsne;
 
@@ -220,6 +235,7 @@ function displayValues(settings) {
   toggleClusterParamsVisibility();
   toggleClusterAlgorithmParams();
   refreshDirectionColorControls();
+  window.syncAnalysisControls?.();
 }
 
 function getCurrentDirectionalMode() {
@@ -317,7 +333,9 @@ function updateSettings(suppressToast = false) {
 
   // Distance type
   const distanceMetric = document.getElementById("distance-metric")?.value;
-  if (distanceMetric === "jaccard-distance") {
+  if (distanceMetric === "go-semantic") {
+    newSettings["distance_type"] = "go_semantic_wang";
+  } else if (distanceMetric === "jaccard-distance") {
     if (document.getElementById("plain-jaccard")?.checked) {
       newSettings["distance_type"] = "jaccard_plain";
     } else if (document.getElementById("weighted-jaccard")?.checked) {
@@ -374,6 +392,9 @@ function updateSettings(suppressToast = false) {
 
   // Save ONLY current UI settings
   localStorage.setItem("settings", JSON.stringify(newSettings));
+  // Apply must persist the same threshold mode and pair as Submit.
+  localStorage.setItem("threshold-type", selectedType);
+  cacheThresholdInputs();
 
   const anythingChanged = stylingOnly || isDataChange || thresholdChange || clusterChanged;
 
@@ -411,7 +432,6 @@ function updateSettings(suppressToast = false) {
       const toast = document.getElementById("toast-message");
       if (toast) {
         toast.style.display = "block";
-        toast.style.color = "#2ecc71";
         toast.textContent = "Cluster mode enabled — computing clusters...";
         setTimeout(() => { toast.style.display = "none"; }, 2000);
       }
@@ -427,7 +447,6 @@ function updateSettings(suppressToast = false) {
       const toast = document.getElementById("toast-message");
       if (toast) {
         toast.style.display = "block";
-        toast.style.color = "#2ecc71";
         toast.textContent = "No changes detected.";
         setTimeout(() => { toast.style.display = "none"; }, 2000);
       }
@@ -439,7 +458,6 @@ function updateSettings(suppressToast = false) {
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
     toast.style.display = "block";
-    toast.style.color = "#2ecc71";
 
     const hasRendered = hasRuntimeGraphData();
 
@@ -790,7 +808,9 @@ window.update_settings = {
     newSettings["mode"] = reduction["mode"];
 
     const distanceMetric = document.getElementById("distance-metric")?.value;
-    if (distanceMetric === "jaccard-distance") {
+    if (distanceMetric === "go-semantic") {
+      newSettings["distance_type"] = "go_semantic_wang";
+    } else if (distanceMetric === "jaccard-distance") {
       if (document.getElementById("plain-jaccard")?.checked) {
         newSettings["distance_type"] = "jaccard_plain";
       } else if (document.getElementById("weighted-jaccard")?.checked) {
@@ -811,57 +831,65 @@ window.update_settings = {
   refreshDirectionColorControls: refreshDirectionColorControls,
 };
 
+function isValidThreshold(value) {
+  return value !== null && value !== undefined && value !== "" &&
+    Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 1;
+}
+
+function cacheThresholdInputs() {
+  const pvalue = document.getElementById("pvalue-input").value;
+  const fdr = document.getElementById("fdr-input").value;
+  const type = document.querySelector('input[name="threshold-type"]:checked')?.value;
+  // Save a complete pair atomically; ignore temporarily empty input while typing.
+  if (!isValidThreshold(pvalue) || !isValidThreshold(fdr)) return;
+  localStorage.setItem("threshold-inputs", JSON.stringify({ pvalue, fdr, type }));
+}
+window.cacheThresholdInputs = cacheThresholdInputs;
+
+function initializeThresholdInputs() {
+  let cached;
+  try {
+    cached = JSON.parse(localStorage.getItem("threshold-inputs") || "null");
+  } catch { cached = null; }
+  const saved = JSON.parse(localStorage.getItem("settings") || "{}");
+  const completePair = cached && isValidThreshold(cached.pvalue) && isValidThreshold(cached.fdr) &&
+    ["pvalue", "fdr"].includes(cached.type);
+  const savedType = isValidThreshold(saved.p_value_threshold) ? "pvalue" :
+    isValidThreshold(saved.fdr_threshold) ? "fdr" :
+    localStorage.getItem("threshold-type") === "pvalue" ? "pvalue" : "fdr";
+  // An applied analysis is authoritative if an older display cache disagrees.
+  const hasAppliedThreshold = isValidThreshold(saved.p_value_threshold) ||
+    isValidThreshold(saved.fdr_threshold);
+  const selectedType = hasAppliedThreshold ? savedType : completePair ? cached.type : savedType;
+  // Migrate older caches using the calculated counterpart as well as the selected value.
+  const savedP = savedType === "pvalue" ?
+    (saved.p_value_threshold ?? localStorage.getItem("p-value")) : localStorage.getItem("computed-p-value");
+  const savedFDR = savedType === "fdr" ?
+    (saved.fdr_threshold ?? localStorage.getItem("fdr")) : localStorage.getItem("computed-fdr");
+  document.getElementById("pvalue-input").value = completePair ? cached.pvalue :
+    isValidThreshold(savedP) ? String(savedP) : "0.05";
+  document.getElementById("fdr-input").value = completePair ? cached.fdr :
+    isValidThreshold(savedFDR) ? String(savedFDR) : "0.05";
+  if (hasAppliedThreshold) {
+    const activeInput = document.getElementById(selectedType === "pvalue" ? "pvalue-input" : "fdr-input");
+    activeInput.value = String(selectedType === "pvalue" ? saved.p_value_threshold : saved.fdr_threshold);
+  }
+  document.querySelectorAll('input[name="threshold-type"]').forEach(radio => {
+    radio.checked = radio.value === selectedType;
+  });
+}
+
 function updateThresholdInputs() {
   const selectedType = document.querySelector('input[name="threshold-type"]:checked')?.value;
-  const pInput = document.getElementById("pvalue-input");
-  const fdrInput = document.getElementById("fdr-input");
-  const pWrapper = document.getElementById("pvalue-wrapper");
-  const fWrapper = document.getElementById("fdr-wrapper");
-
-  const storedAppliedP = localStorage.getItem("p-value");
-  const storedAppliedFDR = localStorage.getItem("fdr");
-  const storedComputedP = localStorage.getItem("computed-p-value");
-  const storedComputedFDR = localStorage.getItem("computed-fdr");
-
-  if (selectedType === "pvalue") {
-    if (storedAppliedP !== null) {
-      pInput.value = storedAppliedP;
-    } else if (storedComputedP !== null) {
-      pInput.value = storedComputedP;
-    } else if (lastPValue !== "") {
-      pInput.value = lastPValue;
-    } else {
-      pInput.value = "0.05";
-    }
-
-    lastFDR = fdrInput.value;
-
-    pInput.removeAttribute("readonly");
-    fdrInput.setAttribute("readonly", true);
-
-    pWrapper.classList.remove("grayed-out");
-    fWrapper.classList.add("grayed-out");
-  } else {
-    if (storedAppliedFDR !== null) {
-      fdrInput.value = storedAppliedFDR;
-    } else if (storedComputedFDR !== null) {
-      fdrInput.value = storedComputedFDR;
-    } else if (lastFDR !== "") {
-      fdrInput.value = lastFDR;
-    } else {
-      fdrInput.value = "0.05";
-    }
-
-    lastPValue = pInput.value;
-
-    fdrInput.removeAttribute("readonly");
-    pInput.setAttribute("readonly", true);
-
-    fWrapper.classList.remove("grayed-out");
-    pWrapper.classList.add("grayed-out");
-  }
-
+  const usePValue = selectedType === "pvalue";
+  // Changing the editable threshold must leave both displayed values in place.
+  document.getElementById("pvalue-input").readOnly = !usePValue;
+  document.getElementById("fdr-input").readOnly = usePValue;
+  document.getElementById("pvalue-wrapper").classList.toggle("grayed-out", !usePValue);
+  document.getElementById("fdr-wrapper").classList.toggle("grayed-out", usePValue);
   localStorage.setItem("threshold-type", selectedType);
+  window.syncAnalysisControls?.();
+  cacheThresholdInputs();
 }
 
 window.addEventListener("load", () => {
