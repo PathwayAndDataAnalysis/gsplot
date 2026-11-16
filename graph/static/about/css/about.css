@@ -1,79 +1,26 @@
-.about-container {
-  margin: 30px auto 60px;
-  max-width: 1050px;
-  padding: 0 20px;
-  display: flex;
-  flex-direction: column;
-  row-gap: 18px;
+.about-page {
+  display: grid;
+  gap: 14px;
 }
 
-.about-section {
-  background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 3px 9px rgba(0, 0, 0, 0.1);
-  padding: 20px 22px;
-}
-
-.about-section h1 {
-  margin: 0 0 8px;
-  font-size: 2rem;
-  font-weight: 600;
-}
-
-.about-section h2 {
-  margin: 0 0 8px;
-  font-size: 1.4rem;
-  font-weight: 600;
-}
-
-.about-section p {
-  margin: 0 0 10px;
-  line-height: 1.6;
-}
-
-.about-section ul {
-  margin: 0;
-  padding-left: 18px;
-}
-
-.about-section li {
-  margin: 7px 0;
-  line-height: 1.45;
-}
-
-.about-section a {
-  color: #0156b3;
-}
+.about-section p { margin: 0 0 10px; }
+.about-section ul { margin: 0 0 10px; padding-inline-start: 20px; }
+.about-section li + li { margin-top: 5px; }
 
 .bio-lab-header {
   display: flex;
-  justify-content: space-between;
-  gap: 24px;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
   margin-bottom: 10px;
 }
 
-.bio-lab-header img {
-  width: 120px;
-  height: auto;
-}
+.bio-lab-header h2 { flex: 1 1 260px; margin: 0; }
+.bio-lab-header img { width: 110px; height: auto; }
 
-@media (max-width: 800px) {
-  .about-container {
-    padding: 0 12px;
-  }
-  .about-section {
-    padding: 16px;
-  }
-  .about-section h1 {
-    font-size: 1.7rem;
-  }
-  .about-section h2 {
-    font-size: 1.2rem;
-  }
-  .bio-lab-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
+@media (min-width: 800px) {
+  .about-page { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .about-page > .info-hero,
+  .about-page > :last-child { grid-column: 1 / -1; }
 }
