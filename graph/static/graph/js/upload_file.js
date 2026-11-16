@@ -240,12 +240,30 @@ function importFile() {
 }
 
 // When the user clicks the settings button, add classes to trigger css animation
-settingsButton.addEventListener("click", function () {
-  setSettingsOpen(!settingsContainer.classList.contains("visible"));
+const closeSettingsButton = document.getElementById("close-settings");
+
+settingsButton.addEventListener("click", () => {
+  const open = settingsContainer.inert;
+  setSettingsOpen(open);
+  if (open) closeSettingsButton.focus();
+});
+
+function closeSettings() {
+  settingsButton.focus({ preventScroll: true });
+  setSettingsOpen(false);
+}
+
+closeSettingsButton.addEventListener("click", closeSettings);
+settingsContainer.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeSettings();
+  }
 });
 
 function setSettingsOpen(open) {
   settingsContainer.classList.toggle("visible", open);
+  settingsContainer.inert = !open;
   graph.classList.toggle("settings-open", open);
   document.body.classList.toggle("settings-open", open);
   settingsButton.setAttribute("aria-expanded", String(open));
@@ -285,7 +303,6 @@ document.getElementById("submit-gene-button").addEventListener("click", async fu
       if (shouldToast) {
         const toast = document.getElementById("toast-message");
         if (toast) {
-          toast.style.color = "#2ecc71";
           toast.textContent = "New settings automatically applied.";
           toast.style.display = "block";
           setTimeout(() => {

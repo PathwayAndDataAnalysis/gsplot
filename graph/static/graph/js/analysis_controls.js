@@ -19,18 +19,6 @@
     mirror.removeAttribute("oninput");
     pairs.push([original, mirror]);
   });
-  // Group the mirrored controls for the input page.
-  const children = [...copy.children];
-  const algorithm = document.createElement("div");
-  const distance = document.createElement("div");
-  const threshold = document.createElement("div");
-  algorithm.className = "analysis-control-group analysis-algorithm";
-  distance.className = "analysis-control-group analysis-distance";
-  threshold.className = "analysis-control-group analysis-threshold";
-  children.slice(0, 4).forEach(node => algorithm.append(node));
-  children.slice(4, 9).forEach(node => distance.append(node));
-  children.slice(9).forEach(node => threshold.append(node));
-  copy.append(algorithm, distance, threshold);
   home.append(copy);
 
   function sync() {

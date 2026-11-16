@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   {% load static %}
   <title>Gene Set Plot</title>
-  <link rel="stylesheet" type="text/css" href="{% static 'graph/css/style.css' %}?v=input-layout" />
+  <link rel="stylesheet" type="text/css" href="{% static 'graph/css/style.css' %}?v=settings-panel" />
 </head>
 
 <body>
@@ -28,14 +28,14 @@
       <a class="nav-button" id="nav-graph" href="/#graph" aria-disabled="true">Graph</a>
       <a class="nav-button" data-page="help" href="/help/">Help</a>
       <a class="nav-button" data-page="about" href="/about/">About</a>
-      <div class="settings-button">
+      <button type="button" class="settings-button" aria-label="Settings" aria-controls="settings-panel" aria-expanded="false">
         <!-- Gear Icon -->
-        <svg height="100%" id="Layer_1" style="enable-background: new 0 0 512 512" version="1.1" viewBox="0 0 512 512"
+        <svg aria-hidden="true" height="100%" id="Layer_1" style="enable-background: new 0 0 512 512" version="1.1" viewBox="0 0 512 512"
           width="40" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
           <path
             d="M424.5,216.5h-15.2c-12.4,0-22.8-10.7-22.8-23.4c0-6.4,2.7-12.2,7.5-16.5l9.8-9.6c9.7-9.6,9.7-25.3,0-34.9l-22.3-22.1  c-4.4-4.4-10.9-7-17.5-7c-6.6,0-13,2.6-17.5,7l-9.4,9.4c-4.5,5-10.5,7.7-17,7.7c-12.8,0-23.5-10.4-23.5-22.7V89.1  c0-13.5-10.9-25.1-24.5-25.1h-30.4c-13.6,0-24.4,11.5-24.4,25.1v15.2c0,12.3-10.7,22.7-23.5,22.7c-6.4,0-12.3-2.7-16.6-7.4l-9.7-9.6  c-4.4-4.5-10.9-7-17.5-7s-13,2.6-17.5,7L110,132c-9.6,9.6-9.6,25.3,0,34.8l9.4,9.4c5,4.5,7.8,10.5,7.8,16.9  c0,12.8-10.4,23.4-22.8,23.4H89.2c-13.7,0-25.2,10.7-25.2,24.3V256v15.2c0,13.5,11.5,24.3,25.2,24.3h15.2  c12.4,0,22.8,10.7,22.8,23.4c0,6.4-2.8,12.4-7.8,16.9l-9.4,9.3c-9.6,9.6-9.6,25.3,0,34.8l22.3,22.2c4.4,4.5,10.9,7,17.5,7  c6.6,0,13-2.6,17.5-7l9.7-9.6c4.2-4.7,10.2-7.4,16.6-7.4c12.8,0,23.5,10.4,23.5,22.7v15.2c0,13.5,10.8,25.1,24.5,25.1h30.4  c13.6,0,24.4-11.5,24.4-25.1v-15.2c0-12.3,10.7-22.7,23.5-22.7c6.4,0,12.4,2.8,17,7.7l9.4,9.4c4.5,4.4,10.9,7,17.5,7  c6.6,0,13-2.6,17.5-7l22.3-22.2c9.6-9.6,9.6-25.3,0-34.9l-9.8-9.6c-4.8-4.3-7.5-10.2-7.5-16.5c0-12.8,10.4-23.4,22.8-23.4h15.2  c13.6,0,23.3-10.7,23.3-24.3V256v-15.2C447.8,227.2,438.1,216.5,424.5,216.5z M336.8,256L336.8,256c0,44.1-35.7,80-80,80  c-44.3,0-80-35.9-80-80l0,0l0,0c0-44.1,35.7-80,80-80C301.1,176,336.8,211.9,336.8,256L336.8,256z" />
         </svg>
-      </div>
+      </button>
     </div>
   </nav>
 
@@ -223,302 +223,303 @@
     <iframe id="graph" src="{% url 'read_graph' %}" frameborder="0"></iframe>
   </div>
 
-  <div class="settings-container">
+  <aside class="settings-container" id="settings-panel" aria-labelledby="settings-title" inert>
     <div class="settings">
-      <div class="graph-settings-header">
-        <h3>Graph Settings</h3>
-      </div>
+      <header class="settings-header">
+        <h2 id="settings-title">Settings</h2>
+        <button type="button" id="close-settings" aria-label="Close settings">×</button>
+      </header>
+      <div class="settings-scroll">
+        <section class="settings-section" aria-labelledby="settings-graph-title">
+          <h3 id="settings-graph-title">Graph</h3>
 
-      <h4>Point Color</h4>
-      <div class="color-options">
-        <div class="option">
-          <label for="insignificant-color">Least Significant:</label>
-          <input type="color" id="insignificant-color" name="insignificant-color" />
-        </div>
-        <div class="option">
-          <label for="significant-color" id="significant-color-label">Most Significant:</label>
-          <input type="color" id="significant-color" name="significant-color" />
-        </div>
-        <div class="option" id="negative-significant-color-wrapper" style="display: none;">
-          <label for="negative-significant-color">Most Negative:</label>
-          <input type="color" id="negative-significant-color" name="negative-significant-color" />
-        </div>
-        <div class="option">
-          <label for="selected-color">Selected:</label>
-          <input type="color" id="selected-color" name="selected-color" />
-        </div>
-      </div>
-
-      <h4>Point Size</h4>
-      <div class="size-options">
-        <div class="radio-container">
-          <div class="option">
-            <label for="fixed-size">Fixed:</label>
-            <input type="radio" id="fixed-size" name="point-size" value="fixed" />
-          </div>
-          <div class="option">
-            <label for="dynamic-size">Dynamic:</label>
-            <input type="radio" id="dynamic-size" name="point-size" value="dynamic" />
-          </div>
-        </div>
-        <div class="size-number-container">
-          <div id="fixed-size-input-reveal">
+          <h4>Point Color</h4>
+          <div class="color-options">
             <div class="option">
-              <label for="fixed-size-input">Size:</label>
-              <input type="numeric" id="fixed-size-input" name="fixed-size-input" />
+              <label for="insignificant-color">Least Significant:</label>
+              <input type="color" id="insignificant-color" name="insignificant-color" />
+            </div>
+            <div class="option">
+              <label for="significant-color" id="significant-color-label">Most Significant:</label>
+              <input type="color" id="significant-color" name="significant-color" />
+            </div>
+            <div class="option" id="negative-significant-color-wrapper" style="display: none;">
+              <label for="negative-significant-color">Most Negative:</label>
+              <input type="color" id="negative-significant-color" name="negative-significant-color" />
+            </div>
+            <div class="option">
+              <label for="selected-color">Selected:</label>
+              <input type="color" id="selected-color" name="selected-color" />
             </div>
           </div>
-          <div id="dynamic-size-input-reveal">
-            <div class="option">
-              <label for="dynamic-size-scalar">Scalar:</label>
-              <input type="numeric" id="dynamic-size-scalar" name="dynamic-size-scalar" />
+
+          <h4>Point Size</h4>
+          <div class="size-options">
+            <div class="radio-container">
+              <div class="option">
+                <label for="fixed-size">Fixed:</label>
+                <input type="radio" id="fixed-size" name="point-size" value="fixed" />
+              </div>
+              <div class="option">
+                <label for="dynamic-size">Dynamic:</label>
+                <input type="radio" id="dynamic-size" name="point-size" value="dynamic" />
+              </div>
+            </div>
+            <div class="size-number-container">
+              <div id="fixed-size-input-reveal">
+                <div class="option">
+                  <label for="fixed-size-input">Size:</label>
+                  <input type="numeric" id="fixed-size-input" name="fixed-size-input" />
+                </div>
+              </div>
+              <div id="dynamic-size-input-reveal">
+                <div class="option">
+                  <label for="dynamic-size-scalar">Scalar:</label>
+                  <input type="numeric" id="dynamic-size-scalar" name="dynamic-size-scalar" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      <h4>Cluster Labeling</h4>
+          <h4>Cluster Labeling</h4>
 
-      <div class="option" style="align-items: center;">
-        <label for="cluster-mode" style="margin-right: 10px;">Cluster mode</label>
-        <label class="toggle-switch">
-          <input type="checkbox" id="cluster-mode">
-          <span class="toggle-slider"></span>
-        </label>
-      </div>
-
-      <div id="cluster-params" style="display:none; margin-top:10px;">
-        <div class="option">
-          <label for="cluster-algorithm">Cluster Algorithm:</label>
-          <select id="cluster-algorithm" name="cluster-algorithm">
-            <option value="hdbscan" selected>HDBSCAN</option>
-            <option value="optics">OPTICS</option>
-          </select>
-        </div>
-
-        <div id="hdbscan-options-container" style="display:block;">
-          <h5>HDBSCAN Settings</h5>
-
-          <div class="option">
-            <label for="hdbscan-min-cluster-size">Min Cluster Size</label>
-            <input type="number" id="hdbscan-min-cluster-size" value="5" min="2">
+          <div class="option" style="align-items: center;">
+            <label for="cluster-mode" style="margin-right: 10px;">Cluster mode</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="cluster-mode">
+              <span class="toggle-slider"></span>
+            </label>
           </div>
 
-          <div class="option">
-            <label for="hdbscan-min-samples">Min Samples (optional)</label>
-            <input type="number" id="hdbscan-min-samples" placeholder="leave empty = default" min="1">
-          </div>
-        </div>
+          <div id="cluster-params" style="display:none; margin-top:10px;">
+            <div class="option">
+              <label for="cluster-algorithm">Cluster Algorithm:</label>
+              <select id="cluster-algorithm" name="cluster-algorithm">
+                <option value="hdbscan" selected>HDBSCAN</option>
+                <option value="optics">OPTICS</option>
+              </select>
+            </div>
 
-        <div id="optics-options-container" style="display:none;">
-          <h5>OPTICS Settings</h5>
+            <div id="hdbscan-options-container" style="display:block;">
+              <h5>HDBSCAN Settings</h5>
 
-          <div class="option">
-            <label for="optics-min-cluster-size">Min Cluster Size (optional)</label>
-            <input type="number" id="optics-min-cluster-size" placeholder="leave empty = use min_samples" min="2">
+              <div class="option">
+                <label for="hdbscan-min-cluster-size">Min Cluster Size</label>
+                <input type="number" id="hdbscan-min-cluster-size" value="5" min="2">
+              </div>
+
+              <div class="option">
+                <label for="hdbscan-min-samples">Min Samples (optional)</label>
+                <input type="number" id="hdbscan-min-samples" placeholder="leave empty = default" min="1">
+              </div>
+            </div>
+
+            <div id="optics-options-container" style="display:none;">
+              <h5>OPTICS Settings</h5>
+
+              <div class="option">
+                <label for="optics-min-cluster-size">Min Cluster Size (optional)</label>
+                <input type="number" id="optics-min-cluster-size" placeholder="leave empty = use min_samples" min="2">
+              </div>
+
+              <div class="option">
+                <label for="optics-min-samples">Min Samples</label>
+                <input type="number" id="optics-min-samples" value="5" min="2">
+              </div>
+
+              <div class="option">
+                <label for="optics-xi">Xi</label>
+                <input type="number" id="optics-xi" value="0.05" min="0.01" max="1" step="0.01">
+              </div>
+            </div>
           </div>
 
-          <div class="option">
-            <label for="optics-min-samples">Min Samples</label>
-            <input type="number" id="optics-min-samples" value="5" min="2">
+          <div id="display-genes-container">
+            <h4 style="display: flex; align-items: center; gap: 8px;">
+              Display Genes
+              <span class="tooltip-container">
+                <i class="tooltip-icon">i</i>
+                <span class="tooltip-text" id="display-genes-tooltip">
+                  This option filters the selected point(s) to show only significant genes.<br>
+                  Only available when you use thresholded genes.
+                </span>
+              </span>
+            </h4>
+
+            <div class="option" style="align-items: flex-start; justify-content: space-between; gap: 12px;">
+              <label for="show-sig-only" id="display-genes-label"
+                style="margin-right: 0; flex: 1; white-space: normal; overflow-wrap: anywhere;">Show significant genes only</label>
+              <label class="toggle-switch" style="flex-shrink: 0;">
+                <input type="checkbox" id="show-sig-only">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+
+            <div id="enrichment-order-container" class="option" style="align-items: flex-start; justify-content: space-between; gap: 12px; display: none;">
+              <label for="show-enrichment-order"
+                style="margin-right: 0; flex: 1; white-space: normal; overflow-wrap: anywhere;">Show genes in enrichment order</label>
+              <label class="toggle-switch" style="flex-shrink: 0;">
+                <input type="checkbox" id="show-enrichment-order">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
           </div>
 
-          <div class="option">
-            <label for="optics-xi">Xi</label>
-            <input type="number" id="optics-xi" value="0.05" min="0.01" max="1" step="0.01">
+          <div class="settings-graph-actions">
+            <button type="button" onclick="clearSelected()">Clear Selected</button>
+            <button type="button" onclick="toggleLabels()">Toggle Labels</button>
           </div>
-        </div>
+        </section>
+
+        <section class="settings-section" aria-labelledby="settings-analysis-title">
+          <h3 id="settings-analysis-title">Analysis</h3>
+          <div id="shared-analysis-controls">
+            <div class="analysis-control-group analysis-algorithm">
+              <div class="form-group">
+                <h4><label for="algorithmSelect">Choose Algorithm</label></h4>
+                <select class="form-control" id="algorithmSelect" onchange="toggleAlgorithmParams()">
+                  <option value="tsne">t-SNE</option>
+                  <option value="umap">UMAP</option>
+                  <option value="isomap">Isomap</option>
+                </select>
+              </div>
+              <div id="umapParams" class="param-group" style="display: none;">
+                <h5>UMAP Settings</h5>
+                <div class="form-group row">
+                  <label for="umapNNeighbors" class="col-sm-4 col-form-label">Number of Neighbors:</label>
+                  <div class="col-sm-8">
+                    <input type="number" class="form-control" id="umapNNeighbors" value="15" min="2">
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label for="umapMinDist" class="col-sm-4 col-form-label">Minimum Distance:</label>
+                  <div class="col-sm-8">
+                    <input type="number" step="0.01" class="form-control" id="umapMinDist" value="0.1" min="0" max="1">
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label for="umapRandomState" class="col-sm-4 col-form-label">Random State (seed):</label>
+                  <div class="col-sm-8">
+                    <input type="number" class="form-control" id="umapRandomState" value="0">
+                    <small class="form-text text-muted">Set to 0 or leave empty for random initialization.</small>
+                  </div>
+                </div>
+              </div>
+              <div id="tsneParams" class="param-group">
+                <h5>t-SNE Settings</h5>
+                <div class="form-group row">
+                  <label for="tsnePerplexity" class="col-sm-4 col-form-label">Perplexity:</label>
+                  <div class="col-sm-8">
+                    <input type="number" step="0.1" class="form-control" id="tsnePerplexity" value="15.0" min="1">
+                    <small class="form-text text-muted">Balance between local and global structure (5-50 typically).</small>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label for="tsneEarlyExaggeration" class="col-sm-4 col-form-label">Early Exaggeration:</label>
+                  <div class="col-sm-8">
+                    <input type="number" step="0.1" class="form-control" id="tsneEarlyExaggeration" value="12.0" min="1">
+                    <small class="form-text text-muted">Controls space between clusters during optimization.</small>
+                  </div>
+                </div>
+                <div class="form-group row">
+                  <label for="tsneNIters" class="col-sm-4 col-form-label">Max Iterations:</label>
+                  <div class="col-sm-8">
+                    <input type="number" class="form-control" id="tsneNIters" value="1000" min="250">
+                    <small class="form-text text-muted">Maximum optimization steps.</small>
+                  </div>
+                </div>
+              </div>
+
+              <div id="isomapParams" class="param-group" style="display: none;">
+                <h5>Isomap Settings</h5>
+                <div class="form-group row">
+                  <label for="isomapNNeighbors" class="col-sm-4 col-form-label">Number of Neighbors:</label>
+                  <div class="col-sm-8">
+                    <input type="number" class="form-control" id="isomapNNeighbors" value="5" min="1">
+                    <small class="form-text text-muted">Number of neighbors to consider for graph construction.</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="analysis-control-group analysis-distance">
+              <div class="option">
+                <label for="distance-metric">Distance Metric:</label>
+                <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
+                  <option value="jaccard-distance" selected>Jaccard Distance</option>
+                  <option value="overlap-coeff">Overlap Coeff</option>
+                  <option value="go-semantic" id="go-semantic-option" hidden disabled>GO Semantic (Wang)</option>
+                </select>
+              </div>
+
+              <div id="jaccard-options-container" class="option" style="display: block;">
+                <div class="radio-container">
+                  <div class="option">
+                    <label for="weighted-jaccard">Weighted:</label>
+                    <input type="radio" id="weighted-jaccard" name="jaccard-type" value="jaccard_weighted" checked />
+                  </div>
+                  <div class="option">
+                    <label for="plain-jaccard">Plain:</label>
+                    <input type="radio" id="plain-jaccard" name="jaccard-type" value="jaccard_plain" />
+                  </div>
+                </div>
+              </div>
+
+              <div id="overlap-options-container" class="option" style="display: none;">
+                <div class="radio-container">
+                  <div class="option">
+                    <label for="weighted-overlap">Weighted:</label>
+                    <input type="radio" id="weighted-overlap" name="overlap-type" value="overlap_weighted" checked />
+                  </div>
+                  <div class="option">
+                    <label for="plain-overlap">Plain:</label>
+                    <input type="radio" id="plain-overlap" name="overlap-type" value="overlap_plain" />
+                  </div>
+                </div>
+              </div>
+              <p id="go-semantic-description" class="option" hidden>
+                Uses the GO hierarchy to compare biological function, independently of shared genes.
+                No gene weighting is applied. BP, MF and CC are compared within their own branches;
+                pairs from different branches have maximum distance.
+              </p>
+            </div>
+            <div class="analysis-control-group analysis-threshold">
+              <div class="analysis-threshold-choice">
+                <label style="font-weight: bold;">
+                  Select Threshold Type
+                  <span class="tooltip-container">
+                    <i class="tooltip-icon">i</i>
+                    <span class="tooltip-text">Please enter a value only for the selected threshold type. The other field is
+                      auto-filled.</span>
+                  </span>
+                </label>
+                <div class="threshold-type-options">
+                  <label><input type="radio" name="threshold-type" value="fdr" checked> Use FDR</label>
+                  <label><input type="radio" name="threshold-type" value="pvalue"> Use P-Value</label>
+                </div>
+              </div>
+
+              <div id="threshold-container" class="threshold-values">
+                <div id="fdr-wrapper" style="display: flex; flex-direction: column;">
+                  <label for="fdr-input" style="font-weight: bold; font-size: 14px;">FDR</label>
+                  <input type="number" id="fdr-input" step="any" value="0.05" min="0" max="1">
+                </div>
+                <div id="pvalue-wrapper" style="display: flex; flex-direction: column;">
+                  <label for="pvalue-input" style="font-weight: bold; font-size: 14px;">P-Value</label>
+                  <input type="number" id="pvalue-input" step="any" value="0.05" min="0" max="1">
+                </div>
+              </div>
+            </div>
+          </div><!-- shared-analysis-controls -->
+        </section>
       </div>
-
-      <div id="display-genes-container">
-        <h4 style="display: flex; align-items: center; gap: 8px;">
-          Display Genes
-          <span class="tooltip-container">
-            <i class="tooltip-icon">i</i>
-            <span class="tooltip-text" id="display-genes-tooltip">
-              This option filters the selected point(s) to show only significant genes.<br>
-              Only available when you use thresholded genes.
-            </span>
-          </span>
-        </h4>
-
-        <div class="option" style="align-items: flex-start; justify-content: space-between; gap: 12px;">
-          <label for="show-sig-only" id="display-genes-label"
-            style="margin-right: 0; flex: 1; white-space: normal; overflow-wrap: anywhere;">Show significant genes only</label>
-          <label class="toggle-switch" style="flex-shrink: 0;">
-            <input type="checkbox" id="show-sig-only">
-            <span class="toggle-slider"></span>
-          </label>
+      <footer class="settings-footer">
+        <div role="status">
+          <p id="toast-message" style="display: none;"></p>
         </div>
-
-        <div id="enrichment-order-container" class="option" style="align-items: flex-start; justify-content: space-between; gap: 12px; display: none;">
-          <label for="show-enrichment-order"
-            style="margin-right: 0; flex: 1; white-space: normal; overflow-wrap: anywhere;">Show genes in enrichment order</label>
-          <label class="toggle-switch" style="flex-shrink: 0;">
-            <input type="checkbox" id="show-enrichment-order">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      </div>
-
-      <div id="shared-analysis-controls">
-      <div class="form-group">
-        <h4><label for="algorithmSelect">Choose Algorithm</label></h4>
-        <select class="form-control" id="algorithmSelect" onchange="toggleAlgorithmParams()">
-          <option value="tsne">t-SNE</option>
-          <option value="umap">UMAP</option>
-          <option value="isomap">Isomap</option>
-        </select>
-      </div>
-      <div id="umapParams" class="param-group" style="display: none;">
-        <h5>UMAP Settings</h5>
-        <div class="form-group row">
-          <label for="umapNNeighbors" class="col-sm-4 col-form-label">Number of Neighbors:</label>
-          <div class="col-sm-8">
-            <input type="number" class="form-control" id="umapNNeighbors" value="15" min="2">
-          </div>
-        </div>
-        <div class="form-group row">
-          <label for="umapMinDist" class="col-sm-4 col-form-label">Minimum Distance:</label>
-          <div class="col-sm-8">
-            <input type="number" step="0.01" class="form-control" id="umapMinDist" value="0.1" min="0" max="1">
-          </div>
-        </div>
-        <div class="form-group row">
-          <label for="umapRandomState" class="col-sm-4 col-form-label">Random State (seed):</label>
-          <div class="col-sm-8">
-            <input type="number" class="form-control" id="umapRandomState" value="0">
-            <small class="form-text text-muted">Set to 0 or leave empty for random initialization.</small>
-          </div>
-        </div>
-      </div>
-      <div id="tsneParams" class="param-group">
-        <h5>t-SNE Settings</h5>
-        <div class="form-group row">
-          <label for="tsnePerplexity" class="col-sm-4 col-form-label">Perplexity:</label>
-          <div class="col-sm-8">
-            <input type="number" step="0.1" class="form-control" id="tsnePerplexity" value="15.0" min="1">
-            <small class="form-text text-muted">Balance between local and global structure (5-50 typically).</small>
-          </div>
-        </div>
-        <div class="form-group row">
-          <label for="tsneEarlyExaggeration" class="col-sm-4 col-form-label">Early Exaggeration:</label>
-          <div class="col-sm-8">
-            <input type="number" step="0.1" class="form-control" id="tsneEarlyExaggeration" value="12.0" min="1">
-            <small class="form-text text-muted">Controls space between clusters during optimization.</small>
-          </div>
-        </div>
-        <div class="form-group row">
-          <label for="tsneNIters" class="col-sm-4 col-form-label">Max Iterations:</label>
-          <div class="col-sm-8">
-            <input type="number" class="form-control" id="tsneNIters" value="1000" min="250">
-            <small class="form-text text-muted">Maximum optimization steps.</small>
-          </div>
-        </div>
-      </div>
-
-      <div id="isomapParams" class="param-group" style="display: none;">
-        <h5>Isomap Settings</h5>
-        <div class="form-group row">
-          <label for="isomapNNeighbors" class="col-sm-4 col-form-label">Number of Neighbors:</label>
-          <div class="col-sm-8">
-            <input type="number" class="form-control" id="isomapNNeighbors" value="5" min="1">
-            <small class="form-text text-muted">Number of neighbors to consider for graph construction.</small>
-          </div>
-        </div>
-      </div>
-
-      <!-- START Additional Settings Section -->
-      <div class="additional-settings-header">
-        <h4>Additional Settings</h4>
-      </div>
-      <div class="option">
-        <label for="distance-metric">Distance Metric:</label>
-        <select id="distance-metric" name="distance-metric" onchange="toggleJaccardOptions()">
-          <option value="jaccard-distance" selected>Jaccard Distance</option>
-          <option value="overlap-coeff">Overlap Coeff</option>
-          <option value="go-semantic" id="go-semantic-option" hidden disabled>GO Semantic (Wang)</option>
-        </select>
-      </div>
-
-      <div id="jaccard-options-container" class="option" style="display: block;">
-        <div class="radio-container">
-          <div class="option">
-            <label for="weighted-jaccard">Weighted:</label>
-            <input type="radio" id="weighted-jaccard" name="jaccard-type" value="jaccard_weighted" checked />
-          </div>
-          <div class="option">
-            <label for="plain-jaccard">Plain:</label>
-            <input type="radio" id="plain-jaccard" name="jaccard-type" value="jaccard_plain" />
-          </div>
-        </div>
-      </div>
-
-      <div id="overlap-options-container" class="option" style="display: none;">
-        <div class="radio-container">
-          <div class="option">
-            <label for="weighted-overlap">Weighted:</label>
-            <input type="radio" id="weighted-overlap" name="overlap-type" value="overlap_weighted" checked />
-          </div>
-          <div class="option">
-            <label for="plain-overlap">Plain:</label>
-            <input type="radio" id="plain-overlap" name="overlap-type" value="overlap_plain" />
-          </div>
-        </div>
-      </div>
-      <p id="go-semantic-description" class="option" hidden>
-        Uses the GO hierarchy to compare biological function, independently of shared genes.
-        No gene weighting is applied. BP, MF and CC are compared within their own branches;
-        pairs from different branches have maximum distance.
-      </p>
-      <!-- END Additional Settings Section -->
-
-      <div style="margin-top: 10px;">
-        <label style="font-weight: bold;">
-          Select Threshold Type
-          <span class="tooltip-container">
-            <i class="tooltip-icon">i</i>
-            <span class="tooltip-text">Please enter a value only for the selected threshold type. The other field is
-              auto-filled.</span>
-          </span>
-        </label>
-        <div class="threshold-type-options">
-          <label><input type="radio" name="threshold-type" value="fdr" checked> Use FDR</label>
-          <label><input type="radio" name="threshold-type" value="pvalue"> Use P-Value</label>
-        </div>
-      </div>
-
-      <div id="threshold-container" style="display: flex; gap: 10px; justify-content: space-between; margin-top: 10px;">
-        <div id="fdr-wrapper" style="display: flex; flex-direction: column;">
-          <label for="fdr-input" style="font-weight: bold; font-size: 14px;">FDR</label>
-          <input type="number" id="fdr-input" step="any" value="0.05" min="0" max="1" style="width: 100px;">
-        </div>
-        <div style="display: flex; align-items: center; font-size: 14px; font-weight: normal;">or</div>
-        <div id="pvalue-wrapper" style="display: flex; flex-direction: column;">
-          <label for="pvalue-input" style="font-weight: bold; font-size: 14px;">P-Value</label>
-          <input type="number" id="pvalue-input" step="any" value="0.05" min="0" max="1" style="width: 100px;">
-        </div>
-      </div>
-
-      </div><!-- shared-analysis-controls -->
-
-      <div class="button-container">
-        <button onclick="clearSelected()">Clear Selected</button>
-        <button onclick="updateSettings()">Apply</button>
-        <button onclick="toggleLabels()">Toggle Labels</button>
-      </div>
-      <div id="toast-message" style="
-            display: none;
-            margin-top: 10px;
-            font-size: 14px;
-            font-weight: bold;
-            color: #2ecc71;
-            font-family: sans-serif;
-          ">
-        Settings saved! Click Submit to update the graph.
-      </div>
+        <button type="button" class="settings-apply" onclick="updateSettings()">Apply</button>
+      </footer>
     </div>
-  </div>
+  </aside>
 
   <div id="selected-section">
     <div id="selected-points-header">
@@ -556,11 +557,11 @@
 
   <!-- JavaScript Files -->
   </main>
-  <script src="{% static 'graph/js/update_settings.js' %}?v=go-semantic-2"></script>
+  <script src="{% static 'graph/js/update_settings.js' %}?v=settings-panel"></script>
   <script src="{% static 'graph/js/msigdb_loader.js' %}?v=go-semantic-2" data-collection-metadata-url="{% static 'resources/collection_metadata.json' %}"></script>
   <script src="{% static 'graph/js/modify_selected.js' %}"></script>
-  <script src="{% static 'graph/js/upload_file.js' %}?v=go-semantic-2"></script>
-  <script src="{% static 'graph/js/analysis_controls.js' %}?v=input-layout"></script>
+  <script src="{% static 'graph/js/upload_file.js' %}?v=settings-panel"></script>
+  <script src="{% static 'graph/js/analysis_controls.js' %}?v=settings-panel"></script>
   <script src="{% static 'graph/js/navigation.js' %}"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </body>

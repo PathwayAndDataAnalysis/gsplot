@@ -432,7 +432,6 @@ function updateSettings(suppressToast = false) {
       const toast = document.getElementById("toast-message");
       if (toast) {
         toast.style.display = "block";
-        toast.style.color = "#2ecc71";
         toast.textContent = "Cluster mode enabled — computing clusters...";
         setTimeout(() => { toast.style.display = "none"; }, 2000);
       }
@@ -448,7 +447,6 @@ function updateSettings(suppressToast = false) {
       const toast = document.getElementById("toast-message");
       if (toast) {
         toast.style.display = "block";
-        toast.style.color = "#2ecc71";
         toast.textContent = "No changes detected.";
         setTimeout(() => { toast.style.display = "none"; }, 2000);
       }
@@ -460,7 +458,6 @@ function updateSettings(suppressToast = false) {
   const toast = document.getElementById("toast-message");
   if (toast && !suppressToast) {
     toast.style.display = "block";
-    toast.style.color = "#2ecc71";
 
     const hasRendered = hasRuntimeGraphData();
 
