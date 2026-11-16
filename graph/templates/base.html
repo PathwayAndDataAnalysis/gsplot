@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   {% load static %}
   <title>Gene Set Plot</title>
-  <link rel="stylesheet" type="text/css" href="{% static 'graph/css/style.css' %}?v=go-semantic-2" />
+  <link rel="stylesheet" type="text/css" href="{% static 'graph/css/style.css' %}?v=input-layout" />
 </head>
 
 <body>
@@ -45,15 +45,12 @@
   <div id="upload-container">
     <div id="welcome-message">
       <h1>Welcome to Gene Set Plot</h1>
-      <h3>A Gene Set Enrichment Analysis (GSEA) visualization tool.</h3>
+      <p>A Gene Set Enrichment Analysis (GSEA) visualization tool.</p>
     </div>
   </div>
 
   <div id="manual-gene-input">
     <h2>Gene Input</h2>
-    <p class="gene-input-intro">
-      Choose an input style. Scored and ranked inputs let you choose whether to run a positive test, negative test, or two-sided test.
-    </p>
 
     <div class="gene-input-tabs">
       <span class="gene-input-tab-button active" onclick="showGeneInputTab('single-textarea', event)">Ranked Genes</span>
@@ -87,15 +84,9 @@
           </div>
         </div>
       </div>
-      <p class="gene-input-helper ranked-example-helper">
-        To try an example, click <b>Load Example</b>. This loads a winter-versus-summer hibernating ground squirrel
-        platelet proteome ranked gene list. Recommended gene sets: Gene Ontology (MSigDB Human -> C5 -> GO). You can open settings with the gear button to customize the parameters and explore the available options in the settings panel. See <a href="/help">Help</a> for more details.
-      </p>
-      <label for="id_single_gene_list" style="font-weight: bold">Enter Gene List:</label><br />
       <div class="gene-input-column">
-        <textarea id="id_single_gene_list" rows="10" cols="80"
-          placeholder="Enter all genes, comma or newline separated."></textarea>
-        <div class="ranked-gene-textarea-actions">
+        <div class="gene-input-field-header">
+          <label for="id_single_gene_list">Enter Gene List</label>
           <button type="button" onclick="clearSingleGeneList()">Clear</button>
           <button
             type="button"
@@ -106,16 +97,22 @@
             Load Example
           </button>
         </div>
+        <textarea id="id_single_gene_list" rows="5" cols="80"
+          placeholder="Enter all genes, comma or newline separated."></textarea>
+        <p class="gene-input-helper">The example uses winter vs. summer ground squirrel platelet data.
+          Recommended collection: Human MSigDB → C5 → GO. See <a href="{% url 'help' %}">Help</a> for details.</p>
       </div>
       <div id="ranked-example-status" class="gene-input-status"></div>
-      <div class="gene-input-column" style="margin-top: 12px;">
-        <label for="id_ranked_genes_file" style="font-weight: bold;">Or Upload File:</label>
+      <div class="gene-input-column gene-input-upload">
+        <div class="gene-input-field-header">
+          <label for="id_ranked_genes_file">Or Upload File</label>
+          <button type="button" onclick="clearRankedGenesFile()">Clear File</button>
+        </div>
         <input id="id_ranked_genes_file" type="file" accept=".tsv,.txt" />
         <p class="gene-input-helper">
           Upload a <code>.tsv</code> or <code>.txt</code> file with one gene per line (or first column as gene).
         </p>
         <div id="ranked-genes-file-status" class="gene-input-status"></div>
-        <button onclick="clearRankedGenesFile()">Clear File</button>
       </div>
     </div>
 
@@ -128,17 +125,21 @@
       </div>
       <div class="gene-input-side-by-side">
         <div class="gene-input-column">
-          <label for="id_significant_genes" style="font-weight: bold">Significant Genes:</label><br />
+          <div class="gene-input-field-header">
+            <label for="id_significant_genes">Significant Genes</label>
+            <button type="button" onclick="clearSignificantGenes()">Clear</button>
+          </div>
           <textarea id="id_significant_genes" rows="5" cols="40"
             placeholder="Enter significant genes, comma or newline separated"></textarea>
-          <button onclick="clearSignificantGenes()">Clear</button>
         </div>
 
         <div class="gene-input-column">
-          <label for="id_insignificant_genes" style="font-weight: bold">Insignificant Genes:</label><br />
+          <div class="gene-input-field-header">
+            <label for="id_insignificant_genes">Insignificant Genes</label>
+            <button type="button" onclick="clearInsignificantGenes()">Clear</button>
+          </div>
           <textarea id="id_insignificant_genes" rows="5" cols="40"
             placeholder="Enter insignificant genes, comma or newline separated"></textarea>
-          <button onclick="clearInsignificantGenes()">Clear</button>
         </div>
       </div>
     </div>
@@ -167,29 +168,33 @@
           </div>
         </div>
       </div>
-      <label for="id_scored_genes_file" style="font-weight: bold">Upload Scored Genes File:</label><br />
       <div class="gene-input-column">
+        <div class="gene-input-field-header">
+          <label for="id_scored_genes_file">Upload Scored Genes File</label>
+          <button type="button" onclick="clearScoredGenesFile()">Clear</button>
+        </div>
         <input id="id_scored_genes_file" type="file" accept=".tsv,.txt" />
         <p class="gene-input-helper">
           Upload a <code>.tsv</code> or <code>.txt</code> file with two columns: gene and score without headers.
         </p>
         <div id="scored-genes-file-status" class="gene-input-status"></div>
-        <button onclick="clearScoredGenesFile()">Clear</button>
       </div>
     </div>
   </div>
 
   <!--Human/Mouse/Upload Dataset Selection-->
   <div id="species-selector">
-    <label><strong>Select Gene Set Dataset:</strong></label>
-    <select id="species-select" onchange="handleSpeciesChange()" style="margin-left: 10px;">
-      <option value="human" selected>Human (MSigDB)</option>
-      <option value="mouse">Mouse (MSigDB)</option>
-      <option value="custom">Upload your own</option>
-    </select>
-    <div id="custom-upload-section" style="display: none; margin-top: 15px;">
+    <div class="dataset-field">
+      <label for="species-select">Gene Set Dataset</label>
+      <select id="species-select" onchange="handleSpeciesChange()">
+        <option value="human" selected>Human (MSigDB)</option>
+        <option value="mouse">Mouse (MSigDB)</option>
+        <option value="custom">Upload your own</option>
+      </select>
+    </div>
+    <div id="custom-upload-section" style="display: none;">
       <input type="file" id="custom-json-input" accept=".json,.txt,.gmt" />
-      <p style="color: gray; margin-top: 10px;">Upload a custom gene set `.json`, `.txt` (JSON text), or `.gmt` file.</p>
+      <p class="gene-input-helper">Upload a custom gene set <code>.json</code>, <code>.txt</code> (JSON text), or <code>.gmt</code> file.</p>
     </div>
   </div>
 
@@ -197,12 +202,10 @@
   <!-- Collection selection sections -->
   <div id="tree-container">
     <h3>Select Gene Set Collection(s):</h3>
-    <div style="text-align: left; margin-top: 20px;">
-      <label for="min-member-input" style="font-weight: normal; margin-right: 10px;">
-        Enter the minimum relevant members for each gene set:
-      </label>
-      <input type="number" id="min-member-input" value="5" min="5" style="margin-right: 10px;">
-      <p id="min-member-note" style="color: gray; font-size: 13px; margin-top: 4px;">
+    <div class="min-member-field">
+      <label for="min-member-input">Minimum relevant members per gene set</label>
+      <input type="number" id="min-member-input" value="5" min="5" aria-describedby="min-member-note">
+      <p id="min-member-note">
         We recommend at least 5 members per gene set. Anything less might lead to unreliable results.
       </p>
     </div>
@@ -211,8 +214,7 @@
 
   <section id="home-analysis-settings" aria-labelledby="home-analysis-title">
     <h3 id="home-analysis-title">Analysis Settings</h3>
-    <p class="analysis-default-note">Optional: leave these unchanged to use the defaults below. Any changes also appear in Settings.</p>
-    <p class="analysis-default-values">Defaults: t-SNE (perplexity 15, early exaggeration 12, 1,000 iterations), weighted Jaccard distance, and FDR 0.05.</p>
+    <p>Defaults: t-SNE, weighted Jaccard distance, and FDR 0.05. Changes also appear in Settings.</p>
     <div id="home-analysis-controls"></div>
   </section>
 
@@ -361,7 +363,7 @@
 
       <div id="shared-analysis-controls">
       <div class="form-group">
-        <h4>Choose Algorithm:</h4>
+        <h4><label for="algorithmSelect">Choose Algorithm</label></h4>
         <select class="form-control" id="algorithmSelect" onchange="toggleAlgorithmParams()">
           <option value="tsne">t-SNE</option>
           <option value="umap">UMAP</option>
@@ -525,8 +527,8 @@
     <div id="selected-points-container"></div>
   </div>
 
-  <div id="submit-section-wrapper" style="padding-bottom: 5px;">
-    <div style="display: flex; justify-content: center; margin: 20px 0 60px 0;">
+  <div id="submit-section-wrapper">
+    <div>
       <button id="submit-gene-button">
         Submit
       </button>
@@ -558,7 +560,7 @@
   <script src="{% static 'graph/js/msigdb_loader.js' %}?v=go-semantic-2" data-collection-metadata-url="{% static 'resources/collection_metadata.json' %}"></script>
   <script src="{% static 'graph/js/modify_selected.js' %}"></script>
   <script src="{% static 'graph/js/upload_file.js' %}?v=go-semantic-2"></script>
-  <script src="{% static 'graph/js/analysis_controls.js' %}?v=go-semantic-2"></script>
+  <script src="{% static 'graph/js/analysis_controls.js' %}?v=input-layout"></script>
   <script src="{% static 'graph/js/navigation.js' %}"></script>
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </body>

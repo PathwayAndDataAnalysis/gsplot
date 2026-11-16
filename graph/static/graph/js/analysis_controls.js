@@ -19,12 +19,14 @@
     mirror.removeAttribute("oninput");
     pairs.push([original, mirror]);
   });
-  // Arrange the same controls into three compact columns on the home page.
+  // Group the mirrored controls for the input page.
   const children = [...copy.children];
   const algorithm = document.createElement("div");
   const distance = document.createElement("div");
   const threshold = document.createElement("div");
-  algorithm.className = distance.className = threshold.className = "analysis-control-group";
+  algorithm.className = "analysis-control-group analysis-algorithm";
+  distance.className = "analysis-control-group analysis-distance";
+  threshold.className = "analysis-control-group analysis-threshold";
   children.slice(0, 4).forEach(node => algorithm.append(node));
   children.slice(4, 9).forEach(node => distance.append(node));
   children.slice(9).forEach(node => threshold.append(node));
